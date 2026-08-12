@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-demo16</artifactId>
+  <name>auto-valhalla demo16 (Java 16 bytecode)</name>
+
+  <description>
+    Value-class candidates compiled to Java 16 bytecode (major version 60),
+    proving the agent handles newer class files and rewrites Java 16 features
+    such as records.
+  </description>
+
+  <properties>
+    <!-- Java 16 bytecode, no preview. -->
+    <maven.compiler.release>16</maven.compiler.release>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-annotation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+</project>

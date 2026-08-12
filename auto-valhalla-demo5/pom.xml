@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-demo5</artifactId>
+  <name>auto-valhalla demo5 (Java 5 bytecode)</name>
+
+  <description>
+    A value-class candidate compiled to genuine Java 5 bytecode (major version
+    49) with a real JDK 5, proving the agent handles legacy class files.
+  </description>
+
+  <properties>
+    <!-- Compile with a real JDK 5 so the class file is genuine Java 5 bytecode
+         (major version 49), loadable on any JVM &gt;= 5. -->
+    <java5.home>${env.JAVA5_HOME}</java5.home>
+    <!-- Neutralise the parent's JDK 28 preview settings for this module.
+         (An empty maven.compiler.release would make javadoc fail with
+         "release version -sourcepath not supported", so it is left unset and the
+         parent's value is inherited.) -->
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-annotation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- JDK 5's javac -version exits non-zero, so the modern compiler plugin
+           cannot drive it; invoke the real JDK 5 javac directly. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>compile-jdk5</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${java5.home}/bin/javac</executable>
+              <arguments>
+                <argument>-source</argument>
+                <argument>1.5</argument>
+                <argument>-target</argument>
+                <argument>1.5</argument>
+                <argument>-cp</argument>
+                <argument>${project.basedir}/../auto-valhalla-annotation/target/auto-valhalla-annotation-0.1.0-SNAPSHOT.jar</argument>
+                <argument>-d</argument>
+                <argument>${project.build.outputDirectory}</argument>
+                <argument>${project.basedir}/src/main/java/demo5/Point.java</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

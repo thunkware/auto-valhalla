@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-demo-runner</artifactId>
+  <name>auto-valhalla demo runner</name>
+
+  <description>
+    Runs the cross-version demos with the agent and reports whether each class
+    became a value class (needs JDK 28 preview APIs such as Objects.hasIdentity).
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-annotation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-demo5</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-demo16</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <executable>${java.home}/bin/java</executable>
+          <arguments>
+            <argument>--enable-preview</argument>
+             <argument>-javaagent:${project.basedir}/../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+            <!-- select demo16.Hsl (and demo16.*) by package include; the
+                 annotated classes are also converted via the annotation. -->
+            <argument>-Dauto-valhalla.includes=demo16</argument>
+            <argument>-cp</argument>
+            <argument>${project.build.outputDirectory}:${project.basedir}/../auto-valhalla-demo5/target/auto-valhalla-demo5-0.1.0-SNAPSHOT.jar:${project.basedir}/../auto-valhalla-demo16/target/auto-valhalla-demo16-0.1.0-SNAPSHOT.jar:${project.basedir}/../auto-valhalla-annotation/target/auto-valhalla-annotation-0.1.0-SNAPSHOT.jar</argument>
+            <argument>demo.runner.Main</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.6</version>
+        <configuration>
+          <!-- preview APIs (Objects.hasIdentity), the attach API, and self-attach -->
+          <argLine>--enable-preview --add-modules jdk.attach -Djdk.attach.allowAttachSelf=true -XX:+EnableDynamicAgentLoading</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

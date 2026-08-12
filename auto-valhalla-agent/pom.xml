@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-agent</artifactId>
+  <name>auto-valhalla agent</name>
+
+  <properties>
+    <!-- The agent's own classes are compiled without preview so the jar loads
+         on a JDK 28 JVM even when preview features are off. The runtime check
+         (RuntimeMXBean input arguments) then disables the agent if the JVM was
+         not started with the enable-preview flag. -->
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-annotation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-agent5</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Unpack the (JDK 5) annotation classes into this jar so the agent is
+           self-contained and can read @AutoValhalla at load time without the
+           annotation artifact being on the application classpath. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.8.1</version>
+        <executions>
+          <execution>
+            <id>embed-annotation</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeArtifactIds>auto-valhalla-annotation</includeArtifactIds>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+            </configuration>
+          </execution>
+          <!-- Unpack the JDK 5 shim (AutoValhallaAgent5, class-file version 49)
+               into this jar so the published agent jar is loadable/attachable on
+               any JVM from JDK 5 upwards. The shim loads first and, on a JVM older
+               than JDK 28, warns and returns harmlessly; on JDK 28+ it calls
+               the real agent's entry point directly. -->
+          <execution>
+            <id>embed-agent5</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeArtifactIds>auto-valhalla-agent5</includeArtifactIds>
+              <!-- Keep only the JDK 5 shim; drop this module's placeholder
+                   AutoValhallaAgent so the real (JDK 28) one compiled by the
+                   agent module is used instead. -->
+              <excludes>io/github/thunkware/auto/valhalla/AutoValhallaAgent.class</excludes>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Premain-Class>io.github.thunkware.auto.valhalla.AutoValhallaAgent5</Premain-Class>
+              <Agent-Class>io.github.thunkware.auto.valhalla.AutoValhallaAgent5</Agent-Class>
+              <Can-Redefine-Classes>true</Can-Redefine-Classes>
+              <Can-Retransform-Classes>true</Can-Retransform-Classes>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.6</version>
+        <configuration>
+          <!-- allow the verifier to accept the preview-version class files
+               produced by the rewriter -->
+          <argLine>--enable-preview</argLine>
+        </configuration>
+      </plugin>
+      <!-- Spotless is enabled only in the agent module; the version and formatter
+           config come from the root pom, which skips it everywhere else. -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <configuration>
+          <skip>false</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

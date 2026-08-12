@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-demo-runner5</artifactId>
+  <name>auto-valhalla demo runner 5</name>
+
+  <properties>
+    <!-- Real JDK 5 install: the app and the run are on JDK 5 so we can prove
+         the agent is safe to attach on a pre-Valhalla JVM (it must only warn
+         and return). -->
+    <java5.home>${env.JAVA5_HOME}</java5.home>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-demo5</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- The application source lives under src/main/jdk5 (outside Maven's
+           default source root), so the JDK 28 compiler finds nothing to do;
+           it is compiled to Java 5 bytecode by the exec step below. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>compile-jdk5</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${java5.home}/bin/javac</executable>
+              <arguments>
+                <argument>-source</argument>
+                <argument>1.5</argument>
+                <argument>-target</argument>
+                <argument>1.5</argument>
+                <argument>-cp</argument>
+                <argument>../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar</argument>
+                <argument>-d</argument>
+                <argument>${project.build.outputDirectory}</argument>
+                <argument>src/main/jdk5/demo5runner/Main.java</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <!-- Prove the agent is safe to attach on a JDK 5 JVM: it must only
+               warn and return, leaving the application class untouched. -->
+          <execution>
+            <id>run-on-jdk5</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${java5.home}/bin/java</executable>
+              <arguments>
+                <argument>-javaagent:../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+                <argument>-cp</argument>
+                <argument>${project.build.outputDirectory}:../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar</argument>
+                <argument>demo5runner.Main</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
