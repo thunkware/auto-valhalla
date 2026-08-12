@@ -3,6 +3,7 @@ package demo.runner;
 import java.util.Objects;
 
 import demo5.Point;
+import demo5.Square;
 import demo16.Hsl;
 import demo16.Money;
 import demo16.Pair;
@@ -43,5 +44,12 @@ public class Main {
         System.out.println("  " + r1);
         System.out.println("  hasIdentity(r1):  " + Objects.hasIdentity(r1));
         System.out.println("  r1 == r2:         " + (r1 == r2));
+
+        Square s1 = new Square(4);
+        Square s2 = new Square(4);
+        System.out.println("Square (demo5, mark-fields-final mode, Java 5 bytecode)");
+        System.out.println("  " + s1);
+        System.out.println("  hasIdentity(s1):  " + Objects.hasIdentity(s1));
+        System.out.println("  s1 == s2:         " + (s1 == s2));
     }
 }

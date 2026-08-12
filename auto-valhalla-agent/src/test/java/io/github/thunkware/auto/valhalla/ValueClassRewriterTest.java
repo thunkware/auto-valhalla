@@ -142,6 +142,40 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void markFieldsFinalModeRequiresSingleConstructorWrite() throws Exception {
+        byte[] once = readResource("/sample/Once.class");
+        byte[] sampleX = readResource("/sample/SampleX.class");
+        byte[] mutable = readResource("/sample/Mutable.class");
+        assertNotNull(once, "Once on classpath");
+        assertNotNull(sampleX, "SampleX on classpath");
+        assertNotNull(mutable, "Mutable on classpath");
+
+        ClassFile cf = ClassFile.of();
+        // Once: non-final fields written once in the ctor -> can be marked final.
+        assertTrue(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(once)),
+                "Once fields are non-final and written once in the constructor");
+        // SampleX: fields already final -> nothing to mark, so it qualifies.
+        assertTrue(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(sampleX)),
+                "SampleX fields are already final (no-op)");
+        // Mutable: `v` is also written by the set() method -> cannot be marked final.
+        assertFalse(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(mutable)),
+                "Mutable.v is written outside the constructor");
+
+        EnumSet<Mode> mff = EnumSet.copyOf(Mode.getDefaultModes());
+        mff.add(Mode.MARK_FIELDS_FINAL);
+        ValueClassTransformer transformer = new ValueClassTransformer(
+                Set.of("sample.Once", "sample.Mutable", "sample.SampleX"), Set.of(),
+                mff,
+                false, false, null);
+        assertNotNull(transformer.transform(null, null, "sample.Once", null, null, once),
+                "mode=mark-fields-final converts classes with non-final fields written once in the ctor");
+        assertNotNull(transformer.transform(null, null, "sample.SampleX", null, null, sampleX),
+                "mode=mark-fields-final also converts classes with already-final fields");
+        assertNull(transformer.transform(null, null, "sample.Mutable", null, null, mutable),
+                "mode=mark-fields-final rejects classes with a field written outside the ctor");
+    }
+
+    @Test
     void subclassOfTransformedFinalReportedBySuperclassName() throws Exception {
         byte[] base = readResource("/sample/Base.class");
         byte[] sub = readResource("/sample/Sub.class");
@@ -182,12 +216,11 @@ class ValueClassRewriterTest {
         assertEquals(Mode.getDefaultModes(), Mode.parse(null));
         assertEquals(Mode.getDefaultModes(), Mode.parse("  "));
         assertEquals(Mode.getDefaultModes(), Mode.parse("unknown-token"));
-        // yolo is a shorthand for the default ignore-* modes
+        // yolo is a shorthand for the default modes
         assertEquals(Mode.getDefaultModes(), Mode.parse("yolo"));
-        assertEquals(EnumSet.of(Mode.SAFE,
-                        Mode.IGNORE_NON_FINAL,
-                        Mode.IGNORE_SYNCHRONIZED),
-                Mode.parse("safe,yolo"));
+        EnumSet<Mode> safeYolo = EnumSet.of(Mode.SAFE);
+        safeYolo.addAll(Mode.getDefaultModes());
+        assertEquals(safeYolo, Mode.parse("safe,yolo"));
     }
 
     @Test

@@ -58,22 +58,13 @@ java --enable-preview \
 
 ### 3. Convert everything with `includes=*`
 
-Selection always happens through the `@AutoValhalla` annotation or `includes`.
-The `mode` option then narrows which of those selected classes are actually
-converted. Modes are comma-separated and case-insensitive (`-`, `_` and camelCase
-accepted):
+Selection always happens through the `@AutoValhalla` annotation or `includes`;
+the [`mode`](#mode-values) option then narrows which of those selected classes
+are actually converted (it defaults to `yolo` =
+`ignore-non-final,ignore-synchronized,mark-fields-final`).
 
-- `safe` — keep only selected classes that are *already `final`*. Non-final
-  candidates are skipped, because converting them would break their subclasses.
-- `ignore-non-final` — also convert non-final candidates. **Only use this when
-  you are sure nothing subclasses them**, since converted classes are made
-  `final`.
-- `ignore-synchronized` — allow candidates with synchronized instance methods
-  (their `ACC_SYNCHRONIZED` is stripped so they can become value classes).
-
-The mode defaults to `yolo` which is same as `ignore-non-final,ignore-synchronized`. 
-To convert every structurally suitable class, select everything with the `*` include
-and (optionally) narrow with `mode`:
+To convert every structurally suitable class, select everything with the `*`
+include and (optionally) narrow with `mode`:
 
 ```bash
 java --enable-preview \
@@ -114,15 +105,16 @@ form (e.g. `auto-valhalla.includes` → `AUTO_VALHALLA_INCLUDES`).
 
 #### `mode` values
 
-Tokens are case-insensitive and may use `-`, `_` or camelCase. The default mode
-set is `ignore-non-final,ignore-synchronized`.
-
 | Mode | Effect |
 | --- | --- |
 | `safe` | Keep only selected classes that are *already `final`*. Non-final candidates are skipped, because converting them would break their subclasses. |
 | `ignore-non-final` | Also convert non-final candidates. They are made `final`, so only opt in when nothing subclasses them (otherwise subclasses fail with `IncompatibleClassChangeError`). |
 | `ignore-synchronized` | Allow candidates with synchronized instance methods; their `ACC_SYNCHRONIZED` is stripped so they can become value classes. |
-| `yolo` | Shorthand for `ignore-non-final,ignore-synchronized` (the default). |
+| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected, since a value class cannot have a mutable field. |
+| `yolo` | Shorthand for `ignore-non-final,ignore-synchronized,mark-fields-final` (the default). |
+
+Tokens are case-insensitive and may use `-`, `_` or camelCase. e.g. `ignore-non-final`, `ignore_non_final`, and 
+`ignoreNonFinal` are all the same.
 
 ### `.config` precedence
 

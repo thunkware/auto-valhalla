@@ -5,9 +5,14 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileVersion;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.ClassTransform;
+import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodModel;
+import java.lang.classfile.Opcode;
+import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.reflect.AccessFlag;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -211,6 +216,48 @@ public final class ValueClassRewriter {
     public static boolean alreadyValue(ClassModel model) {
         return model.minorVersion() == PREVIEW_MINOR_VERSION
                 && (model.flags().flagsMask() & ACC_IDENTITY) == 0;
+    }
+
+    /**
+     * True if every non-{@code final} instance field is written exactly once, and
+     * only inside a constructor — i.e. the non-{@code final} fields can safely be
+     * marked {@code final} (value-class) without the risk of a later method
+     * re-assigning them. Already-{@code final} fields are fine (nothing to mark).
+     * Used by the {@code mark-fields-final} mode to gate selection.
+     */
+    public static boolean fieldsSafeToMarkFinal(ClassModel model) {
+        String self = model.thisClass().asInternalName();
+        Map<String, Integer> writes = new HashMap<>();
+        AtomicBoolean bad = new AtomicBoolean(false);
+        for (MethodModel m : model.methods()) {
+            boolean ctor = m.methodName().stringValue().equals("<init>");
+            m.code().ifPresent(code -> code.elementList().forEach(e -> {
+                if (bad.get()) {
+                    return;
+                }
+                if (e instanceof FieldInstruction fi && fi.opcode() == Opcode.PUTFIELD
+                        && fi.owner().asInternalName().equals(self)) {
+                    if (!ctor) {
+                        bad.set(true);
+                        return;
+                    }
+                    writes.merge(fi.name().stringValue(), 1, Integer::sum);
+                }
+            }));
+        }
+        if (bad.get()) {
+            return false;
+        }
+        for (FieldModel f : model.fields()) {
+            if (f.flags().has(AccessFlag.STATIC) || f.flags().has(AccessFlag.FINAL)) {
+                continue;
+            }
+            // a non-final field must be written exactly once, in a constructor
+            if (writes.getOrDefault(f.fieldName().stringValue(), 0) != 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** True if the class is annotated with {@link AutoValhalla}. */

@@ -125,6 +125,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                         + " final unless mode=ignore-non-final, and must not have a"
                         + " synchronized instance method unless mode=ignore-synchronized)");
             }
+            if (mode.contains(Mode.MARK_FIELDS_FINAL)
+                    && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
+                return onFail(internal,
+                        "is selected for value-class transformation but has a non-final field"
+                        + " not written exactly once in a constructor (mode=mark-fields-final)");
+            }
             byte[] out = ValueClassRewriter.transform(model, onFailThrow, ignoreSync, ignoreNonFinal);
             if (out == null) {
                 return onFail(internal,
