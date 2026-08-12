@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.ProtectionDomain;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,8 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * name matches one of the configured {@code includes} patterns (which supports
  * {@code *}). Matching classes named by {@code excludes} are never converted.
  *
- * <p>{@code mode} narrows which of those candidates are actually converted
- * (default {@code ignore-non-final,ignore-synchronized}).
+ * <p>{@code annotation-mode} narrows annotation-selected candidates and
+ * {@code includes-mode} narrows includes-selected ones (see {@link Mode}).
  *
  * <p>Selection and behavior are controlled by the following flags, supplied
  * either as agent arguments ({@code -javaagent:auto-valhalla.jar=...}), as
@@ -34,14 +35,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *       package prefix.</li>
  *   <li>{@code auto-valhalla.excludes} — classes/packages to skip (wins over
  *       includes and the annotation).</li>
- *   <li>{@code auto-valhalla.mode} — a comma-separated set of modes (case
- *       insensitive; {@code -}, {@code _} and camelCase accepted) narrowing which
- *       selected (annotated/included) classes are converted. Defaults to
- *       {@code ignore-non-final,ignore-synchronized}: {@code safe} keeps only
- *       classes that are <em>already final</em>; {@code ignore-non-final} also
- *       converts non-final classes (breaking any subclasses);
- *       {@code ignore-synchronized} strips {@code ACC_SYNCHRONIZED} from
- *       non-static methods of otherwise eligible classes.</li>
+ *   <li>{@code auto-valhalla.annotation-mode} — modes for annotated classes
+ *       (default {@code ignore-non-final,ignore-synchronized}).</li>
+ *   <li>{@code auto-valhalla.includes-mode} — modes for included classes
+ *       (default {@code yolo} = {@code ignore-non-final,ignore-synchronized,
+ *       mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
  *   <li>{@code auto-valhalla.on-fail-throw=true} — surface a loud
  *       {@link java.lang.LinkageError} if a selected class cannot be safely
@@ -59,7 +57,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     private final Set<String> includes;
     private final Set<String> excludes;
-    private final Set<Mode> mode;
+    private final Set<Mode> annotationMode;
+    private final Set<Mode> includesMode;
     private final boolean debug;
     private final boolean onFailThrow;
     private final String onFailAppendTo;
@@ -68,10 +67,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
-            Set<Mode> mode, boolean debug, boolean onFailThrow, String onFailAppendTo) {
+            Set<Mode> annotationMode, Set<Mode> includesMode,
+            boolean debug, boolean onFailThrow, String onFailAppendTo) {
         this.includes = includes;
         this.excludes = excludes;
-        this.mode = mode;
+        this.annotationMode = annotationMode;
+        this.includesMode = includesMode;
         this.debug = debug;
         this.onFailThrow = onFailThrow;
         this.onFailAppendTo = onFailAppendTo;
@@ -111,12 +112,20 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             }
             boolean included = patternMatches(includes, internal);
             // Selection: the annotation and includes choose which classes are
-            // candidates. mode only narrows which of them are actually converted.
+            // candidates. annotation-mode narrows annotation-selected classes,
+            // includes-mode narrows includes-selected classes.
             if (!annotated && !included) {
                 return null;
             }
-            boolean ignoreNonFinal = mode.contains(Mode.IGNORE_NON_FINAL);
-            boolean ignoreSync = mode.contains(Mode.IGNORE_SYNCHRONIZED);
+            EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
+            if (annotated) {
+                effective.addAll(annotationMode);
+            }
+            if (included) {
+                effective.addAll(includesMode);
+            }
+            boolean ignoreNonFinal = effective.contains(Mode.IGNORE_NON_FINAL);
+            boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
             if (!ValueClassRewriter.isSuitable(model, ignoreSync, ignoreNonFinal)) {
                 return onFail(internal,
                         "is selected for value-class transformation but is not suitable"
@@ -125,11 +134,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                         + " final unless mode=ignore-non-final, and must not have a"
                         + " synchronized instance method unless mode=ignore-synchronized)");
             }
-            if (mode.contains(Mode.MARK_FIELDS_FINAL)
+            if (effective.contains(Mode.MARK_FIELDS_FINAL)
                     && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
                 return onFail(internal,
                         "is selected for value-class transformation but has a non-final field"
-                        + " not written exactly once in a constructor (mode=mark-fields-final)");
+                        + " not written in every constructor (mode=mark-fields-final)");
             }
             byte[] out = ValueClassRewriter.transform(model, onFailThrow, ignoreSync, ignoreNonFinal);
             if (out == null) {

@@ -34,10 +34,10 @@ echo "==== run WITHOUT agent (identity classes) ===="
     -cp "$CP" demo.runner.Main
 
 echo
-echo "==== run WITH agent (annotation + includes selection, mode=yolo) ===="
+echo "==== run WITH agent (annotation + includes selection, includes-mode=yolo) ===="
 "$JAVA_HOME/bin/java" --enable-preview \
     -javaagent:"$AGENT_JAR" \
     -Dauto-valhalla.includes=demo16,demo5 \
-    -Dauto-valhalla.mode=yolo \
+    -Dauto-valhalla.includes-mode=yolo \
     "${EXTRA[@]}" \
     -cp "$CP" demo.runner.Main

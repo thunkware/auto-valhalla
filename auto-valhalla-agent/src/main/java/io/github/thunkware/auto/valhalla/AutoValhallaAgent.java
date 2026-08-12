@@ -7,6 +7,7 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -38,14 +39,12 @@ import java.util.Set;
  *   <li>{@code auto-valhalla.includes-file} / {@code auto-valhalla.excludes-file}
  *       — path to a file with one pattern per line (blank lines and {@code #}
  *       comments ignored).</li>
-     *   <li>{@code auto-valhalla.mode} — comma-separated set of modes (case
-     *       insensitive; {@code -}, {@code _} and camelCase accepted) narrowing
-     *       which selected (annotated/included) classes are converted. Defaults
-     *       to {@code ignore-non-final,ignore-synchronized}: {@code safe} keeps
-     *       only classes that are <em>already final</em>; {@code ignore-non-final}
-     *       also converts non-final classes (breaking any subclasses);
-     *       {@code ignore-synchronized} strips {@code ACC_SYNCHRONIZED} from
-     *       non-static methods of otherwise-eligible classes.</li>
+     *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
+     *       selected by {@code @AutoValhalla} (default
+     *       {@code ignore-non-final,ignore-synchronized}).</li>
+     *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
+     *       selected by {@code includes} (default {@code yolo} =
+     *       {@code ignore-non-final,ignore-synchronized,mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
  *   <li>{@code auto-valhalla.on-fail-throw=true} — surface a loud
  *       {@link java.lang.LinkageError} if a selected class cannot be safely
@@ -101,8 +100,9 @@ public final class AutoValhallaAgent {
         }
         Config cfg = parse(agentArgs);
         ValueClassTransformer transformer = new ValueClassTransformer(
-                cfg.includes(), cfg.excludes(), cfg.mode(), cfg.debug(),
-                cfg.onFailThrow(), cfg.onFailAppendTo());
+                cfg.includes(), cfg.excludes(),
+                cfg.annotationMode(), cfg.includesMode(),
+                cfg.debug(), cfg.onFailThrow(), cfg.onFailAppendTo());
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
 
@@ -111,7 +111,8 @@ public final class AutoValhallaAgent {
                     + (attach ? " (dynamically)" : "")
                     + "; includes=" + cfg.includes()
                     + " excludes=" + cfg.excludes()
-                    + " mode=" + cfg.mode()
+                    + " annotation-mode=" + cfg.annotationMode()
+                    + " includes-mode=" + cfg.includesMode()
                     + " on-fail-throw=" + cfg.onFailThrow()
                     + " on-fail-append-to=" + cfg.onFailAppendTo());
         }
@@ -120,7 +121,8 @@ public final class AutoValhallaAgent {
     /** Canonical option keys (without the {@code auto-valhalla.} prefix). */
     private static final List<String> KNOWN = List.of(
             "includes", "includes-file", "excludes", "excludes-file",
-            "mode", "debug", "on-fail-throw", "on-fail-append-to", "config");
+            "annotation-mode", "includes-mode",
+            "debug", "on-fail-throw", "on-fail-append-to", "config");
 
     static Config parse(String agentArgs) {
         // Ordered list of [canonicalKey, value] assignments. Later entries win
@@ -164,7 +166,8 @@ public final class AutoValhallaAgent {
 
         Set<String> includes = new HashSet<>();
         Set<String> excludes = new HashSet<>();
-        Set<Mode> mode = Mode.getDefaultModes();
+        Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
+        Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
         boolean debug = false;
         boolean onFailThrow = false;
         String onFailAppendTo = null;
@@ -175,7 +178,8 @@ public final class AutoValhallaAgent {
                 case "excludes" -> excludes.addAll(parsePatternSet(a[1]));
                 case "includes-file" -> includes.addAll(readPatternFile(a[1]));
                 case "excludes-file" -> excludes.addAll(readPatternFile(a[1]));
-                case "mode" -> mode = Mode.parse(a[1]);
+                case "annotation-mode" -> annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
+                case "includes-mode" -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
                 case "debug" -> debug = Boolean.parseBoolean(a[1]);
                 case "on-fail-throw" -> onFailThrow = Boolean.parseBoolean(a[1]);
                 case "on-fail-append-to" -> {
@@ -185,7 +189,8 @@ public final class AutoValhallaAgent {
                 default -> { /* unreachable */ }
             }
         }
-        return new Config(includes, excludes, mode, debug, onFailThrow, onFailAppendTo);
+        return new Config(includes, excludes, annotationMode, includesMode,
+                debug, onFailThrow, onFailAppendTo);
     }
 
     private static void emit(List<String[]> assigns, String key, String value) {

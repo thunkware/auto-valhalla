@@ -2,7 +2,7 @@ package demo5;
 
 /**
  * Converted to a value class via {@code includes=demo5} combined with
- * {@code mode=mark-fields-final}: the field is non-final yet written exactly once, in
+ * {@code includes-mode=yolo}: the field is non-final yet written exactly once, in
  * the constructor, so it can safely be made {@code final}. Compiled to genuine
  * Java 5 bytecode (major version 49).
  */

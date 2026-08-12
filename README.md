@@ -59,17 +59,18 @@ java --enable-preview \
 ### 3. Convert everything with `includes=*`
 
 Selection always happens through the `@AutoValhalla` annotation or `includes`;
-the [`mode`](#mode-values) option then narrows which of those selected classes
-are actually converted (it defaults to `yolo` =
-`ignore-non-final,ignore-synchronized,mark-fields-final`).
+the [`mode`](#mode-values) options then narrow which of those selected classes
+are actually converted: 
+  * `annotation-mode` applies to annotated classes (defaults
+to `ignore-non-final,ignore-synchronized`)
+  * `includes-mode` to included ones (defaults to `yolo`)
 
 To convert every structurally suitable class, select everything with the `*`
-include and (optionally) narrow with `mode`:
+include and (optionally) narrow with `includes-mode`:
 
 ```bash
 java --enable-preview \
      -Dauto-valhalla.includes='*' \
-     -Dauto-valhalla.mode=safe \
      -javaagent:auto-valhalla.jar \
      -jar myapp.jar
 ```
@@ -88,8 +89,9 @@ precedence). Within the agent-argument list, later options override earlier ones
 and a `.config` file is expanded in place (see below).
 
 Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the
-unprefixed name (e.g. `mode`). Environment variables map to the `AUTO_VALHALLA_*`
-form (e.g. `auto-valhalla.includes` → `AUTO_VALHALLA_INCLUDES`).
+unprefixed name (e.g. `includes-mode`). Environment variables map to the
+`AUTO_VALHALLA_*` form (e.g. `auto-valhalla.includes` →
+`AUTO_VALHALLA_INCLUDES`).
 
 | Option | Env var | Description |
 | --- | --- | --- |
@@ -97,7 +99,8 @@ form (e.g. `auto-valhalla.includes` → `AUTO_VALHALLA_INCLUDES`).
 | `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but never convert matching classes (wins over `includes` and the annotation). |
 | `auto-valhalla.includes-file` | `AUTO_VALHALLA_INCLUDES_FILE` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
 | `auto-valhalla.excludes-file` | `AUTO_VALHALLA_EXCLUDES_FILE` | As above, for excludes. |
-| `auto-valhalla.mode` | `AUTO_VALHALLA_MODE` | Comma-separated set of modes that narrow which selected (annotated/included) classes convert. See the mode table below. |
+| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `ignore-non-final,ignore-synchronized`. See the mode table below. |
+| `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Modes narrowing includes-selected classes. Defaults to `yolo`. See the mode table below. |
 | `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions. |
 | `auto-valhalla.on-fail-throw` | `AUTO_VALHALLA_ON_FAIL_THROW` | `true` to surface a loud `LinkageError` (a `ClassFormatError` at load) when a selected class cannot be safely transformed, instead of silently keeping it an identity class. |
 | `auto-valhalla.on-fail-append-to` | `AUTO_VALHALLA_ON_FAIL_APPEND_TO` | Path to a file; the internal name of each selected class that fails to transform is appended (the file is created if it does not exist). |
@@ -169,18 +172,17 @@ surfacing errors:
   classes. Use `on-fail-throw` to make such cases fail with an exception.
 - The agent rewrites identity records and final classes only. It never transforms
   JDK/system classes or its own support classes. Non-final classes are converted
-  only with `mode=ignore-non-final` (or via `@AutoValhalla`/`includes`); in that
+  only with `includes-mode=ignore-non-final` (or via `@AutoValhalla`/`includes`); in that
   case the class is made final and any existing subclasses will fail to load with
   an `IncompatibleClassChangeError`.
-- **A converted class is `final`.** If anything subclasses it — even outside
-  `mode`'s reach — that subclass will stop loading.
+- **A converted class is `final`.** If anything subclasses it, that subclass will stop loading.
 - **Semantics change.** For a converted class, `==` becomes value equality (two
   instances with equal fields compare `==`), `equals`/`hashCode` of the two
   fields, `synchronized` methods no longer take a monitor, and
   `System.identityHashCode`, `WeakReference`, and `IdentityHashMap` no longer see
   per-instance identity. A value class has no identity, so identity-keyed caches
   and `==`-based deduplication silently change behavior. **This is especially
-  dangerous with `mode`**, which converts classes without annotating them.
+  dangerous with `includes-mode`**, which converts classes without annotating them.
 - **Safe to attach anywhere.** The agent's entry point is a JDK 5 class file, so
   the jar loads on any JVM from JDK 5 up. On a JVM older than JDK 28 (or on JDK 28
   without `--enable-preview`) the agent prints a single warning and does nothing —

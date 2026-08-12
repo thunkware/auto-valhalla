@@ -32,7 +32,8 @@ class ValueClassRewriterTest {
 
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.SampleX"), Set.of(),
-                Mode.getDefaultModes(), false, false, null);
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, false, null);
 
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "suitable class should be rewritten");
@@ -66,9 +67,10 @@ class ValueClassRewriterTest {
         // never an unloadable value-class file.
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.Sync"), Set.of(),
-                EnumSet.of(Mode.SAFE), false, false, null);
+                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
+                false, false, null);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
-        assertNull(out, "synchronized-instance-method class must not be rewritten by mode=safe");
+        assertNull(out, "synchronized-instance-method class must not be rewritten by includes-mode=safe");
     }
 
     @Test
@@ -90,8 +92,8 @@ class ValueClassRewriterTest {
 
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.Sync"), Set.of(),
-                EnumSet.of(Mode.IGNORE_SYNCHRONIZED,
-                        Mode.IGNORE_NON_FINAL),
+                EnumSet.noneOf(Mode.class),
+                EnumSet.of(Mode.IGNORE_SYNCHRONIZED, Mode.IGNORE_NON_FINAL),
                 false, false, null);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "synchronized non-final class should be rewritten with"
@@ -125,35 +127,40 @@ class ValueClassRewriterTest {
     void safeModeNarrowsSelectionToFinalClasses() throws Exception {
         byte[] base = readResource("/sample/Base.class");
         assertNotNull(base, "Base on classpath");
-        // Base is selected by includes; default mode would convert it, but
-        // mode=safe narrows selection to already-final classes only.
+        // Base is selected by includes; the default includes-mode would convert
+        // it, but includes-mode=safe narrows selection to already-final classes.
         ValueClassTransformer safe = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
-                EnumSet.of(Mode.SAFE),
+                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
                 false, false, null);
         assertNull(safe.transform(null, null, "sample.Base", null, null, base),
-                "mode=safe must not convert a non-final class (would break its subclasses)");
+                "includes-mode=safe must not convert a non-final class (would break its subclasses)");
         ValueClassTransformer def = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
-                Mode.getDefaultModes(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
                 false, false, null);
         assertNotNull(def.transform(null, null, "sample.Base", null, null, base),
-                "default mode must convert the selected non-final class");
+                "default includes-mode must convert the selected non-final class");
     }
 
     @Test
-    void markFieldsFinalModeRequiresSingleConstructorWrite() throws Exception {
+    void markFieldsFinalModeRequiresPerConstructorWrites() throws Exception {
         byte[] once = readResource("/sample/Once.class");
+        byte[] twoCtors = readResource("/sample/TwoCtors.class");
         byte[] sampleX = readResource("/sample/SampleX.class");
         byte[] mutable = readResource("/sample/Mutable.class");
         assertNotNull(once, "Once on classpath");
+        assertNotNull(twoCtors, "TwoCtors on classpath");
         assertNotNull(sampleX, "SampleX on classpath");
         assertNotNull(mutable, "Mutable on classpath");
 
         ClassFile cf = ClassFile.of();
-        // Once: non-final fields written once in the ctor -> can be marked final.
+        // Once: non-final fields written in the (single) ctor -> can be marked final.
         assertTrue(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(once)),
-                "Once fields are non-final and written once in the constructor");
+                "Once fields are non-final and written in the constructor");
+        // TwoCtors: the field is written in every constructor, not just once globally.
+        assertTrue(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(twoCtors)),
+                "TwoCtors.a is written in every constructor");
         // SampleX: fields already final -> nothing to mark, so it qualifies.
         assertTrue(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(sampleX)),
                 "SampleX fields are already final (no-op)");
@@ -161,18 +168,19 @@ class ValueClassRewriterTest {
         assertFalse(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(mutable)),
                 "Mutable.v is written outside the constructor");
 
-        EnumSet<Mode> mff = EnumSet.copyOf(Mode.getDefaultModes());
+        EnumSet<Mode> mff = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
         mff.add(Mode.MARK_FIELDS_FINAL);
         ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of("sample.Once", "sample.Mutable", "sample.SampleX"), Set.of(),
-                mff,
-                false, false, null);
+                Set.of("sample.Once", "sample.TwoCtors", "sample.Mutable", "sample.SampleX"),
+                Set.of(), EnumSet.noneOf(Mode.class), mff, false, false, null);
         assertNotNull(transformer.transform(null, null, "sample.Once", null, null, once),
-                "mode=mark-fields-final converts classes with non-final fields written once in the ctor");
+                "includes-mode=mark-fields-final converts classes with non-final fields written in the ctor");
+        assertNotNull(transformer.transform(null, null, "sample.TwoCtors", null, null, twoCtors),
+                "includes-mode=mark-fields-final allows a field written in every constructor");
         assertNotNull(transformer.transform(null, null, "sample.SampleX", null, null, sampleX),
-                "mode=mark-fields-final also converts classes with already-final fields");
+                "includes-mode=mark-fields-final also converts classes with already-final fields");
         assertNull(transformer.transform(null, null, "sample.Mutable", null, null, mutable),
-                "mode=mark-fields-final rejects classes with a field written outside the ctor");
+                "includes-mode=mark-fields-final rejects classes with a field written outside the ctor");
     }
 
     @Test
@@ -183,7 +191,7 @@ class ValueClassRewriterTest {
         assertNotNull(sub, "Sub on classpath");
         ValueClassTransformer t = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
-                EnumSet.of(Mode.IGNORE_NON_FINAL),
+                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.IGNORE_NON_FINAL),
                 false, false, null);
         assertNotNull(t.transform(null, null, "sample.Base", null, null, base),
                 "Base rewrites (made final)");
@@ -212,15 +220,18 @@ class ValueClassRewriterTest {
                         Mode.IGNORE_NON_FINAL,
                         Mode.IGNORE_SYNCHRONIZED),
                 Mode.parse("Safe,Ignore-Non-Final,IGNORE_SYNCHRONIZED"));
-        // the default mode set is ignore-non-final + ignore-synchronized
-        assertEquals(Mode.getDefaultModes(), Mode.parse(null));
-        assertEquals(Mode.getDefaultModes(), Mode.parse("  "));
-        assertEquals(Mode.getDefaultModes(), Mode.parse("unknown-token"));
-        // yolo is a shorthand for the default modes
-        assertEquals(Mode.getDefaultModes(), Mode.parse("yolo"));
+        // the default includes-mode set and the yolo expansion
+        assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse(null));
+        assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("  "));
+        assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("unknown-token"));
+        // yolo is a shorthand for the default includes-mode
+        assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("yolo"));
         EnumSet<Mode> safeYolo = EnumSet.of(Mode.SAFE);
-        safeYolo.addAll(Mode.getDefaultModes());
+        safeYolo.addAll(Mode.INCLUDES_DEFAULT);
         assertEquals(safeYolo, Mode.parse("safe,yolo"));
+        // the default annotation-mode set is narrower (no mark-fields-final)
+        assertEquals(EnumSet.of(Mode.IGNORE_NON_FINAL, Mode.IGNORE_SYNCHRONIZED),
+                Mode.ANNOTATION_DEFAULT);
     }
 
     @Test

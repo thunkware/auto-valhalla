@@ -5,12 +5,14 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Modes accepted by the {@code auto-valhalla.mode} string property. The
+ * Modes accepted by the {@code auto-valhalla.annotation-mode} and
+ * {@code auto-valhalla.includes-mode} string properties. The
  * {@code @AutoValhalla} annotation and {@code includes} select which classes are
- * candidates; {@code mode} further narrows which of those candidates are
- * actually converted. The property may list several comma-separated tokens
- * (case-insensitive; {@code -}, {@code _} and camelCase are all accepted); they
- * are collected into an {@link EnumSet} internally.
+ * candidates; {@code annotation-mode} narrows annotation-selected classes and
+ * {@code includes-mode} narrows includes-selected ones. The property may list
+ * several comma-separated tokens (case-insensitive; {@code -}, {@code _} and
+ * camelCase are all accepted); they are collected into an {@link EnumSet}
+ * internally.
  */
 public enum Mode {
     /** Narrow selection to classes that are <em>already final</em> ({@code safe}).
@@ -44,21 +46,32 @@ public enum Mode {
         this.flag = flag;
     }
 
-    /** The default {@code mode} set when the option is not specified — and the
-     *  {@code yolo} expansion:
+    /** The default set for {@code annotation-mode} (classes selected by the
+     *  {@code @AutoValhalla} annotation):
+     *  {@code ignore-non-final,ignore-synchronized}. */
+    public static final Set<Mode> ANNOTATION_DEFAULT =
+            EnumSet.of(Mode.IGNORE_NON_FINAL, Mode.IGNORE_SYNCHRONIZED);
+
+    /** The default set for {@code includes-mode} (classes selected by
+     *  {@code includes}) — and the {@code yolo} expansion:
      *  {@code ignore-non-final,ignore-synchronized,mark-fields-final}. */
-    static Set<Mode> getDefaultModes() {
-        return EnumSet.of(Mode.IGNORE_NON_FINAL, Mode.IGNORE_SYNCHRONIZED,
-                Mode.MARK_FIELDS_FINAL);
+    public static final Set<Mode> INCLUDES_DEFAULT =
+            EnumSet.of(Mode.IGNORE_NON_FINAL, Mode.IGNORE_SYNCHRONIZED,
+                    Mode.MARK_FIELDS_FINAL);
+
+    /** Parses a mode string into a set of {@link Mode}s using
+     *  {@link #INCLUDES_DEFAULT} as the default. */
+    public static Set<Mode> parse(String s) {
+        return parse(s, INCLUDES_DEFAULT);
     }
 
-    /** Parses the {@code mode} string property into a set of {@link Mode}s. A
-     *  {@code null}, blank or unknown value yields {@link #getDefaultModes()}.
-     *  {@code yolo} is a shorthand for the default {@code ignore-*} modes. */
-    public static Set<Mode> parse(String s) {
+    /** Parses a mode string into a set of {@link Mode}s. A {@code null}, blank or
+     *  unknown value yields {@code dflt}. {@code yolo} is a shorthand for
+     *  {@link #INCLUDES_DEFAULT}. */
+    public static Set<Mode> parse(String s, Set<Mode> dflt) {
         EnumSet<Mode> set = EnumSet.noneOf(Mode.class);
         if (s == null || s.isBlank()) {
-            return getDefaultModes();
+            return EnumSet.copyOf(dflt);
         }
         for (String tok : s.split(",")) {
             tok = tok.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
@@ -77,8 +90,8 @@ public enum Mode {
         }
         if (set.contains(Mode.YOLO)) {
             set.remove(Mode.YOLO);
-            set.addAll(getDefaultModes());
+            set.addAll(INCLUDES_DEFAULT);
         }
-        return set.isEmpty() ? getDefaultModes() : set;
+        return set.isEmpty() ? EnumSet.copyOf(dflt) : set;
     }
 }

@@ -10,9 +10,10 @@ import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.reflect.AccessFlag;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -219,18 +220,20 @@ public final class ValueClassRewriter {
     }
 
     /**
-     * True if every non-{@code final} instance field is written exactly once, and
-     * only inside a constructor — i.e. the non-{@code final} fields can safely be
-     * marked {@code final} (value-class) without the risk of a later method
-     * re-assigning them. Already-{@code final} fields are fine (nothing to mark).
-     * Used by the {@code mark-fields-final} mode to gate selection.
+     * True if every non-{@code final} instance field is written in <em>every</em>
+     * constructor and never in a non-constructor method — i.e. the non-{@code
+     * final} fields can safely be marked {@code final} (value-class) without the
+     * risk of a later method re-assigning them. Already-{@code final} fields are
+     * fine (nothing to mark). Used by the {@code mark-fields-final} mode to gate
+     * selection.
      */
     public static boolean fieldsSafeToMarkFinal(ClassModel model) {
         String self = model.thisClass().asInternalName();
-        Map<String, Integer> writes = new HashMap<>();
+        List<Set<String>> ctorWrites = new ArrayList<>();
         AtomicBoolean bad = new AtomicBoolean(false);
         for (MethodModel m : model.methods()) {
             boolean ctor = m.methodName().stringValue().equals("<init>");
+            Set<String> written = ctor ? new HashSet<>() : null;
             m.code().ifPresent(code -> code.elementList().forEach(e -> {
                 if (bad.get()) {
                     return;
@@ -241,9 +244,12 @@ public final class ValueClassRewriter {
                         bad.set(true);
                         return;
                     }
-                    writes.merge(fi.name().stringValue(), 1, Integer::sum);
+                    written.add(fi.name().stringValue());
                 }
             }));
+            if (ctor) {
+                ctorWrites.add(written);
+            }
         }
         if (bad.get()) {
             return false;
@@ -252,9 +258,12 @@ public final class ValueClassRewriter {
             if (f.flags().has(AccessFlag.STATIC) || f.flags().has(AccessFlag.FINAL)) {
                 continue;
             }
-            // a non-final field must be written exactly once, in a constructor
-            if (writes.getOrDefault(f.fieldName().stringValue(), 0) != 1) {
-                return false;
+            String name = f.fieldName().stringValue();
+            // a non-final field must appear in every constructor
+            for (Set<String> ctor : ctorWrites) {
+                if (!ctor.contains(name)) {
+                    return false;
+                }
             }
         }
         return true;

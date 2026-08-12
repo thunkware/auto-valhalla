@@ -47,7 +47,7 @@ public class Main {
 
         Square s1 = new Square(4);
         Square s2 = new Square(4);
-        System.out.println("Square (demo5, mark-fields-final mode, Java 5 bytecode)");
+        System.out.println("Square (demo5, includes-mode=yolo, Java 5 bytecode)");
         System.out.println("  " + s1);
         System.out.println("  hasIdentity(s1):  " + Objects.hasIdentity(s1));
         System.out.println("  s1 == s2:         " + (s1 == s2));

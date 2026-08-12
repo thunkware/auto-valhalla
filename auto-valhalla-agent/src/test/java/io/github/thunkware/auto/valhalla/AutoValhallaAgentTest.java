@@ -36,12 +36,16 @@ class AutoValhallaAgentTest {
     }
 
     @Test
-    void modeDefaultsToIgnoreStar() {
+    void modeFlagsHaveDistinctDefaults() {
         var cfg = AutoValhallaAgent.parse("includes=a.");
-        assertEquals(Mode.getDefaultModes(), cfg.mode(),
-                "mode must default to ignore-non-final,ignore-synchronized");
-        var safe = AutoValhallaAgent.parse("mode=safe");
-        assertEquals(EnumSet.of(Mode.SAFE), safe.mode());
+        assertEquals(Mode.ANNOTATION_DEFAULT, cfg.annotationMode(),
+                "annotation-mode must default to ignore-non-final,ignore-synchronized");
+        assertEquals(Mode.INCLUDES_DEFAULT, cfg.includesMode(),
+                "includes-mode must default to yolo");
+        var safe = AutoValhallaAgent.parse("includes-mode=safe");
+        assertEquals(EnumSet.of(Mode.SAFE), safe.includesMode());
+        assertEquals(Mode.ANNOTATION_DEFAULT, safe.annotationMode(),
+                "annotation-mode keeps its own default");
     }
 
     @Test
