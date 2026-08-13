@@ -18,9 +18,9 @@ record Config(Set<String> includes, Set<String> excludes,
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
      *  used by {@link AutoValhallaAgent#parse(String)} switch. */
     static final String INCLUDES = "includes";
-    static final String INCLUDES_FILE = "includes-file";
+    static final String INCLUDES_FILES = "includes-files";
     static final String EXCLUDES = "excludes";
-    static final String EXCLUDES_FILE = "excludes-file";
+    static final String EXCLUDES_FILES = "excludes-files";
     static final String ANNOTATION_MODE = "annotation-mode";
     static final String INCLUDES_MODE = "includes-mode";
     static final String DEBUG = "debug";
@@ -37,7 +37,7 @@ record Config(Set<String> includes, Set<String> excludes,
      *  precedence order: system properties / environment variables are looked up
      *  in this order. */
     static final List<String> KNOWN = List.of(
-            INCLUDES, INCLUDES_FILE, EXCLUDES, EXCLUDES_FILE,
+            INCLUDES, INCLUDES_FILES, EXCLUDES, EXCLUDES_FILES,
             ANNOTATION_MODE, INCLUDES_MODE,
             DEBUG,
             ANNOTATION_ON_FAIL_THROW, ANNOTATION_ON_FAIL_APPEND_TO,

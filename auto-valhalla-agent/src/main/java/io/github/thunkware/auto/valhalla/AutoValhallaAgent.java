@@ -36,9 +36,9 @@ import java.util.Set;
  *       ({@code startsWith}); otherwise it is an exact class name.</li>
  *   <li>{@code auto-valhalla.excludes} — same matching rules, but excludes the
  *       matching classes (takes precedence over includes and the annotation).</li>
- *   <li>{@code auto-valhalla.includes-file} / {@code auto-valhalla.excludes-file}
+ *   <li>{@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
  *       — path to a file with one pattern per line (blank lines and {@code #}
- *       comments ignored).</li>
+ *       comments ignored). CSV format is automatically detected and parsed.</li>
      *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
      *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
@@ -57,7 +57,7 @@ import java.util.Set;
  *       class name of each failing class (e.g. {@code com.example.Foo},
  *       not {@code com/example/Foo}) to the given file, per selection
  *       source (created if necessary). Dot names here read naturally for
- *       {@code auto-valhalla.includes-file} / {@code auto-valhalla.excludes-file}
+ *       {@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
  *       feedback.</li>
  *   <li>{@code auto-valhalla.annotation.on-success-append-to=file} /
  *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
@@ -202,8 +202,8 @@ public final class AutoValhallaAgent {
             switch (a[0]) {
                 case Config.INCLUDES -> includes.addAll(parsePatternSet(a[1]));
                 case Config.EXCLUDES -> excludes.addAll(parsePatternSet(a[1]));
-                case Config.INCLUDES_FILE -> includes.addAll(readPatternFile(a[1]));
-                case Config.EXCLUDES_FILE -> excludes.addAll(readPatternFile(a[1]));
+                case Config.INCLUDES_FILES -> includes.addAll(readPatternFile(a[1]));
+                case Config.EXCLUDES_FILES -> excludes.addAll(readPatternFile(a[1]));
                 case Config.ANNOTATION_MODE -> annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
                 case Config.INCLUDES_MODE -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
                 case Config.DEBUG -> debug = Boolean.parseBoolean(a[1]);
@@ -314,14 +314,29 @@ public final class AutoValhallaAgent {
         Set<String> set = new HashSet<>();
         try (BufferedReader br = Files.newBufferedReader(Path.of(path.trim()))) {
             String line;
+            boolean isCsv = false;
             while ((line = br.readLine()) != null) {
                 String t = line.trim();
                 if (t.isEmpty() || t.startsWith("#")) {
                     continue;
                 }
-                String n = normalizePattern(t);
-                if (n != null) {
-                    set.add(n);
+                // Detect CSV on first non-comment line: contains comma not inside quotes
+                if (set.isEmpty() && !isCsv) {
+                    isCsv = looksLikeCsv(t);
+                }
+                // Parse accordingly
+                if (isCsv) {
+                    for (String field : parseCsvLine(t)) {
+                        String n = normalizePattern(field);
+                        if (n != null) {
+                            set.add(n);
+                        }
+                    }
+                } else {
+                    String n = normalizePattern(t);
+                    if (n != null) {
+                        set.add(n);
+                    }
                 }
             }
         } catch (IOException e) {
@@ -329,6 +344,46 @@ public final class AutoValhallaAgent {
                     + path + ": " + e);
         }
         return set;
+    }
+
+    private static boolean looksLikeCsv(String line) {
+        int commas = 0;
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"' && (i == 0 || line.charAt(i - 1) != '\\')) {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                commas++;
+            }
+        }
+        return commas > 0;
+    }
+
+    private static List<String> parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder field = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    field.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                fields.add(field.toString().trim());
+                field.setLength(0);
+            } else {
+                field.append(c);
+            }
+        }
+        if (field.length() > 0 || !line.isEmpty()) {
+            fields.add(field.toString().trim());
+        }
+        return fields;
     }
 
     static List<String> splitAgentArgs(String agentArgs) {
