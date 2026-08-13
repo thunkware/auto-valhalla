@@ -8,6 +8,7 @@ import java.lang.classfile.ClassTransform;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
+import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.reflect.AccessFlag;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * Rewrites a loaded class file into a JEP 401 value class.
@@ -27,7 +29,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@code java.lang.classfile} API:
  *
  * <ul>
- *   <li>clears {@code ACC_IDENTITY} and sets {@code ACC_FINAL};</li>
+ *   <li>clears {@code ACC_IDENTITY} and sets {@code ACC_FINAL} (concrete classes)
+ *       or keeps {@code ACC_ABSTRACT} (abstract classes become abstract value
+ *       classes, whose subclasses may be value classes or identity classes);</li>
  *   <li>sets {@code ACC_FINAL} and {@code ACC_STRICT} on instance fields;</li>
  *   <li>reorders constructor bodies (see {@link ConstructorRewriter});</li>
  *   <li>bumps the class-file version to the JDK 28 preview version so the JVM
@@ -63,12 +67,14 @@ public final class ValueClassRewriter {
 
     /**
      * Like {@link #transform(ClassModel, boolean, boolean)} but, when
-     * {@code ignoreNonFinal} is true, a class that is not already final is still
-     * accepted (it will be made final, which breaks any existing subclasses).
+     * {@code markClassFinal} is true, a class that is not already final (and not
+     * abstract) is still accepted (it will be marked final, which breaks any
+     * existing subclasses). Abstract classes are always value-compatible and stay
+     * abstract.
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
-            boolean ignoreSynchronized, boolean ignoreNonFinal) {
-        if (!isSuitable(model, ignoreSynchronized, ignoreNonFinal)) {
+            boolean ignoreSynchronized, boolean markClassFinal) {
+        if (!isSuitable(model, ignoreSynchronized, markClassFinal)) {
             return null;
         }
         if (alreadyValue(model)) {
@@ -81,10 +87,12 @@ public final class ValueClassRewriter {
             if (ce instanceof ClassFileVersion) {
                 cb.withVersion(JAVA_28_MAJOR_VERSION, PREVIEW_MINOR_VERSION);
             } else if (ce instanceof AccessFlags af) {
-                // Make it a value class: drop identity (ACC_SUPER) and make it
-                // final. A value class must be final (JEP 401); abstract classes
-                // are not accepted (see isSuitable), so there is no abstract case.
-                int flags = af.flagsMask() & ~ACC_IDENTITY | ClassFile.ACC_FINAL;
+                // Make it a value class: drop identity (ACC_SUPER). A concrete
+                // value class must be final (JEP 401); an abstract class keeps
+                // its ACC_ABSTRACT and becomes an abstract value class, whose
+                // subclasses may themselves be value classes or identity classes.
+                int flags = af.flagsMask() & ~ACC_IDENTITY
+                        | (af.has(AccessFlag.ABSTRACT) ? 0 : ClassFile.ACC_FINAL);
                 cb.withFlags(flags);
             } else {
                 cb.accept(ce);
@@ -144,9 +152,10 @@ public final class ValueClassRewriter {
      * <p>JEP 401 class-level rules enforced here:
      * <ul>
      *   <li>not an interface, enum, annotation, or module;</li>
-     *   <li>the direct superclass is {@code java/lang/Object} or
-     *       {@code java/lang/Record} — a value class may not extend an identity
-     *       class;</li>
+     *   <li>the direct superclass is {@code java/lang/Object}, {@code
+     *       java/lang/Record}, or an abstract value class — a value class may
+     *       extend only {@code java.lang.Object} or an abstract value class,
+     *       not an identity class;</li>
      *   <li>no non-static (instance) method carries {@code ACC_SYNCHRONIZED} — a
      *       value class cannot declare a synchronized instance method (unless
      *       {@code ignoreSynchronized} is set, in which case it is stripped);</li>
@@ -163,8 +172,9 @@ public final class ValueClassRewriter {
      * true, a class with synchronized instance methods is still considered
      * suitable (the caller is expected to strip them via
      * {@link #transform(ClassModel, boolean, boolean, boolean)}); and when
-     * {@code ignoreNonFinal} is true, a class that is not already final is still
-     * considered suitable (it will be made final, breaking any subclasses).
+     * {@code markClassFinal} is true, a class that is neither final nor abstract
+     * is still considered suitable (it will be marked final, breaking any
+     * subclasses).
      */
     public static boolean isSuitable(ClassModel model, boolean ignoreSynchronized) {
         return isSuitable(model, ignoreSynchronized, false);
@@ -175,42 +185,59 @@ public final class ValueClassRewriter {
      * the meaning of the flags.
      */
     public static boolean isSuitable(ClassModel model, boolean ignoreSynchronized,
-            boolean ignoreNonFinal) {
+            boolean markClassFinal) {
+        return suitabilityProblems(model, ignoreSynchronized, markClassFinal).isEmpty();
+    }
+
+    /**
+     * Reports, as targeted messages, every JEP 401 structural rule the class
+     * violates, so callers can surface <em>only</em> the actual problem(s)
+     * instead of a blanket "not suitable". Empty when the class is a suitable
+     * value-class candidate (see {@link #isSuitable(ClassModel, boolean, boolean)}
+     * for what the {@code ignore*} flags mean).
+     */
+    public static List<String> suitabilityProblems(ClassModel model,
+            boolean ignoreSynchronized, boolean markClassFinal) {
+        List<String> problems = new ArrayList<>();
         AccessFlags flags = model.flags();
-        if (flags.has(AccessFlag.INTERFACE)
-                || flags.has(AccessFlag.ENUM)
-                || flags.has(AccessFlag.ANNOTATION)
-                || flags.has(AccessFlag.MODULE)
-                || flags.has(AccessFlag.ABSTRACT)) {
-            return false;
+        if (flags.has(AccessFlag.INTERFACE)) {
+            problems.add("it is an interface; a value class cannot be an interface");
         }
-        // A value class may not extend an identity class.
-        boolean superOk = model.superclass()
-                .map(sc -> {
-                    String n = sc.asInternalName();
-                    return n.equals("java/lang/Object") || n.equals("java/lang/Record");
-                })
-                .orElse(false);
-        if (!superOk) {
-            return false;
+        if (flags.has(AccessFlag.ENUM)) {
+            problems.add("it is an enum; a value class cannot be an enum");
         }
-        // A value class must be final; making a non-final class final would break
-        // its subclasses, so reject it unless the caller opts in (ignoreNonFinal).
-        if (!ignoreNonFinal && !flags.has(AccessFlag.FINAL)) {
-            return false;
+        if (flags.has(AccessFlag.ANNOTATION)) {
+            problems.add("it is an annotation type; a value class cannot be an annotation type");
         }
-        // A value class cannot declare a synchronized instance method. The
-        // bytecode verifier does not catch this, so the JVM would reject the
-        // rewritten class at load with ClassFormatError: illegal modifiers 0x21.
+        if (flags.has(AccessFlag.MODULE)) {
+            problems.add("it is a module; a value class cannot be a module");
+        }
+        String sup = model.superclass().map(ClassEntry::asInternalName)
+                .orElse("java/lang/Object");
+        if (!sup.equals("java/lang/Object") && !sup.equals("java/lang/Record")) {
+            problems.add("it extends the identity class " + sup
+                    + "; a value class can extend only java.lang.Object or an"
+                    + " abstract value class, not an identity class");
+        }
+        if (!markClassFinal && !flags.has(AccessFlag.FINAL)
+                && !flags.has(AccessFlag.ABSTRACT)) {
+            problems.add("it is not final; a value class must be final (use"
+                    + " mark-class-final to convert it by marking it final, which"
+                    + " breaks any existing subclasses)");
+        }
         if (!ignoreSynchronized) {
-            for (MethodModel m : model.methods()) {
-                AccessFlags mf = m.flags();
-                if (mf.has(AccessFlag.SYNCHRONIZED) && !mf.has(AccessFlag.STATIC)) {
-                    return false;
-                }
+            String sync = model.methods().stream()
+                    .filter(m -> m.flags().has(AccessFlag.SYNCHRONIZED)
+                            && !m.flags().has(AccessFlag.STATIC))
+                    .map(m -> m.methodName().stringValue())
+                    .collect(Collectors.joining(", "));
+            if (!sync.isEmpty()) {
+                problems.add("it declares synchronized instance method(s) " + sync
+                        + "; a value class cannot have a synchronized instance"
+                        + " method (use ignore-synchronized to strip it)");
             }
         }
-        return true;
+        return problems;
     }
 
     /** True if the class file already describes a value class. */

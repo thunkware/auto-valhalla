@@ -41,21 +41,32 @@ import java.util.Set;
  *       comments ignored).</li>
      *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
      *       selected by {@code @AutoValhalla} (default
-     *       {@code ignore-non-final,ignore-synchronized}).</li>
+     *       {@code mark-class-final,ignore-synchronized}).</li>
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
      *       selected by {@code includes} (default {@code yolo} =
-     *       {@code ignore-non-final,ignore-synchronized,mark-fields-final}).</li>
+     *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
- *   <li>{@code auto-valhalla.on-fail-throw=true} — surface a loud
- *       {@link java.lang.LinkageError} if a selected class cannot be safely
- *       transformed instead of leaving it an identity class.</li>
- *   <li>{@code auto-valhalla.on-fail-append-to=file} — append the internal name of
- *       each selected class that fails to transform to the given file (created if
- *       necessary).</li>
+ *   <li>{@code auto-valhalla.annotation.on-fail-throw=true} (default) — surface
+ *       a loud {@link java.lang.LinkageError} if an <em>annotation-selected</em>
+ *       class cannot be safely transformed instead of leaving it an identity
+ *       class.</li>
+ *   <li>{@code auto-valhalla.includes.on-fail-throw=true} (default false) — the
+ *       same, for <em>includes-selected</em> classes (off by default so a broad
+ *       includes sweep cannot crash the application).</li>
+*   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} /
+     *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
+     *       Java dot name of each failing class (e.g. {@code com.example.Foo},
+     *       not {@code com/example/Foo}) to the given file, per selection
+     *       source (created if necessary). Dot names here read naturally for
+     *       {@code auto-valhalla.includes-file} / {@code auto-valhalla.excludes-file}
+     *       feedback.</li>
  *   <li>{@code auto-valhalla.config=file} — read options from a Java properties
  *       file (keys may omit the {@code auto-valhalla.} prefix).</li>
  * </ul>
- * Every class annotated with {@code @AutoValhalla} is always converted.
+ * A class selected by both the annotation and {@code includes} follows the
+ * annotation settings for failure handling (an explicit in-source opt-in is
+ * the stronger statement). Every class annotated with {@code @AutoValhalla} is
+ * always converted.
  *
  * <p>The same options may also be set as environment variables using the
  * {@code AUTO_VALHALLA_*} convention: the canonical key (without the
@@ -102,7 +113,9 @@ public final class AutoValhallaAgent {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 cfg.includes(), cfg.excludes(),
                 cfg.annotationMode(), cfg.includesMode(),
-                cfg.debug(), cfg.onFailThrow(), cfg.onFailAppendTo());
+                cfg.debug(),
+                cfg.annotationOnFailThrow(), cfg.annotationOnFailAppendTo(),
+                cfg.includesOnFailThrow(), cfg.includesOnFailAppendTo());
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
 
@@ -113,16 +126,10 @@ public final class AutoValhallaAgent {
                     + " excludes=" + cfg.excludes()
                     + " annotation-mode=" + cfg.annotationMode()
                     + " includes-mode=" + cfg.includesMode()
-                    + " on-fail-throw=" + cfg.onFailThrow()
-                    + " on-fail-append-to=" + cfg.onFailAppendTo());
+                    + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow()
+                    + " includes.on-fail-throw=" + cfg.includesOnFailThrow());
         }
     }
-
-    /** Canonical option keys (without the {@code auto-valhalla.} prefix). */
-    private static final List<String> KNOWN = List.of(
-            "includes", "includes-file", "excludes", "excludes-file",
-            "annotation-mode", "includes-mode",
-            "debug", "on-fail-throw", "on-fail-append-to", "config");
 
     static Config parse(String agentArgs) {
         // Ordered list of [canonicalKey, value] assignments. Later entries win
@@ -130,7 +137,7 @@ public final class AutoValhallaAgent {
         List<String[]> assigns = new ArrayList<>();
 
         // System properties, then environment variables (lowest precedence).
-        for (String key : KNOWN) {
+        for (String key : Config.KNOWN) {
             String full = "auto-valhalla." + key;
             String v = System.getProperty(full);
             if (v == null) {
@@ -169,32 +176,44 @@ public final class AutoValhallaAgent {
         Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
         Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
         boolean debug = false;
-        boolean onFailThrow = false;
-        String onFailAppendTo = null;
+        // annotation-selected classes are an explicit opt-in: fail loudly by
+        // default. includes sweep broadly: stay quiet by default.
+        boolean annotationOnFailThrow = true;
+        String annotationOnFailAppendTo = null;
+        boolean includesOnFailThrow = false;
+        String includesOnFailAppendTo = null;
 
         for (String[] a : assigns) {
             switch (a[0]) {
-                case "includes" -> includes.addAll(parsePatternSet(a[1]));
-                case "excludes" -> excludes.addAll(parsePatternSet(a[1]));
-                case "includes-file" -> includes.addAll(readPatternFile(a[1]));
-                case "excludes-file" -> excludes.addAll(readPatternFile(a[1]));
-                case "annotation-mode" -> annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
-                case "includes-mode" -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
-                case "debug" -> debug = Boolean.parseBoolean(a[1]);
-                case "on-fail-throw" -> onFailThrow = Boolean.parseBoolean(a[1]);
-                case "on-fail-append-to" -> {
+                case Config.INCLUDES -> includes.addAll(parsePatternSet(a[1]));
+                case Config.EXCLUDES -> excludes.addAll(parsePatternSet(a[1]));
+                case Config.INCLUDES_FILE -> includes.addAll(readPatternFile(a[1]));
+                case Config.EXCLUDES_FILE -> excludes.addAll(readPatternFile(a[1]));
+                case Config.ANNOTATION_MODE -> annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
+                case Config.INCLUDES_MODE -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
+                case Config.DEBUG -> debug = Boolean.parseBoolean(a[1]);
+                case Config.ANNOTATION_ON_FAIL_THROW ->
+                        annotationOnFailThrow = Boolean.parseBoolean(a[1]);
+                case Config.INCLUDES_ON_FAIL_THROW ->
+                        includesOnFailThrow = Boolean.parseBoolean(a[1]);
+                case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
-                    onFailAppendTo = t.isEmpty() ? null : t;
+                    annotationOnFailAppendTo = t.isEmpty() ? null : t;
+                }
+                case Config.INCLUDES_ON_FAIL_APPEND_TO -> {
+                    String t = a[1].trim();
+                    includesOnFailAppendTo = t.isEmpty() ? null : t;
                 }
                 default -> { /* unreachable */ }
             }
         }
         return new Config(includes, excludes, annotationMode, includesMode,
-                debug, onFailThrow, onFailAppendTo);
+                debug, annotationOnFailThrow, annotationOnFailAppendTo,
+                includesOnFailThrow, includesOnFailAppendTo);
     }
 
     private static void emit(List<String[]> assigns, String key, String value) {
-        if (key.equals("config")) {
+        if (key.equals(Config.CONFIG)) {
             // expand the referenced properties file in place
             Properties props = new Properties();
             try (BufferedReader br = Files.newBufferedReader(Path.of(value.trim()))) {
@@ -206,7 +225,7 @@ public final class AutoValhallaAgent {
             }
             for (String rawKey : props.stringPropertyNames()) {
                 String canonical = canonicalKey(rawKey);
-                if (canonical != null && !canonical.equals("config")) {
+                if (canonical != null && !canonical.equals(Config.CONFIG)) {
                     emit(assigns, canonical, props.getProperty(rawKey));
                 }
             }
@@ -220,7 +239,7 @@ public final class AutoValhallaAgent {
         if (s.startsWith("auto-valhalla.")) {
             s = s.substring("auto-valhalla.".length());
         }
-        return KNOWN.contains(s) ? s : null;
+        return Config.KNOWN.contains(s) ? s : null;
     }
 
     /**

@@ -73,6 +73,9 @@
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>${project.basedir}/src/main/java/demo5/Point.java</argument>
                 <argument>${project.basedir}/src/main/java/demo5/Square.java</argument>
+                <argument>${project.basedir}/src/main/java/demo5/Circle.java</argument>
+                <argument>${project.basedir}/src/main/java/demo5/broken/MutablePoint.java</argument>
+                <argument>${project.basedir}/src/main/java/demo5/broken/SyncPoint.java</argument>
               </arguments>
             </configuration>
           </execution>

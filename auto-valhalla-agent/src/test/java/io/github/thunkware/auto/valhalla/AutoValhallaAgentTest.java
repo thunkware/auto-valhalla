@@ -2,6 +2,7 @@ package io.github.thunkware.auto.valhalla;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -39,13 +40,32 @@ class AutoValhallaAgentTest {
     void modeFlagsHaveDistinctDefaults() {
         var cfg = AutoValhallaAgent.parse("includes=a.");
         assertEquals(Mode.ANNOTATION_DEFAULT, cfg.annotationMode(),
-                "annotation-mode must default to ignore-non-final,ignore-synchronized");
+                "annotation-mode must default to mark-class-final,ignore-synchronized");
         assertEquals(Mode.INCLUDES_DEFAULT, cfg.includesMode(),
                 "includes-mode must default to yolo");
         var safe = AutoValhallaAgent.parse("includes-mode=safe");
         assertEquals(EnumSet.of(Mode.SAFE), safe.includesMode());
         assertEquals(Mode.ANNOTATION_DEFAULT, safe.annotationMode(),
                 "annotation-mode keeps its own default");
+    }
+
+    @Test
+    void onFailFlagsHaveDistinctDefaults() {
+        var cfg = AutoValhallaAgent.parse("includes=a.");
+        assertTrue(cfg.annotationOnFailThrow(),
+                "annotation.on-fail-throw must default to true (loud for an explicit opt-in)");
+        assertFalse(cfg.includesOnFailThrow(),
+                "includes.on-fail-throw must default to false (quiet for a broad sweep)");
+        assertNull(cfg.annotationOnFailAppendTo(), "annotation.on-fail-append-to defaults to unset");
+        assertNull(cfg.includesOnFailAppendTo(), "includes.on-fail-append-to defaults to unset");
+
+        var split = AutoValhallaAgent.parse(
+                "annotation.on-fail-throw=false,includes.on-fail-throw=true,"
+                + "annotation.on-fail-append-to=a.log,includes.on-fail-append-to=i.log");
+        assertFalse(split.annotationOnFailThrow());
+        assertTrue(split.includesOnFailThrow());
+        assertEquals("a.log", split.annotationOnFailAppendTo());
+        assertEquals("i.log", split.includesOnFailAppendTo());
     }
 
     @Test

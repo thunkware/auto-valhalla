@@ -21,14 +21,17 @@ public enum Mode {
     SAFE("safe"),
 
     /** Shorthand for the default modes
-     *  ({@code ignore-non-final,ignore-synchronized,mark-fields-final}). Never
+     *  ({@code mark-class-final,ignore-synchronized,mark-fields-final}). Never
      *  appears in a parsed set: {@link #parse(String)} expands it. */
     YOLO("yolo"),
 
-    /** Allow non-final candidates to be converted. They are made final, so only
-     *  opt in when no subclass exists (or you accept that subclasses will fail to
-     *  load with an {@link java.lang.IncompatibleClassChangeError}). */
-    IGNORE_NON_FINAL("ignore-non-final"),
+    /** Allow non-final (non-abstract) candidates to be converted by marking the
+     *  class {@code final}, so only opt in when no subclass exists (or you accept
+     *  that subclasses will fail to load with an
+     *  {@link java.lang.IncompatibleClassChangeError}). Abstract candidates are
+     *  value-compatible without this mode: they stay abstract (see
+     *  {@link ValueClassRewriter#isSuitable}). */
+    MARK_CLASS_FINAL("mark-class-final"),
 
     /** Allow candidates with synchronized instance methods: their
      *  {@code ACC_SYNCHRONIZED} is stripped so they can become value classes. */
@@ -48,15 +51,15 @@ public enum Mode {
 
     /** The default set for {@code annotation-mode} (classes selected by the
      *  {@code @AutoValhalla} annotation):
-     *  {@code ignore-non-final,ignore-synchronized}. */
+     *  {@code mark-class-final,ignore-synchronized}. */
     public static final Set<Mode> ANNOTATION_DEFAULT =
-            EnumSet.of(Mode.IGNORE_NON_FINAL, Mode.IGNORE_SYNCHRONIZED);
+            EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED);
 
     /** The default set for {@code includes-mode} (classes selected by
      *  {@code includes}) — and the {@code yolo} expansion:
-     *  {@code ignore-non-final,ignore-synchronized,mark-fields-final}. */
+     *  {@code mark-class-final,ignore-synchronized,mark-fields-final}. */
     public static final Set<Mode> INCLUDES_DEFAULT =
-            EnumSet.of(Mode.IGNORE_NON_FINAL, Mode.IGNORE_SYNCHRONIZED,
+            EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED,
                     Mode.MARK_FIELDS_FINAL);
 
     /** Parses a mode string into a set of {@link Mode}s using
@@ -81,7 +84,7 @@ public enum Mode {
             switch (tok) {
                 case "safe" -> set.add(Mode.SAFE);
                 case "yolo" -> set.add(Mode.YOLO);
-                case "ignorenonfinal" -> set.add(Mode.IGNORE_NON_FINAL);
+                case "markclassfinal" -> set.add(Mode.MARK_CLASS_FINAL);
                 case "ignoresynchronized" ->
                         set.add(Mode.IGNORE_SYNCHRONIZED);
                 case "markfieldsfinal" -> set.add(Mode.MARK_FIELDS_FINAL);

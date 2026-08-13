@@ -31,13 +31,16 @@ CP="auto-valhalla-demo-runner/target/classes:$DEMO5_JAR:$DEMO16_JAR:$ANNO_JAR"
 echo
 echo "==== run WITHOUT agent (identity classes) ===="
 "$JAVA_HOME/bin/java" --enable-preview \
+    -Dauto-valhalla.expect=identity \
     -cp "$CP" demo.runner.Main
 
 echo
 echo "==== run WITH agent (annotation + includes selection, includes-mode=yolo) ===="
 "$JAVA_HOME/bin/java" --enable-preview \
     -javaagent:"$AGENT_JAR" \
+    -Dauto-valhalla.expect=value \
     -Dauto-valhalla.includes=demo16,demo5 \
     -Dauto-valhalla.includes-mode=yolo \
+    -Dauto-valhalla.debug=true \
     "${EXTRA[@]}" \
     -cp "$CP" demo.runner.Main

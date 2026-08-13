@@ -29,7 +29,7 @@ public final class Point {
 }
 
 @AutoValhalla
-public record Circle(Point center, int radius) { }
+public record Pair<T>(T first, T second) { }
 ```
 
 Then download the agent and launch:
@@ -42,7 +42,7 @@ java --enable-preview \
 
 After transformation, your class or record behaves like a value object:
   * `Objects.hasIdentity(new Point(1, 2)) == false`
-  * `Objects.hasIdentity(new Circle(point, 3)) == false`
+  * `Objects.hasIdentity(new Pair(3, 4)) == false`
 
 Because `@AutoValhalla` annotation was compiled with Java 5, it is
 compatible **JDK 1.5 and later**. You can apply the annotation in older codebases
@@ -67,7 +67,7 @@ Selection always happens through the `@AutoValhalla` annotation or `includes`;
 the [`mode`](#mode-values) options then narrow which of those selected classes
 are actually converted: 
   * `annotation-mode` applies to annotated classes (defaults
-to `ignore-non-final,ignore-synchronized`)
+to `mark-class-final,ignore-synchronized`)
   * `includes-mode` to included ones (defaults to `yolo`)
 
 To convert every structurally suitable class, select everything with the `*`
@@ -101,11 +101,13 @@ Within the agent-argument list, later options override earlier ones, and a `.con
 | `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but never convert matching classes (wins over `includes` and the annotation). |
 | `auto-valhalla.includes-file` | `AUTO_VALHALLA_INCLUDES_FILE` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
 | `auto-valhalla.excludes-file` | `AUTO_VALHALLA_EXCLUDES_FILE` | As above, for excludes. |
-| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `ignore-non-final,ignore-synchronized`. See the mode table below. |
+| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `mark-class-final,ignore-synchronized`. See the mode table below. |
 | `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Modes narrowing includes-selected classes. Defaults to `yolo`. See the mode table below. |
 | `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions. |
-| `auto-valhalla.on-fail-throw` | `AUTO_VALHALLA_ON_FAIL_THROW` | `true` to surface a loud `LinkageError` (a `ClassFormatError` at load) when a selected class cannot be safely transformed, instead of silently keeping it an identity class. |
-| `auto-valhalla.on-fail-append-to` | `AUTO_VALHALLA_ON_FAIL_APPEND_TO` | Path to a file; the internal name of each selected class that fails to transform is appended (the file is created if it does not exist). |
+| `auto-valhalla.annotation.on-fail-throw` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_THROW` | `true` (default) to surface a loud `LinkageError` (a `ClassFormatError` at load) when an *annotation-selected* class cannot be safely transformed, instead of silently keeping it an identity class. |
+| `auto-valhalla.includes.on-fail-throw` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_THROW` | Same, for *includes-selected* classes. Defaults to `false` so a broad includes sweep cannot crash the application. |
+| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; the Java dot name (e.g. `com.example.Foo`, not `com/example/Foo`) of each annotation-selected class that fails to transform is appended (the file is created if it does not exist). |
+| `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes. |
 | `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying the options above (keys may omit the `auto-valhalla.` prefix). |
 
 Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the
@@ -115,14 +117,14 @@ unprefixed name (e.g. `includes-mode`).
 
 | Mode | Effect |
 | --- | --- |
-| `safe` | Keep only selected classes that are *already `final`*. Non-final candidates are skipped, because converting them would break their subclasses. |
-| `ignore-non-final` | Also convert non-final candidates. They are made `final`, so only opt in when nothing subclasses them (otherwise subclasses fail with `IncompatibleClassChangeError`). |
+| `safe` | Keep only selected classes that are *already `final`* (or abstract). Non-final candidates are skipped, because converting them would break their subclasses. |
+| `mark-class-final` | Also convert non-final candidates. They are made `final`, so only opt in when nothing subclasses them (otherwise subclasses fail with `IncompatibleClassChangeError`). |
 | `ignore-synchronized` | Allow candidates with synchronized instance methods; their `ACC_SYNCHRONIZED` is stripped so they can become value classes. |
 | `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected, since a value class cannot have a mutable field. |
-| `yolo` | Shorthand for `ignore-non-final,ignore-synchronized,mark-fields-final` (the default). |
+| `yolo` | Shorthand for `mark-class-final,ignore-synchronized,mark-fields-final` (the default). |
 
-Mode names are case-insensitive and may use `-`, `_` or camelCase. e.g. `ignore-non-final`, `ignore_non_final`, and 
-`ignoreNonFinal` are all the same.
+Mode names are case-insensitive and may use `-`, `_` or camelCase. e.g. `mark-class-final`, `mark_class_final`, and 
+`markClassFinal` are all the same.
 
 ### `.config` precedence
 
@@ -150,21 +152,21 @@ stream. Therefore:
 ```properties
 includes=com.example.
 excludes=com.example.dto.
-on-fail-throw=true
+annotation.on-fail-throw=true
 ```
 
-### Feedback loop: `.on-fail-append-to` + `.excludes-file`
+### Feedback loop: `.includes.on-fail-append-to` + `.excludes-file`
 
-`on-fail-append-to` and `.excludes-file` are designed to work together. Run once
-with `on-fail-throw` disabled and `on-fail-append-to` pointing at a file; every class
-that could not be safely transformed is recorded there. Feed that file back as
-`.excludes-file` on subsequent runs so those classes are skipped instead of
-surfacing errors:
+`includes.on-fail-append-to` and `.excludes-file` are designed to work together. Run once
+with `includes.on-fail-throw` disabled (the default) and `includes.on-fail-append-to`
+pointing at a file; every class that could not be safely transformed is recorded
+there. Feed that file back as `.excludes-file` on subsequent runs so those classes
+are skipped instead of surfacing errors:
 
 ```bash
 # first pass: record anything that fails
 -Dauto-valhalla.includes=com.example. \
--Dauto-valhalla.on-fail-append-to=/var/tmp/auto-valhalla-failures.txt
+-Dauto-valhalla.includes.on-fail-append-to=/var/tmp/auto-valhalla-failures.txt
 
 # later passes: skip the classes that failed before
 -Dauto-valhalla.includes=com.example. \
@@ -174,11 +176,13 @@ surfacing errors:
 ## Notes & limitations
 
 - Classes that fail verification after rewriting are, by default, left as identity
-  classes. Use `on-fail-throw` to make such cases fail with an exception.
+  classes (only annotation-selected classes fail loudly by default). Use
+  `annotation.on-fail-throw` / `includes.on-fail-throw` to make such cases fail
+  with an exception.
 - A converted class is `final`. If anything subclasses it, that subclass will stop loading.
 - The agent rewrites identity records and final classes only. It never transforms
   JDK/system classes or its own support classes. Non-final classes are converted
-  (as final) when the effective mode set includes `ignore-non-final` — the default
+  (as final) when the effective mode set includes `mark-class-final` — the default
   for both `annotation-mode` and `includes-mode`; any existing subclass then fails to load.
 - **Semantics change.** For a converted class, `==` becomes value equality (two
   instances with equal fields compare `==`), `equals`/`hashCode` of the two

@@ -1,11 +1,41 @@
 package io.github.thunkware.auto.valhalla;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 /** Parsed agent configuration: include/exclude patterns, the {@link Mode} sets
- *  applied to annotation-selected vs includes-selected classes, and the
- *  failure-handling flags. */
+ *  applied to annotation-selected vs includes-selected classes, the per-source
+ *  failure-handling flags, and the debug flag. */
 record Config(Set<String> includes, Set<String> excludes,
         Set<Mode> annotationMode, Set<Mode> includesMode,
-        boolean debug, boolean onFailThrow, String onFailAppendTo) {}
+        boolean debug,
+        boolean annotationOnFailThrow, String annotationOnFailAppendTo,
+        boolean includesOnFailThrow, String includesOnFailAppendTo) {
+
+    /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
+     *  used by {@link AutoValhallaAgent#parse(String)} switch. */
+    static final String INCLUDES = "includes";
+    static final String INCLUDES_FILE = "includes-file";
+    static final String EXCLUDES = "excludes";
+    static final String EXCLUDES_FILE = "excludes-file";
+    static final String ANNOTATION_MODE = "annotation-mode";
+    static final String INCLUDES_MODE = "includes-mode";
+    static final String DEBUG = "debug";
+    static final String ANNOTATION_ON_FAIL_THROW = "annotation.on-fail-throw";
+    static final String ANNOTATION_ON_FAIL_APPEND_TO = "annotation.on-fail-append-to";
+    static final String INCLUDES_ON_FAIL_THROW = "includes.on-fail-throw";
+    static final String INCLUDES_ON_FAIL_APPEND_TO = "includes.on-fail-append-to";
+    static final String CONFIG = "config";
+
+    /** Canonical option keys (without the {@code auto-valhalla.} prefix), in
+     *  precedence order: system properties / environment variables are looked up
+     *  in this order. */
+    static final List<String> KNOWN = List.of(
+            INCLUDES, INCLUDES_FILE, EXCLUDES, EXCLUDES_FILE,
+            ANNOTATION_MODE, INCLUDES_MODE,
+            DEBUG,
+            ANNOTATION_ON_FAIL_THROW, ANNOTATION_ON_FAIL_APPEND_TO,
+            INCLUDES_ON_FAIL_THROW, INCLUDES_ON_FAIL_APPEND_TO,
+            CONFIG);
+}

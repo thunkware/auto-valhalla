@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.ProtectionDomain;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,22 +37,30 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>{@code auto-valhalla.excludes} — classes/packages to skip (wins over
  *       includes and the annotation).</li>
  *   <li>{@code auto-valhalla.annotation-mode} — modes for annotated classes
- *       (default {@code ignore-non-final,ignore-synchronized}).</li>
+ *       (default {@code mark-class-final,ignore-synchronized}).</li>
  *   <li>{@code auto-valhalla.includes-mode} — modes for included classes
- *       (default {@code yolo} = {@code ignore-non-final,ignore-synchronized,
+ *       (default {@code yolo} = {@code mark-class-final,ignore-synchronized,
  *       mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
- *   <li>{@code auto-valhalla.on-fail-throw=true} — surface a loud
- *       {@link java.lang.LinkageError} if a selected class cannot be safely
- *       transformed instead of silently leaving it an identity class.</li>
- *   <li>{@code auto-valhalla.on-fail-append-to=file} — append the internal name of
- *       each selected class that fails to transform to the given file.</li>
+ *   <li>{@code auto-valhalla.annotation.on-fail-throw=true} (default) — surface
+ *       a loud {@link java.lang.LinkageError} if an <em>annotation-selected</em>
+ *       class cannot be safely transformed instead of silently leaving it an
+ *       identity class.</li>
+ *   <li>{@code auto-valhalla.includes.on-fail-throw=true} (default false) — the
+ *       same, for <em>includes-selected</em> classes (off by default so a broad
+ *       includes sweep cannot crash the application).</li>
+*   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} and
+     *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
+     *       Java dot name of each failing class (e.g. {@code com.example.Foo},
+     *       not {@code com/example/Foo}) to the given file, per selection
+     *       source.</li>
  * </ul>
  *
- * <p>By default, classes that fail verification after rewriting are left
- * untouched, so an unsupported class simply keeps identity semantics instead of
- * failing to load. With {@code auto-valhalla.on-fail-throw=true} a
- * {@link java.lang.LinkageError} is thrown instead, surfacing the problem immediately.
+ * <p>A class selected by both the annotation and {@code includes} follows the
+ * annotation settings (an explicit in-source opt-in is the stronger statement).
+ * By default, includes-selected classes that fail verification after rewriting
+ * are left untouched, so an unsupported class simply keeps identity semantics
+ * instead of failing to load.
  */
 public final class ValueClassTransformer implements ClassFileTransformer {
 
@@ -60,33 +69,36 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private final Set<Mode> annotationMode;
     private final Set<Mode> includesMode;
     private final boolean debug;
-    private final boolean onFailThrow;
-    private final String onFailAppendTo;
+    private final boolean annotationOnFailThrow;
+    private final String annotationOnFailAppendTo;
+    private final boolean includesOnFailThrow;
+    private final String includesOnFailAppendTo;
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
             Set<Mode> annotationMode, Set<Mode> includesMode,
-            boolean debug, boolean onFailThrow, String onFailAppendTo) {
+            boolean debug,
+            boolean annotationOnFailThrow, String annotationOnFailAppendTo,
+            boolean includesOnFailThrow, String includesOnFailAppendTo) {
         this.includes = includes;
         this.excludes = excludes;
         this.annotationMode = annotationMode;
         this.includesMode = includesMode;
         this.debug = debug;
-        this.onFailThrow = onFailThrow;
-        this.onFailAppendTo = onFailAppendTo;
+        this.annotationOnFailThrow = annotationOnFailThrow;
+        this.annotationOnFailAppendTo = annotationOnFailAppendTo;
+        this.includesOnFailThrow = includesOnFailThrow;
+        this.includesOnFailAppendTo = includesOnFailAppendTo;
     }
 
     @Override
     public byte[] transform(Module module, ClassLoader loader, String className,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
-        if (className == null || className.isEmpty()) {
-            return null;
-        }
-        if (classBeingRedefined != null) {
-            // Retransformation is not supported: changing class modifiers
+        if (className == null || className.isEmpty() || classBeingRedefined != null) {
+            // No name, or a retransform: changing class modifiers
             // (ACC_IDENTITY / ACC_FINAL) is not a legal redefinition.
             return null;
         }
@@ -94,92 +106,153 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         if (isExcluded(internal)) {
             return null;
         }
+        // Loudest-by-default while we haven't classified the selection yet;
+        // reassigned below once the selection source is known.
+        boolean onFailThrow = annotationOnFailThrow;
+        String onFailAppendTo = annotationOnFailAppendTo;
         try {
             ClassModel model = ClassFile.of().parse(classfileBuffer);
-            // If a superclass was rewritten into a final value class, this class
-            // cannot be loaded; report the offending superclass by name rather
-            // than letting the JVM surface a raw IncompatibleClassChangeError.
-            String sup = model.superclass().map(ClassEntry::asInternalName).orElse(null);
-            if (sup != null && transformedToFinal.contains(sup)) {
-                throw new LinkageError("auto-valhalla: class " + internal
-                        + " cannot be loaded: it extends " + sup
-                        + " which was rewritten into a final value class");
-            }
-            boolean annotated = ValueClassRewriter.hasAutoValhallaAnnotation(model);
-            boolean excluded = patternMatches(excludes, internal);
-            if (excluded) {
+            Selection selection = select(internal, model);
+            if (selection == null) {
                 return null;
             }
-            boolean included = patternMatches(includes, internal);
-            // Selection: the annotation and includes choose which classes are
-            // candidates. annotation-mode narrows annotation-selected classes,
-            // includes-mode narrows includes-selected classes.
-            if (!annotated && !included) {
-                return null;
-            }
-            EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
-            if (annotated) {
-                effective.addAll(annotationMode);
-            }
-            if (included) {
-                effective.addAll(includesMode);
-            }
-            boolean ignoreNonFinal = effective.contains(Mode.IGNORE_NON_FINAL);
-            boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
-            if (!ValueClassRewriter.isSuitable(model, ignoreSync, ignoreNonFinal)) {
-                return onFail(internal,
-                        "is selected for value-class transformation but is not suitable"
-                        + " (must extend java.lang.Object or java.lang.Record directly,"
-                        + " not be an enum/interface/annotation/module/abstract, must be"
-                        + " final unless mode=ignore-non-final, and must not have a"
-                        + " synchronized instance method unless mode=ignore-synchronized)");
-            }
-            if (effective.contains(Mode.MARK_FIELDS_FINAL)
-                    && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
-                return onFail(internal,
-                        "is selected for value-class transformation but has a non-final field"
-                        + " not written in every constructor (mode=mark-fields-final)");
-            }
-            byte[] out = ValueClassRewriter.transform(model, onFailThrow, ignoreSync, ignoreNonFinal);
-            if (out == null) {
-                return onFail(internal,
-                        "is selected for value-class transformation but could not be safely"
-                        + " transformed");
-            }
-            // Record classes we turned from non-final into final so that a later
-            // subclass load can be reported by superclass name.
-            if (!model.flags().has(AccessFlag.FINAL)) {
-                transformedToFinal.add(internal);
-            }
-            if (debug) {
-                System.err.println("[auto-valhalla] " + internal + ": transformed to value class ("
-                        + out.length + " bytes)");
-            }
-            return out;
+            onFailThrow = selection.onFailThrow();
+            onFailAppendTo = selection.onFailAppendTo();
+            return rewrite(internal, model, selection);
+        } catch (LinkageError e) {
+            throw e;
         } catch (Throwable t) {
-            if (t instanceof LinkageError) {
-                // e.g. a superclass was rewritten into a final value class: this
-                // class cannot be loaded regardless of on-fail-throw, so surface
-                // the (superclass-naming) LinkageError rather than swallowing it.
-                throw (LinkageError) t;
-            }
-            if (onFailThrow) {
-                throw new LinkageError("auto-valhalla: failed to transform " + internal
-                        + " into a value class: " + t, t);
-            }
-            if (debug) {
-                System.err.println("[auto-valhalla] " + internal + ": transform failed:");
-                t.printStackTrace(System.err);
-            }
-            return null;
+            return onTransformError(internal, t, onFailThrow, onFailAppendTo);
         }
     }
 
+    /**
+     * Decides how {@code internal} was selected. Returns {@code null} when it is
+     * not a candidate at all; otherwise the effective mode set (the union of the
+     * annotation and includes mode sets) together with the failure settings of
+     * the selection source that applies — the annotation wins when both select
+     * the class.
+     *
+     * <p>Throws a {@link LinkageError} naming the superclass when that superclass
+     * was previously rewritten into a final value class, since this class cannot
+     * be loaded at all.
+     */
+    private Selection select(String internal, ClassModel model) {
+        String sup = model.superclass().map(ClassEntry::asInternalName).orElse(null);
+        if (sup != null && transformedToFinal.contains(sup)) {
+            throw new LinkageError("auto-valhalla: class " + internal
+                    + " cannot be loaded: it extends " + sup
+                    + " which was rewritten into a final value class");
+        }
+        if (patternMatches(excludes, internal)) {
+            return null;
+        }
+        boolean annotated = ValueClassRewriter.hasAutoValhallaAnnotation(model);
+        boolean included = patternMatches(includes, internal);
+        if (!annotated && !included) {
+            return null;
+        }
+        // Failure handling follows the selection source: an annotation is an
+        // explicit opt-in by default failing loudly; includes sweep broadly and
+        // by default leave classes as identity. When both apply, the annotation
+        // wins. Modes from the two sources are combined (the union applies).
+        boolean onFailThrow = annotated ? annotationOnFailThrow : includesOnFailThrow;
+        String onFailAppendTo = annotated
+                ? annotationOnFailAppendTo : includesOnFailAppendTo;
+        EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
+        if (annotated) {
+            effective.addAll(annotationMode);
+        }
+        if (included) {
+            effective.addAll(includesMode);
+        }
+        return new Selection(effective, onFailThrow, onFailAppendTo);
+    }
+
+    /**
+     * Rewrites a selected class: runs the suitability checks, applies the
+     * configured modes, and records classes we turned into final value classes so
+     * later subclass loads can be reported by superclass name. Failure handling
+     * follows the selection's settings.
+     */
+    private byte[] rewrite(String internal, ClassModel model, Selection selection) {
+        Set<Mode> effective = selection.effective();
+        boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
+        boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
+        List<String> problems = ValueClassRewriter.suitabilityProblems(
+                model, ignoreSync, markClassFinal);
+        if (!problems.isEmpty()) {
+            return onFail(internal, "is selected for value-class transformation but is not"
+                    + " suitable: " + String.join("; ", problems),
+                    selection.onFailThrow(), selection.onFailAppendTo());
+        }
+        if (effective.contains(Mode.MARK_FIELDS_FINAL)
+                && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
+            return onFail(internal,
+                    "is selected for value-class transformation but has a non-final field"
+                    + " not written in every constructor (mode=mark-fields-final)",
+                    selection.onFailThrow(), selection.onFailAppendTo());
+        }
+        byte[] out = ValueClassRewriter.transform(model, selection.onFailThrow(),
+                ignoreSync, markClassFinal);
+        if (out == null) {
+            return onFail(internal,
+                    "is selected for value-class transformation but could not be safely"
+                    + " transformed", selection.onFailThrow(), selection.onFailAppendTo());
+        }
+        // Record classes we turned from non-final (non-abstract) into final so
+        // that a later subclass load can be reported by superclass name.
+        // Abstract classes become abstract value classes, whose subclasses (value
+        // or identity) remain legal, so they are not recorded.
+        if (!model.flags().has(AccessFlag.FINAL)
+                && !model.flags().has(AccessFlag.ABSTRACT)) {
+            transformedToFinal.add(internal);
+        }
+        if (debug) {
+            System.err.println("[auto-valhalla] " + internal + ": transformed to value class ("
+                    + out.length + " bytes)");
+        }
+        return out;
+    }
+
+    /**
+     * The selection of a loaded class: the effective mode set (the union of the
+     * applicable annotation/includes modes) and the failure settings of the
+     * selection source that applied.
+     */
+    private record Selection(Set<Mode> effective,
+            boolean onFailThrow, String onFailAppendTo) {}
+
+    /** Handles an unexpected failure: rethrows a {@link LinkageError}, otherwise
+     *  surfaces a loud failure or leaves the class as identity per the effective
+     *  {@code onFail} settings. */
+    private byte[] onTransformError(String internal, Throwable t,
+            boolean onFailThrow, String onFailAppendTo) {
+        if (t instanceof LinkageError) {
+            // e.g. a superclass was rewritten into a final value class: this
+            // class cannot be loaded regardless of on-fail-throw, so surface
+            // the (superclass-naming) LinkageError rather than swallowing it.
+            throw (LinkageError) t;
+        }
+        if (onFailThrow) {
+            throw new LinkageError("auto-valhalla: failed to transform " + internal
+                    + " into a value class: " + t, t);
+        }
+        appendOnFail(internal, onFailAppendTo);
+        if (debug) {
+            System.err.println("[auto-valhalla] " + internal + ": transform failed:");
+            t.printStackTrace(System.err);
+        }
+        return null;
+    }
+
     /** Handles a selected-but-untransformable class: optionally records the name
-     *  and either surfaces a loud failure or leaves the class as an identity
-     *  class. */
-    private byte[] onFail(String internal, String reason) {
-        appendOnFail(internal);
+     *  and either surfaces a loud failure ({@code onFailThrow}) or leaves the
+     *  class as an identity class. {@code onFailThrow} / {@code onFailAppendTo}
+     *  come from the class's selection source (annotation vs includes). */
+    private byte[] onFail(String internal, String reason,
+            boolean onFailThrow, String onFailAppendTo) {
+        appendOnFail(internal, onFailAppendTo);
         if (onFailThrow) {
             System.err.println("[auto-valhalla] " + internal + " " + reason
                     + "; the JVM will reject it rather than silently keep an"
@@ -195,12 +268,14 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         return null;
     }
 
-    private void appendOnFail(String internal) {
+    private void appendOnFail(String internal, String onFailAppendTo) {
         if (onFailAppendTo == null) {
             return;
         }
+        // Write Java dot class names (demo5.Shape, not demo5/Shape) so the file
+        // can be fed straight back to includes-file / excludes-file.
         try {
-            Files.writeString(Path.of(onFailAppendTo), internal + "\n",
+            Files.writeString(Path.of(onFailAppendTo), internal.replace('/', '.') + "\n",
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND,
                     StandardOpenOption.WRITE);
         } catch (IOException e) {
@@ -248,7 +323,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     }
 
     /** An unloadable class file, used to force a {@link java.lang.ClassFormatError} when
-     *  {@code on-fail-throw} is set and a selected class cannot be transformed. */
+     *  {@code annotation/includes.on-fail-throw} is set and a selected class cannot be
+     *  transformed. */
     private static byte[] brokenClass() {
         return new byte[] { 0, 0, 0, 0 };
     }

@@ -7,10 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
 import java.lang.reflect.AccessFlag;
+import java.nio.file.Files;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +36,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.SampleX"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null);
+                false, false, null, false, null);
 
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "suitable class should be rewritten");
@@ -68,7 +71,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.Sync"), Set.of(),
                 EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
-                false, false, null);
+                false, false, null, false, null);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNull(out, "synchronized-instance-method class must not be rewritten by includes-mode=safe");
     }
@@ -84,20 +87,20 @@ class ValueClassRewriterTest {
         // mode=safe (or ignore-synchronized alone) only converts already-final
         // classes, so a non-final class with synchronized methods is rejected...
         assertFalse(ValueClassRewriter.isSuitable(model, false, false),
-                "rejected without ignore-non-final");
-        // ...but the equivalent of annotation/includes (ignore-non-final +
+                "rejected without mark-class-final");
+        // ...but the equivalent of annotation/includes (mark-class-final +
         // ignore-synchronized) makes it suitable and rewrites it successfully.
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
-                "suitable with ignore-non-final + ignore-synchronized");
+                "suitable with mark-class-final + ignore-synchronized");
 
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.Sync"), Set.of(),
                 EnumSet.noneOf(Mode.class),
-                EnumSet.of(Mode.IGNORE_SYNCHRONIZED, Mode.IGNORE_NON_FINAL),
-                false, false, null);
+                EnumSet.of(Mode.IGNORE_SYNCHRONIZED, Mode.MARK_CLASS_FINAL),
+                false, false, null, false, null);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "synchronized non-final class should be rewritten with"
-                + " ignore-non-final + ignore-synchronized");
+                + " mark-class-final + ignore-synchronized");
 
         var outModel = cf.parse(out);
         assertTrue(ValueClassRewriter.alreadyValue(outModel),
@@ -132,13 +135,13 @@ class ValueClassRewriterTest {
         ValueClassTransformer safe = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
                 EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
-                false, false, null);
+                false, false, null, false, null);
         assertNull(safe.transform(null, null, "sample.Base", null, null, base),
                 "includes-mode=safe must not convert a non-final class (would break its subclasses)");
         ValueClassTransformer def = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null);
+                false, false, null, false, null);
         assertNotNull(def.transform(null, null, "sample.Base", null, null, base),
                 "default includes-mode must convert the selected non-final class");
     }
@@ -172,7 +175,7 @@ class ValueClassRewriterTest {
         mff.add(Mode.MARK_FIELDS_FINAL);
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.Once", "sample.TwoCtors", "sample.Mutable", "sample.SampleX"),
-                Set.of(), EnumSet.noneOf(Mode.class), mff, false, false, null);
+                Set.of(), EnumSet.noneOf(Mode.class), mff, false, false, null, false, null);
         assertNotNull(transformer.transform(null, null, "sample.Once", null, null, once),
                 "includes-mode=mark-fields-final converts classes with non-final fields written in the ctor");
         assertNotNull(transformer.transform(null, null, "sample.TwoCtors", null, null, twoCtors),
@@ -191,8 +194,8 @@ class ValueClassRewriterTest {
         assertNotNull(sub, "Sub on classpath");
         ValueClassTransformer t = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
-                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.IGNORE_NON_FINAL),
-                false, false, null);
+                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.MARK_CLASS_FINAL),
+                false, false, null, false, null);
         assertNotNull(t.transform(null, null, "sample.Base", null, null, base),
                 "Base rewrites (made final)");
         // Sub extends Base, which was just made final; loading Sub must now fail,
@@ -207,19 +210,19 @@ class ValueClassRewriterTest {
     void parseModeIsCaseAndSeparatorInsensitive() {
         assertEquals(EnumSet.of(Mode.SAFE),
                 Mode.parse("SAFE"));
-        assertEquals(EnumSet.of(Mode.IGNORE_NON_FINAL),
-                Mode.parse("ignore-non-final"));
-        assertEquals(EnumSet.of(Mode.IGNORE_NON_FINAL),
-                Mode.parse("ignoreNonFinal"));
+        assertEquals(EnumSet.of(Mode.MARK_CLASS_FINAL),
+                Mode.parse("mark-class-final"));
+        assertEquals(EnumSet.of(Mode.MARK_CLASS_FINAL),
+                Mode.parse("markClassFinal"));
         assertEquals(EnumSet.of(Mode.IGNORE_SYNCHRONIZED),
                 Mode.parse("IGNORE-SYNCHRONIZED"));
         assertEquals(EnumSet.of(Mode.SAFE,
                         Mode.IGNORE_SYNCHRONIZED),
                 Mode.parse("safe,ignore-synchronized"));
         assertEquals(EnumSet.of(Mode.SAFE,
-                        Mode.IGNORE_NON_FINAL,
+                        Mode.MARK_CLASS_FINAL,
                         Mode.IGNORE_SYNCHRONIZED),
-                Mode.parse("Safe,Ignore-Non-Final,IGNORE_SYNCHRONIZED"));
+                Mode.parse("Safe,Mark-Class-Final,IGNORE_SYNCHRONIZED"));
         // the default includes-mode set and the yolo expansion
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse(null));
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("  "));
@@ -230,14 +233,135 @@ class ValueClassRewriterTest {
         safeYolo.addAll(Mode.INCLUDES_DEFAULT);
         assertEquals(safeYolo, Mode.parse("safe,yolo"));
         // the default annotation-mode set is narrower (no mark-fields-final)
-        assertEquals(EnumSet.of(Mode.IGNORE_NON_FINAL, Mode.IGNORE_SYNCHRONIZED),
+        assertEquals(EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
                 Mode.ANNOTATION_DEFAULT);
+    }
+
+    @Test
+    void suitabilityProblemsAreTargetedToTheActualViolation() throws Exception {
+        byte[] sub = readResource("/sample/Sub.class");
+        byte[] sync = readResource("/sample/Sync.class");
+        assertNotNull(sub, "Sub on classpath");
+        assertNotNull(sync, "Sync on classpath");
+
+        ClassFile cf = ClassFile.of();
+
+        // Sub: an identity superclass AND not final -> both problems are listed,
+        // each targeted at its own condition.
+        List<String> subProblems =
+                ValueClassRewriter.suitabilityProblems(cf.parse(sub), false, false);
+        assertEquals(2, subProblems.size(), "Sub violates exactly two rules: " + subProblems);
+        assertTrue(subProblems.stream().anyMatch(p -> p.contains("extends the identity class sample/Base")),
+                "the superclass problem must name the identity class: " + subProblems);
+        assertTrue(subProblems.stream().anyMatch(p -> p.contains("it is not final")),
+                "the final problem must be reported: " + subProblems);
+
+        // Sync (with mark-class-final, since Sync itself is not final): the
+        // ONLY remaining violation is synchronized instance methods, so the
+        // message must mention only that (naming the methods), not finals or
+        // superclasses.
+        List<String> syncProblems =
+                ValueClassRewriter.suitabilityProblems(cf.parse(sync), false, true);
+        assertEquals(1, syncProblems.size(), "Sync violates only the synchronized rule");
+        String syncMsg = syncProblems.get(0);
+        assertTrue(syncMsg.contains("synchronized instance method(s) get, instance"),
+                "the synchronized problem must name the methods: " + syncMsg);
+        assertTrue(syncMsg.contains("use ignore-synchronized to strip it"), syncMsg);
+        assertFalse(syncMsg.contains("final"), "sync-only message must not mention final: " + syncMsg);
+        assertFalse(syncMsg.contains("extends") || syncMsg.contains("superclass"),
+                "sync-only message must not mention the superclass: " + syncMsg);
+
+        // Once the flags address the violations, no problems remain.
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sub), false, true).stream()
+                .noneMatch(p -> p.contains("not final")),
+                "mark-class-final clears the final problem");
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sync), true, true).isEmpty(),
+                "ignore-synchronized + mark-class-final clears all problems");
     }
 
     @Test
     void starPatternMatchesEverything() {
         assertTrue(ValueClassTransformer.patternMatches(Set.of("*"), "any/pkg/Cls"));
         assertFalse(ValueClassTransformer.patternMatches(Set.of(), "any/pkg/Cls"));
+    }
+
+    @Test
+    void onFailThrowIsPerSelectionSource() throws Exception {
+        byte[] mutable = readResource("/sample/Mutable.class");
+        assertNotNull(mutable, "Mutable on classpath");
+        String internal = "sample/Mutable";
+
+        // A mutable field written by a setter fails the mark-fields-final gate.
+        // includes.on-fail-throw=false leaves it an identity class...
+        ValueClassTransformer includesQuiet = new ValueClassTransformer(
+                Set.of("sample.Mutable"), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, false, null, false, null);
+        assertNull(includesQuiet.transform(null, null, internal, null, null, mutable),
+                "includes.on-fail-throw=false leaves the class as identity");
+
+        // ...while includes.on-fail-throw=true surfaces the rejection loudly
+        // (an unloadable class file, never a usable value class).
+        ValueClassTransformer includesLoud = new ValueClassTransformer(
+                Set.of("sample.Mutable"), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, false, null, true, null);
+        byte[] out = includesLoud.transform(null, null, internal, null, null, mutable);
+        assertNotNull(out, "includes.on-fail-throw=true surfaces the rejection");
+        assertFalse(DemoFixturesTest.isUsableValueClass(out),
+                "a loud rejection is not a usable value class");
+
+        // Annotation-selected classes default to loud: an annotated mutable
+        // class must not come back as a silent identity or a usable value class
+        // under the default configuration.
+        byte[] mp = readResource("/demo5/broken/MutablePoint.class");
+        assertNotNull(mp, "MutablePoint on classpath");
+        ValueClassTransformer annoLoud = new ValueClassTransformer(
+                Set.of(), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, true, null, false, null);
+        byte[] mpOut = annoLoud.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
+        assertNotNull(mpOut, "annotation.on-fail-throw defaults to true for annotated classes");
+        assertFalse(DemoFixturesTest.isUsableValueClass(mpOut),
+                "the annotation-default rejection is not a usable value class");
+    }
+
+    @Test
+    void onFailAppendIsPerSelectionSource() throws Exception {
+        File ann = File.createTempFile("ann", ".log");
+        File inc = File.createTempFile("inc", ".log");
+        try {
+            // Selected by BOTH annotation and includes: the annotation settings
+            // win, so the failure is recorded in the annotation file only.
+            byte[] mp = readResource("/demo5/broken/MutablePoint.class");
+            ValueClassTransformer both = new ValueClassTransformer(
+                    Set.of("demo5"), Set.of(),
+                    Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                    false, true, ann.getAbsolutePath(), true, inc.getAbsolutePath());
+            both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
+            assertEquals("demo5.broken.MutablePoint\n", Files.readString(ann.toPath()),
+                    "a both-selected class is appended to the annotation file as a dot name");
+            assertTrue(Files.readString(inc.toPath()).isEmpty(),
+                    "the includes file is untouched when the annotation settings win");
+
+            // Includes-only selection appends to the includes file.
+            byte[] mutable = readResource("/sample/Mutable.class");
+            File inc2 = File.createTempFile("inc2", ".log");
+            try {
+                ValueClassTransformer includesOnly = new ValueClassTransformer(
+                        Set.of("sample.Mutable"), Set.of(),
+                        Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                        false, false, null, false, inc2.getAbsolutePath());
+                includesOnly.transform(null, null, "sample/Mutable", null, null, mutable);
+                assertEquals("sample.Mutable\n", Files.readString(inc2.toPath()),
+                        "an includes-only class is appended to the includes file as a dot name");
+            } finally {
+                inc2.delete();
+            }
+        } finally {
+            ann.delete();
+            inc.delete();
+        }
     }
 
     private byte[] readResource(String name) throws Exception {
