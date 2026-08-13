@@ -1,7 +1,7 @@
 # auto-valhalla
 
-Automatically turn your plain classes/records into value classes/records. 
-Codes like a class on older JDKs, works like an int on Valhalla.
+> Automatically turn your plain classes/records into value classes/records!
+> Codes like a class on older JDKs, works like an int on Valhalla.
 
 auto-valhalla is a Java agent that rewrites eligible identity classes into value
 classes at class-load time, so existing code (compiled on older JDKs or even JDK28) 
@@ -94,20 +94,20 @@ Flags are supplied as, in that order of precedence:
 
 Within the agent-argument list, later options override earlier ones, and a `.config` file is expanded in place (see below).
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.includes` | `AUTO_VALHALLA_INCLUDES` | Comma-separated classes/packages to convert. `*` matches everything; `foo.*` / `foo.` is a package prefix; a value containing a dot is an exact class name; a bare word (no dot) is also a package prefix. |
-| `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but never convert matching classes (wins over `includes` and the annotation). |
-| `auto-valhalla.includes-file` | `AUTO_VALHALLA_INCLUDES_FILE` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
-| `auto-valhalla.excludes-file` | `AUTO_VALHALLA_EXCLUDES_FILE` | As above, for excludes. |
-| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `safe`. See the mode table below. |
-| `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Modes narrowing includes-selected classes. Defaults to `yolo`. See the mode table below. |
-| `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions. |
+| Option | Env var | Description                                                                                                                                                                                          |
+| --- | --- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `auto-valhalla.includes` | `AUTO_VALHALLA_INCLUDES` | Comma-separated classes/packages to convert. `*` matches everything; `foo.` is a package prefix; `foo.Bar` an exact class name                                                                       |
+| `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but for exclusion (overrides `includes` and the annotation).                                                                                                                    |
+| `auto-valhalla.includes-file` | `AUTO_VALHALLA_INCLUDES_FILE` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored.                                                                                                                  |
+| `auto-valhalla.excludes-file` | `AUTO_VALHALLA_EXCLUDES_FILE` | As above, for excludes.                                                                                                                                                                              |
+| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `safe`. See the mode table below.                                                                                                           |
+| `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Modes narrowing includes-selected classes. Defaults to `yolo`. See the mode table below.                                                                                                             |
+| `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions.                                                                                                                                                   |
 | `auto-valhalla.annotation.on-fail-throw` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_THROW` | `true` (default) to surface a loud `LinkageError` (a `ClassFormatError` at load) when an *annotation-selected* class cannot be safely transformed, instead of silently keeping it an identity class. |
-| `auto-valhalla.includes.on-fail-throw` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_THROW` | Same, for *includes-selected* classes. Defaults to `false` so a broad includes sweep cannot crash the application. |
-| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; the Java dot name (e.g. `com.example.Foo`, not `com/example/Foo`) of each annotation-selected class that fails to transform is appended (the file is created if it does not exist). |
-| `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes. |
-| `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying the options above (keys may omit the `auto-valhalla.` prefix). |
+| `auto-valhalla.includes.on-fail-throw` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_THROW` | Same, for *includes-selected* classes. Defaults to `false` so a broad includes sweep cannot crash the application.                                                                                   |
+| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; the Java dot name (e.g. `com.example.Foo`, not `com/example/Foo`) of each annotation-selected class that fails to transform is appended (the file is created if it does not exist).  |
+| `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
+| `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying the options above (keys may omit the `auto-valhalla.` prefix).                                                                                              |
 
 Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the
 unprefixed name (e.g. `includes-mode`).
@@ -178,15 +178,14 @@ are skipped instead of surfacing errors:
 
 ## Notes & limitations
 
-- Classes that fail verification after rewriting are, by default, left as identity
-  classes (only annotation-selected classes fail loudly by default). Use
-  `annotation.on-fail-throw` / `includes.on-fail-throw` to make such cases fail
-  with an exception.
-- A converted class is `final`. If anything subclasses it, that subclass will stop loading.
+- If annotation-selected classes fail conversion, an exception is thrown by default. Use `annotation.on-fail-throw`
+  to change behavior.
+- If includes-selected classes fail conversion, the classes are left as identity classes. Use `includes.on-fail-throw`
+  to change behavior.
+- A converted class is `final`. If anything subclasses it, that subclass will fail class loading.
 - The agent rewrites identity records and final classes only. It never transforms
   JDK/system classes or its own support classes. Non-final classes are converted
-  (as final) when the effective mode set includes `mark-class-final` — the default
-  for both `annotation-mode` and `includes-mode`; any existing subclass then fails to load.
+  (as final) when the mode includes `mark-class-final`; any existing subclass then fails to load.
 - **Semantics change.** For a converted class, `==` becomes value equality (two
   instances with equal fields compare `==`), `equals`/`hashCode` of the two
   fields, `synchronized` methods no longer take a monitor, and
@@ -205,6 +204,5 @@ are skipped instead of surfacing errors:
 
 ## Note on AI assistance
 
-This project was developed with the help of an AI coding agent
-([opencode](https://opencode.ai)). Humans designed, directed, reviewed, edited the work.
-The agent authored the bulk of the implementation, build configuration, and documentation.
+This project was vibe-coded with an AI coding agent ([opencode](https://opencode.ai)). Humans designed, directed, reviewed, edited 
+the work. The agent authored the bulk of the implementation, build configuration, and documentation.
