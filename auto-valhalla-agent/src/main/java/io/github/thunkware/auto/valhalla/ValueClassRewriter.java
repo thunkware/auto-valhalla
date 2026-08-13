@@ -6,6 +6,7 @@ import java.lang.classfile.ClassFileVersion;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.ClassTransform;
 import java.lang.classfile.FieldModel;
+import java.lang.classfile.Instruction;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.attribute.InnerClassInfo;
@@ -31,9 +32,10 @@ import java.util.stream.Collectors;
  * {@code java.lang.classfile} API:
  *
  * <ul>
- *   <li>clears {@code ACC_IDENTITY} and sets {@code ACC_FINAL} (concrete classes)
- *       or keeps {@code ACC_ABSTRACT} (abstract classes become abstract value
- *       classes, whose subclasses may be value classes or identity classes);</li>
+ *   <li>clears {@code ACC_IDENTITY} and sets {@code ACC_FINAL} (concrete
+ *       classes; abstract classes are never converted and stay identity
+ *       classes — see {@link #suitabilityProblems(ClassModel, boolean,
+ *       boolean)});</li>
  *   <li>sets {@code ACC_FINAL} and {@code ACC_STRICT} on instance fields;</li>
  *   <li>reorders constructor bodies (see {@link ConstructorRewriter});</li>
  *   <li>bumps the class-file version to the JDK 28 preview version so the JVM
@@ -69,30 +71,17 @@ public final class ValueClassRewriter {
 
     /**
      * Like {@link #transform(ClassModel, boolean, boolean)} but, when
-     * {@code markClassFinal} is true, a class that is not already final (and not
-     * abstract) is still accepted (it will be marked final, which breaks any
-     * existing subclasses). Abstract classes are always value-compatible and stay
-     * abstract.
+     * {@code markClassFinal} is true, a class that is not already final is still
+     * accepted (it will be marked final, which breaks any existing subclasses).
+     * Abstract classes are never converted (see
+     * {@link #suitabilityProblems(ClassModel, boolean, boolean)}): an
+     * agent-converted abstract value class whose identity subclass is loaded
+     * later triggers a duplicate class definition in the JVM, so abstract
+     * classes are left as identity classes.
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
             boolean ignoreSynchronized, boolean markClassFinal) {
-        return transform(model, keepIfInvalid, ignoreSynchronized, markClassFinal, Set.of());
-    }
-
-    /**
-     * Like {@link #transform(ClassModel, boolean, boolean, boolean)} but also
-     * treats every {@code abstractValueSuperclasses} entry (an internal class
-     * name, e.g. {@code com/example/Base}) as a legal direct superclass: a value
-     * class may extend an abstract value class. The transformer passes the set
-     * of abstract classes <em>it</em> has already rewritten, since whether a
-     * superclass is an abstract value class is only known from the rewrite
-     * history.
-     */
-    public static byte[] transform(ClassModel model, boolean keepIfInvalid,
-            boolean ignoreSynchronized, boolean markClassFinal,
-            Set<String> abstractValueSuperclasses) {
-        if (!isSuitable(model, ignoreSynchronized, markClassFinal,
-                abstractValueSuperclasses)) {
+        if (!isSuitable(model, ignoreSynchronized, markClassFinal)) {
             return null;
         }
         if (alreadyValue(model)) {
@@ -106,12 +95,10 @@ public final class ValueClassRewriter {
                 cb.withVersion(JAVA_28_MAJOR_VERSION, PREVIEW_MINOR_VERSION);
             } else if (ce instanceof AccessFlags af) {
                 // Make it a value class: drop identity (ACC_SUPER). A concrete
-                // value class must be final (JEP 401); an abstract class keeps
-                // its ACC_ABSTRACT and becomes an abstract value class, whose
-                // subclasses may themselves be value classes or identity classes.
-                int flags = af.flagsMask() & ~ACC_IDENTITY
-                        | (af.has(AccessFlag.ABSTRACT) ? 0 : ClassFile.ACC_FINAL);
-                cb.withFlags(flags);
+                // value class must be final (JEP 401). Abstract classes never
+                // reach this point (they are not suitable, see suitabilityProblems),
+                // so every rewritten class is marked final.
+                cb.withFlags(af.flagsMask() & ~ACC_IDENTITY | ClassFile.ACC_FINAL);
             } else if (ce instanceof InnerClassesAttribute ica) {
                 // The JVM only injects ACC_IDENTITY into InnerClasses-attribute
                 // entries for legacy class files; for a value-class (inline)
@@ -193,15 +180,18 @@ public final class ValueClassRewriter {
      * <p>JEP 401 class-level rules enforced here:
      * <ul>
      *   <li>not an interface, enum, annotation, or module;</li>
-     *   <li>the direct superclass is {@code java/lang/Object}, {@code
-     *       java/lang/Record}, or an abstract value class — a value class may
-     *       extend only {@code java.lang.Object} or an abstract value class,
-     *       not an identity class;</li>
+     *   <li>not abstract — an abstract class is never converted, because a later
+     *       identity subclass of an agent-converted abstract value class triggers
+     *       a duplicate class definition in the JVM (only an identity hierarchy
+     *       or a wholly-rewritten value hierarchy is safe);</li>
+     *   <li>the direct superclass is {@code java/lang/Object} or {@code
+     *       java/lang/Record} — a value class may extend only {@code
+     *       java.lang.Object} or {@code java.lang.Record}, not an identity
+     *       class;</li>
      *   <li>no non-static (instance) method carries {@code ACC_SYNCHRONIZED} — a
      *       value class cannot declare a synchronized instance method (unless
      *       {@code ignoreSynchronized} is set, in which case it is stripped);</li>
-     *   <li>the class is final (made final below) or abstract (kept abstract
-     *       below as an abstract value class).</li>
+     *   <li>the class is final (made final below).</li>
      * </ul>
      */
     public static boolean isSuitable(ClassModel model) {
@@ -231,45 +221,14 @@ public final class ValueClassRewriter {
     }
 
     /**
-     * Like {@link #isSuitable(ClassModel, boolean, boolean)} but with previously
-     * rewritten abstract value classes as legal superclasses (see
-     * {@link #suitabilityProblems(ClassModel, boolean, boolean, Set)}).
-     */
-    public static boolean isSuitable(ClassModel model, boolean ignoreSynchronized,
-            boolean markClassFinal, Set<String> abstractValueSuperclasses) {
-        return suitabilityProblems(model, ignoreSynchronized, markClassFinal,
-                abstractValueSuperclasses).isEmpty();
-    }
-
-    /**
      * Reports, as targeted messages, every JEP 401 structural rule the class
      * violates, so callers can surface <em>only</em> the actual problem(s)
      * instead of a blanket "not suitable". Empty when the class is a suitable
      * value-class candidate (see {@link #isSuitable(ClassModel, boolean, boolean)}
      * for what the {@code ignore*} flags mean).
      */
-    /**
-     * Like {@link #suitabilityProblems(ClassModel, boolean, boolean, Set)} with
-     * no previously-rewritten abstract value classes (nothing is exempt from the
-     * identity-superclass rule).
-     */
     public static List<String> suitabilityProblems(ClassModel model,
             boolean ignoreSynchronized, boolean markClassFinal) {
-        return suitabilityProblems(model, ignoreSynchronized, markClassFinal, Set.of());
-    }
-
-    /**
-     * Like {@link #suitabilityProblems(ClassModel, boolean, boolean)} but also
-     * treats every {@code abstractValueSuperclasses} entry (an internal class
-     * name, e.g. {@code com/example/Base}) as a legal direct superclass: a value
-     * class may extend an abstract value class. The transformer passes the set
-     * of abstract classes <em>it</em> has already rewritten, since whether a
-     * superclass is an abstract value class is only known from the rewrite
-     * history.
-     */
-    public static List<String> suitabilityProblems(ClassModel model,
-            boolean ignoreSynchronized, boolean markClassFinal,
-            Set<String> abstractValueSuperclasses) {
         List<String> problems = new ArrayList<>();
         AccessFlags flags = model.flags();
         if (flags.has(AccessFlag.INTERFACE)) {
@@ -284,13 +243,20 @@ public final class ValueClassRewriter {
         if (flags.has(AccessFlag.MODULE)) {
             problems.add("it is a module; a value class cannot be a module");
         }
+        if (flags.has(AccessFlag.ABSTRACT)) {
+            problems.add("it is abstract; converting an abstract class is not yet supported");
+//            problems.add("it is abstract; an abstract class is not converted"
+//                    + " (an agent-converted abstract value class whose identity"
+//                    + " subclass loads later triggers a duplicate class"
+//                    + " definition in the JVM, so abstract classes stay"
+//                    + " identity classes)");
+        }
         String sup = model.superclass().map(ClassEntry::asInternalName)
                 .orElse("java/lang/Object");
-        if (!sup.equals("java/lang/Object") && !sup.equals("java/lang/Record")
-                && !abstractValueSuperclasses.contains(sup)) {
+        if (!sup.equals("java/lang/Object") && !sup.equals("java/lang/Record")) {
             problems.add("it extends the identity class " + sup
-                    + "; a value class can extend only java.lang.Object or an"
-                    + " (agent-rewritten) abstract value class, not an identity class");
+                    + "; a value class can extend only java.lang.Object or"
+                    + " java.lang.Record, not an identity class");
         }
         if (!markClassFinal && !flags.has(AccessFlag.FINAL)
                 && !flags.has(AccessFlag.ABSTRACT)) {
@@ -309,6 +275,23 @@ public final class ValueClassRewriter {
                         + "; a value class cannot have a synchronized instance"
                         + " method (use ignore-synchronized to strip it)");
             }
+        }
+        // A synchronized block (monitorenter) is never safe in a value class: a
+        // value object has no identity, so synchronizing on it throws
+        // IdentityException at runtime. Unlike ACC_SYNCHRONIZED, monitorenter
+        // cannot be stripped, so this is rejected regardless of
+        // ignore-synchronized.
+        String syncBlocks = model.methods().stream()
+                .filter(m -> m.code().map(code -> code.elementList().stream()
+                        .anyMatch(e -> e instanceof Instruction i
+                                && i.opcode() == Opcode.MONITORENTER))
+                        .orElse(false))
+                .map(m -> m.methodName().stringValue())
+                .collect(Collectors.joining(", "));
+        if (!syncBlocks.isEmpty()) {
+            problems.add("it uses a synchronized block (monitorenter) in method(s) " + syncBlocks
+                    + "; a value object has no identity, so synchronizing on it"
+                    + " throws IdentityException at runtime");
         }
         return problems;
     }

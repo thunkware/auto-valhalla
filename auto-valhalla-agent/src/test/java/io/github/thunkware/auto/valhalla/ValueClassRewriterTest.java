@@ -249,43 +249,53 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void subclassOfRewrittenAbstractValueClassIsStillSuitable() throws Exception {
+    void abstractClassIsLeftAsIdentityClass() throws Exception {
         byte[] absBase = readResource("/sample/AbstractBase.class");
         byte[] absSub = readResource("/sample/AbstractSub.class");
         assertNotNull(absBase, "AbstractBase on classpath");
         assertNotNull(absSub, "AbstractSub on classpath");
         ClassFile cf = ClassFile.of();
 
-        // Rewrite the abstract superclass into an abstract value class first.
         ValueClassTransformer t = new ValueClassTransformer(
                 Set.of("sample.AbstractBase", "sample.AbstractSub"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
                 false, false, null, false, null);
-        byte[] baseOut = t.transform(null, null, "sample/AbstractBase", null, null, absBase);
-        assertNotNull(baseOut, "abstract class is rewritten into an abstract value class");
-        var baseModel = cf.parse(baseOut);
-        assertTrue(baseModel.flags().has(AccessFlag.ABSTRACT),
-                "the rewritten base must keep ACC_ABSTRACT");
-        assertTrue(ValueClassRewriter.alreadyValue(baseModel),
-                "the rewritten base must be a value class");
 
-        // Its subclass must now be a suitable candidate: a value class may extend
-        // an abstract value class. (No LinkageError, unlike a final superclass.)
-        assertTrue(ValueClassRewriter.suitabilityProblems(
-                        cf.parse(absSub), false, true, Set.of("sample/AbstractBase")).isEmpty(),
-                "AbstractSub extends a rewritten abstract value class, so it is suitable");
-        assertTrue(ValueClassRewriter.suitabilityProblems(
-                        cf.parse(absSub), false, false, Set.of("sample/AbstractBase")).stream()
-                        .anyMatch(p -> p.contains("it is not final")),
-                "without mark-class-final the non-final AbstractSub still lacks finality");
-        assertTrue(ValueClassRewriter.suitabilityProblems(
-                        cf.parse(absSub), false, true).stream()
-                        .anyMatch(p -> p.contains("extends the identity class sample/AbstractBase")),
-                "without the rewrite history the abstract superclass is treated as an identity class");
+        // An abstract class is never converted: an agent-converted abstract
+        // value class whose identity subclass loads later triggers a duplicate
+        // class definition in the JVM, so abstract classes stay identity.
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(absBase), false, false)
+                        .stream().anyMatch(p -> p.contains("abstract")),
+                "an abstract class must be reported as not suitable");
+
+        byte[] baseOut = t.transform(null, null, "sample/AbstractBase", null, null, absBase);
+        assertNull(baseOut, "abstract class is left as an identity class");
+
+        // Its concrete subclass now extends an identity class, so it is not a
+        // value-class candidate either (a value class may extend only
+        // java.lang.Object or java.lang.Record).
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(absSub), false, false)
+                        .stream().anyMatch(p -> p.contains("extends the identity class sample/AbstractBase")),
+                "AbstractSub extends the identity class AbstractBase, so it is not suitable");
 
         byte[] subOut = t.transform(null, null, "sample/AbstractSub", null, null, absSub);
-        assertNotNull(subOut, "AbstractSub rewrites once its superclass is an abstract value class");
-        assertTrue(cf.verify(subOut).isEmpty(), "rewritten AbstractSub must verify");
+        assertNull(subOut, "subclass of an identity abstract class is left as an identity class");
+    }
+
+    @Test
+    void synchronizedBlockIsRejectedEvenWithIgnoreSynchronized() throws Exception {
+        byte[] syncBlock = readResource("/sample/SyncBlock.class");
+        assertNotNull(syncBlock, "SyncBlock on classpath");
+        ClassFile cf = ClassFile.of();
+
+        // monitorenter cannot be stripped, so the class is rejected even when
+        // ignore-synchronized is set (which only strips ACC_SYNCHRONIZED).
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock), false, true)
+                        .stream().anyMatch(p -> p.contains("synchronized block")),
+                "a synchronized block must be reported as not suitable");
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock), true, true)
+                        .stream().anyMatch(p -> p.contains("synchronized block")),
+                "ignore-synchronized must not make a synchronized block suitable");
     }
 
     @Test

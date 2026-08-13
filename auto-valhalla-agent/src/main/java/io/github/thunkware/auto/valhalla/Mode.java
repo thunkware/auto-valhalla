@@ -34,8 +34,8 @@ public enum Mode {
      *  class {@code final}, so only opt in when no subclass exists (or you accept
      *  that subclasses will fail to load with an
      *  {@link java.lang.IncompatibleClassChangeError}). Abstract candidates are
-     *  value-compatible without this mode: they stay abstract (see
-     *  {@link ValueClassRewriter#isSuitable}). */
+     *  never converted (see
+     *  {@link ValueClassRewriter#suitabilityProblems(java.lang.classfile.ClassModel, boolean, boolean)}). */
     MARK_CLASS_FINAL("mark-class-final"),
 
     /** If instance fields are non-{@code final} yet written only once in a
@@ -52,7 +52,7 @@ public enum Mode {
 
     /** The default set for {@code annotation-mode} (classes selected by the
      *  {@code @AutoValhalla} annotation): {@code safe} — only classes that are
-     *  <em>already final</em> (or abstract) are converted. A selected
+     *  <em>already final</em> are converted. A selected
      *  non-final class is not converted and is handled by the {@code on-fail-*}
      *  settings (by default a loud failure for annotated classes, so
      *  {@code mark-class-final} must be opted in explicitly to convert it). */
