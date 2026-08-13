@@ -16,8 +16,8 @@ import java.util.Set;
  */
 public enum Mode {
     /** Narrow selection to classes that are <em>already final</em> ({@code safe}).
-     *  Non-final candidates are skipped, because making a non-final class final
-     *  would break its subclasses. */
+     *  Non-final candidates are not converted; whether that is a silent skip or
+     *  a loud failure depends on the configured {@code on-fail-throw} setting. */
     SAFE("safe"),
 
     /** Shorthand for the default modes

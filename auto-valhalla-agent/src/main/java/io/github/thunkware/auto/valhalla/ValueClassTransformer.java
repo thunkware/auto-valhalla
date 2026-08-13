@@ -56,8 +56,9 @@ import java.util.concurrent.ConcurrentHashMap;
      *       source.</li>
  * </ul>
  *
- * <p>A class selected by both the annotation and {@code includes} follows the
- * annotation settings (an explicit in-source opt-in is the stronger statement).
+ * <p>A class selected by both the annotation and {@code includes} is treated as
+ * annotation-selected only: its mode set and failure settings come from the
+ * annotation (an explicit in-source opt-in is the stronger statement).
  * By default, includes-selected classes that fail verification after rewriting
  * are left untouched, so an unsupported class simply keeps identity semantics
  * instead of failing to load.
@@ -137,10 +138,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     /**
      * Decides how {@code internal} was selected. Returns {@code null} when it is
-     * not a candidate at all; otherwise the effective mode set (the union of the
-     * annotation and includes mode sets) together with the failure settings of
-     * the selection source that applies — the annotation wins when both select
-     * the class.
+     * not a candidate at all; otherwise the effective mode set together with the
+     * failure settings of the selection source that applies. A class selected by
+     * both counts as annotation-selected only.
      *
      * <p>Throws a {@link LinkageError} naming the superclass when that superclass
      * was previously rewritten into a final value class, since this class cannot
@@ -161,18 +161,18 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         if (!annotated && !included) {
             return null;
         }
-        // Failure handling follows the selection source: an annotation is an
-        // explicit opt-in by default failing loudly; includes sweep broadly and
-        // by default leave classes as identity. When both apply, the annotation
-        // wins. Modes from the two sources are combined (the union applies).
-        boolean onFailThrow = annotated ? annotationOnFailThrow : includesOnFailThrow;
-        String onFailAppendTo = annotated
-                ? annotationOnFailAppendTo : includesOnFailAppendTo;
+        // Both selection sources can match the same class; in that case the
+        // annotation (an explicit in-source opt-in) is the stronger statement,
+        // so the class is treated as annotation-selected only: its mode set and
+        // failure settings, with no contribution from includes.
+        boolean onFailThrow = annotationOnFailThrow;
+        String onFailAppendTo = annotationOnFailAppendTo;
         EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
         if (annotated) {
             effective.addAll(annotationMode);
-        }
-        if (included) {
+        } else {
+            onFailThrow = includesOnFailThrow;
+            onFailAppendTo = includesOnFailAppendTo;
             effective.addAll(includesMode);
         }
         return new Selection(effective, onFailThrow, onFailAppendTo);
@@ -227,9 +227,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     }
 
     /**
-     * The selection of a loaded class: the effective mode set (the union of the
-     * applicable annotation/includes modes) and the failure settings of the
-     * selection source that applied.
+     * The selection of a loaded class: the effective mode set and the failure
+     * settings of the selection source that applied. A class selected by both
+     * the annotation and includes is annotation-selected only.
      */
     private record Selection(Set<Mode> effective,
             boolean onFailThrow, String onFailAppendTo) {}
