@@ -11,7 +11,7 @@
 
   <name>auto-valhalla</name>
   <description>
-    Java agent that rewrites eligible classes into JEP 401 value objects
+    Java agent that rewrites eligible classes into JEP-401 value objects
     (Project Valhalla) at load time. Classes are selected via the
     @AutoValhalla annotation, agent options, or system properties.
   </description>
@@ -46,7 +46,7 @@
   <licenses>
       <license>
           <name>Apache 2</name>
-          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
           <distribution>manual</distribution>
           <comments>A business-friendly OSS license</comments>
       </license>

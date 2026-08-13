@@ -10,6 +10,12 @@ package sample;
  * the JVM throw "Illegal class modifiers in inner class ... of class ...".
  */
 final class NestedOuter {
+    private final long offset;
+
+    private NestedOuter(long offset) {
+        this.offset = offset;
+    }
+
     static class Inner {
         private final long field;
 
@@ -23,8 +29,5 @@ final class NestedOuter {
 
         private Holder() {
         }
-    }
-
-    private NestedOuter() {
     }
 }

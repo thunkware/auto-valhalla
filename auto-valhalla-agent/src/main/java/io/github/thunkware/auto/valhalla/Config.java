@@ -1,6 +1,5 @@
 package io.github.thunkware.auto.valhalla;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 

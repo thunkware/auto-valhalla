@@ -313,6 +313,17 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void classWithoutInstanceFieldsIsRejected() throws Exception {
+        byte[] noFields = readResource("/sample/NoFields.class");
+        assertNotNull(noFields, "NoFields on classpath");
+        ClassFile cf = ClassFile.of();
+
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(noFields), false, true)
+                        .stream().anyMatch(p -> p.contains("no instance fields")),
+                "a class with no instance fields must be reported as not suitable");
+    }
+
+    @Test
     void onSuccessAppendToRecordsConvertedClassWithoutDuplicates() throws Exception {
         Path success = Files.createTempFile("auto-valhalla-success", ".txt");
         Path fail = Files.createTempFile("auto-valhalla-fail", ".txt");

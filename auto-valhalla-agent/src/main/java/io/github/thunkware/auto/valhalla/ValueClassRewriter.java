@@ -21,6 +21,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static java.lang.classfile.Attributes.*;
+
 /**
  * Rewrites a loaded class file into a JEP 401 value class.
  *
@@ -246,6 +248,15 @@ public final class ValueClassRewriter {
         if (flags.has(AccessFlag.ABSTRACT)) {
             problems.add("it is abstract; converting an abstract class is not yet supported");
         }
+        // A class with no instance fields has no state to flatten: converting it
+        // would change identity semantics for no benefit (and is usually a
+        // utility class with only static members, which should not become a value
+        // class).
+        boolean hasInstanceField = model.fields().stream()
+                .anyMatch(f -> !f.flags().has(AccessFlag.STATIC));
+        if (!hasInstanceField) {
+            problems.add("it has no instance fields; a value class should have instance state");
+        }
         String sup = model.superclass().map(ClassEntry::asInternalName)
                 .orElse("java/lang/Object");
         if (!sup.equals("java/lang/Object") && !sup.equals("java/lang/Record")) {
@@ -364,7 +375,7 @@ public final class ValueClassRewriter {
 
     /** True if the class is annotated with {@link AutoValhalla}. */
     public static boolean hasAutoValhallaAnnotation(ClassModel model) {
-        return model.findAttribute(java.lang.classfile.Attributes.runtimeVisibleAnnotations())
+        return model.findAttribute(runtimeVisibleAnnotations())
                 .map(attr -> attr.annotations().stream()
                         .anyMatch(a -> a.className().stringValue().equals(ANNOTATION_DESCRIPTOR)))
                 .orElse(false);
