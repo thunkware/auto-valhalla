@@ -359,13 +359,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      *  (unless it is already recorded there), deduplicating across runs by reading
      *  the file at start-up. Uses {@link AsyncFileWriter} for non-blocking I/O. */
     private void appendTo(String path, String internal) {
-        if (path == null) {
+        if (path == null || path.isEmpty()) {
             return;
         }
-        AsyncFileWriter writer = AsyncFileWriter.forFile(path);
-        if (writer != null) {
-            writer.record(internal.replace('/', '.'));
-        }
+        AsyncFileWriter.forFile(path)
+                .record(internal.replace('/', '.'));
     }
 
     /**

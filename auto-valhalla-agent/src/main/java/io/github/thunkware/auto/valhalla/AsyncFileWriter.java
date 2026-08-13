@@ -132,8 +132,10 @@ final class AsyncFileWriter {
 
                 // Flush any remaining data
                 synchronized (writer.lock) {
-                    writer.writer.flush();
-                    writer.writer.close();
+                    if (writer.writer != null) {
+                        writer.writer.flush();
+                        writer.writer.close();
+                    }
                 }
             } catch (IOException ignored) {
                 // best-effort cleanup
