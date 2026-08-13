@@ -58,13 +58,12 @@ import java.util.Set;
  *       not {@code com/example/Foo}) to the given file, per selection
  *       source (created if necessary). Dot names here read naturally for
  *       {@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
- *       feedback. Default for includes: {@code auto-valhalla.failures.txt}.</li>
+ *       feedback.</li>
  *   <li>{@code auto-valhalla.annotation.on-success-append-to=file} /
  *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
  *       class name of each class that is successfully converted to a value
  *       class. The file is read at start-up so a name already present is not
- *       re-appended; a missing file is treated as empty, never an error. Default
- *       for includes: {@code auto-valhalla.success.txt}.</li>
+ *       re-appended; a missing file is treated as empty, never an error.</li>
  *   <li>{@code auto-valhalla.synchronization-monitor.append-to=file} — when
  *       {@code Mode.SYNCHRONIZATION_MONITOR} is enabled, append the class name
  *       of each class being synchronized on at runtime. Useful for detecting value
@@ -206,8 +205,8 @@ public final class AutoValhallaAgent {
         String annotationOnFailAppendTo = null;
         String annotationOnSuccessAppendTo = null;
         boolean includesOnFailThrow = false;
-        String includesOnFailAppendTo = "auto-valhalla.failures.txt";
-        String includesOnSuccessAppendTo = "auto-valhalla.success.txt";
+        String includesOnFailAppendTo = null;
+        String includesOnSuccessAppendTo = null;
         String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
 
         for (String[] a : assigns) {
