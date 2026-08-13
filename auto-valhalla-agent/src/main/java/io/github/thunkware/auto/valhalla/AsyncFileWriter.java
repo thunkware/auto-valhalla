@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  * 1 second. Multiple files are supported; each file has its own queue, writer,
  * and background thread.
  *
- * <p>This is used by {@link SynchronizationInspector} and
+ * <p>This is used by {@link SynchronizationMonitor} and
  * {@link ValueClassTransformer} for non-blocking append operations.
  */
 final class AsyncFileWriter {
@@ -27,7 +27,9 @@ final class AsyncFileWriter {
     private static final Map<String, AsyncFileWriter> WRITERS = new ConcurrentHashMap<>();
     private static final long FLUSH_INTERVAL_MS = 1000;
 
-    private final BufferedWriter writer;
+    private final Object lock = new Object();
+    private final Path file;
+    private BufferedWriter writer;
     private final Set<String> seen;
     private final LinkedBlockingQueue<String> queue;
     private final Thread writerThread;
@@ -60,9 +62,9 @@ final class AsyncFileWriter {
         this.seen = ConcurrentHashMap.newKeySet();
         this.queue = new LinkedBlockingQueue<>();
 
-        Path p = Path.of(path);
-        if (Files.exists(p)) {
-            for (String line : Files.readAllLines(p)) {
+        file = Path.of(path);
+        if (Files.exists(file)) {
+            for (String line : Files.readAllLines(file)) {
                 String t = line.trim();
                 if (!t.isEmpty()) {
                     seen.add(t);
@@ -70,14 +72,9 @@ final class AsyncFileWriter {
             }
         }
 
-        // Open writer in append mode, not auto-flush (background thread will flush)
-        this.writer = new BufferedWriter(Files.newBufferedWriter(p,
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND,
-                StandardOpenOption.WRITE));
-
         // Spawn a background virtual thread to read from queue and flush periodically
         this.writerThread = Thread.ofVirtual()
-                .name("AsyncFileWriter-" + p.getFileName())
+                .name("AsyncFileWriter-" + file.getFileName())
                 .start(this::run);
     }
 
@@ -99,7 +96,14 @@ final class AsyncFileWriter {
             long lastFlush = System.currentTimeMillis();
             while (!Thread.currentThread().isInterrupted()) {
                 String name = queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS);
-                synchronized (writer) {
+                synchronized (lock) {
+                    if (writer == null) {
+                        // Open writer in append mode, not auto-flush (background thread will flush)
+                        this.writer = new BufferedWriter(Files.newBufferedWriter(file,
+                                StandardOpenOption.CREATE, StandardOpenOption.APPEND,
+                                StandardOpenOption.WRITE));
+                    }
+
                     if (name != null) {
                         writer.write(name);
                         writer.write('\n');
@@ -127,7 +131,7 @@ final class AsyncFileWriter {
                 writer.writerThread.interrupt();
 
                 // Flush any remaining data
-                synchronized (writer.writer) {
+                synchronized (writer.lock) {
                     writer.writer.flush();
                     writer.writer.close();
                 }
