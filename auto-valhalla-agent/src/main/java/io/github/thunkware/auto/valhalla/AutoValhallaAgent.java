@@ -58,17 +58,24 @@ import java.util.Set;
  *       not {@code com/example/Foo}) to the given file, per selection
  *       source (created if necessary). Dot names here read naturally for
  *       {@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
- *       feedback.</li>
+ *       feedback. Default for includes: {@code auto-valhalla.failures.txt}.</li>
  *   <li>{@code auto-valhalla.annotation.on-success-append-to=file} /
  *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
  *       class name of each class that is successfully converted to a value
  *       class. The file is read at start-up so a name already present is not
- *       re-appended; a missing file is treated as empty, never an error.</li>
+ *       re-appended; a missing file is treated as empty, never an error. Default
+ *       for includes: {@code auto-valhalla.success.txt}.</li>
  *   <li>{@code auto-valhalla.synchronization-monitor.append-to=file} — when
  *       {@code Mode.SYNCHRONIZATION_MONITOR} is enabled, append the class name
  *       of each class being synchronized on at runtime. Useful for detecting value
  *       classes that are locked, which causes {@link java.lang.IdentityException}.
- *       The file is read at start-up so names already present are not re-appended.</li>
+ *       The file is read at start-up so names already present are not re-appended.
+ *       Default: {@code auto-valhalla.synchronization.txt}.</li>
+ *   <li>Excludes default: patterns from {@code auto-valhalla.failures.txt} and
+ *       {@code auto-valhalla.synchronization.txt} are automatically excluded,
+ *       allowing logged failures and problematic classes to be skipped in future runs.
+ *       These defaults can be overridden with explicit {@code excludes} or
+ *       {@code excludes-files} options.</li>
  *   <li>{@code auto-valhalla.config=file} — read options from a Java properties
  *       file (keys may omit the {@code auto-valhalla.} prefix).</li>
  * </ul>
@@ -185,6 +192,10 @@ public final class AutoValhallaAgent {
 
         Set<String> includes = new HashSet<>();
         Set<String> excludes = new HashSet<>();
+        // Default excludes: read failure and synchronization log files as patterns
+        excludes.addAll(readPatternFile("auto-valhalla.failures.txt"));
+        excludes.addAll(readPatternFile("auto-valhalla.synchronization.txt"));
+
         Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
         Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
         boolean debug = false;
@@ -194,9 +205,9 @@ public final class AutoValhallaAgent {
         String annotationOnFailAppendTo = null;
         String annotationOnSuccessAppendTo = null;
         boolean includesOnFailThrow = false;
-        String includesOnFailAppendTo = null;
-        String includesOnSuccessAppendTo = null;
-        String synchronizationMonitorAppendTo = null;
+        String includesOnFailAppendTo = "auto-valhalla.failures.txt";
+        String includesOnSuccessAppendTo = "auto-valhalla.success.txt";
+        String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
 
         for (String[] a : assigns) {
             switch (a[0]) {
