@@ -183,7 +183,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 byte[] monitored = SynchronizationInstrumenter.instrument(model);
                 if (monitored != null) {
                     if (debug) {
-                        System.err.println("[auto-valhalla] " + internal.replace('/', '.')
+                        InternalLogger.debug(internal.replace('/', '.')
                                 + ": instrumented for synchronization monitoring");
                     }
                     return monitored;
@@ -291,7 +291,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         appendTo(selection.onSuccessAppendTo(), internal);
         if (debug) {
-            System.err.println("[auto-valhalla] " + internal.replace('/', '.')
+            InternalLogger.debug(internal.replace('/', '.')
                     + ": transformed to value class (" + out.length + " bytes)");
         }
         return out;
@@ -322,9 +322,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         appendOnFail(internal, onFailAppendTo);
         if (debug) {
-            System.err.println("[auto-valhalla] " + internal.replace('/', '.')
+            InternalLogger.debug(internal.replace('/', '.')
                     + ": transform failed:");
-            t.printStackTrace(System.err);
+            InternalLogger.error("", t);
         }
         return null;
     }
@@ -337,7 +337,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             boolean onFailThrow, String onFailAppendTo) {
         appendOnFail(internal, onFailAppendTo);
         if (onFailThrow) {
-            System.err.println("[auto-valhalla] " + internal.replace('/', '.') + " " + reason
+            InternalLogger.error(internal.replace('/', '.') + " " + reason
                     + "; the JVM will reject it rather than silently keep an"
                     + " identity class.");
             // A ClassFileTransformer exception would be swallowed by the JVM, so instead
@@ -345,7 +345,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             return brokenClass();
         }
         if (debug) {
-            System.err.println("[auto-valhalla] " + internal.replace('/', '.') + ": " + reason
+            InternalLogger.debug(internal.replace('/', '.') + ": " + reason
                     + ", leaving as identity class");
         }
         return null;

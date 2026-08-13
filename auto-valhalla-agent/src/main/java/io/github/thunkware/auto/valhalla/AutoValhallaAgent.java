@@ -39,11 +39,11 @@ import java.util.Set;
  *   <li>{@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
  *       — path to a file with one pattern per line (blank lines and {@code #}
  *       comments ignored). CSV format is automatically detected and parsed.</li>
-     *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
-     *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
-     *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
-     *       selected by {@code includes} (default {@code yolo} =
-     *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
+ *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
+ *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
+ *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
+ *       selected by {@code includes} (default {@code yolo} =
+ *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
  *   <li>{@code auto-valhalla.log-level} — logging level: {@code off}, {@code error},
  *       {@code warning} (default), {@code info}, {@code debug}. Controls verbosity
@@ -100,8 +100,6 @@ import java.util.Set;
  */
 public final class AutoValhallaAgent {
 
-    private AutoValhallaAgent() {}
-
     /**
      * Whether the running JVM has Project Valhalla / value classes available.
      * Determined once from the JVM's input arguments: value classes are a preview
@@ -111,6 +109,9 @@ public final class AutoValhallaAgent {
      * to accept).
      */
     private static final boolean VALHALLA_AVAILABLE = valhallaAvailable();
+
+    private AutoValhallaAgent() {
+    }
 
     public static void premain(String agentArgs, Instrumentation inst) {
         install(agentArgs, inst, false);
@@ -122,7 +123,7 @@ public final class AutoValhallaAgent {
 
     private static void install(String agentArgs, Instrumentation inst, boolean attach) {
         if (!VALHALLA_AVAILABLE) {
-            System.err.println("[auto-valhalla] WARNING: Project Valhalla / value classes "
+            InternalLogger.warning("Project Valhalla / value classes "
                     + "are not available in this JVM (pass --enable-preview on JDK 28+). "
                     + "The agent is disabled and classes are left as identity classes.");
             return;
@@ -141,16 +142,14 @@ public final class AutoValhallaAgent {
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
 
-        if (cfg.debug()) {
-            System.err.println("[auto-valhalla] attached"
-                    + (attach ? " (dynamically)" : "")
-                    + "; includes=" + cfg.includes()
-                    + " excludes=" + cfg.excludes()
-                    + " annotation-mode=" + cfg.annotationMode()
-                    + " includes-mode=" + cfg.includesMode()
-                    + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow()
-                    + " includes.on-fail-throw=" + cfg.includesOnFailThrow());
-        }
+        InternalLogger.info("attached"
+                + (attach ? " (dynamically)" : "")
+                + "; includes=" + cfg.includes()
+                + " excludes=" + cfg.excludes()
+                + " annotation-mode=" + cfg.annotationMode()
+                + " includes-mode=" + cfg.includesMode()
+                + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow()
+                + " includes.on-fail-throw=" + cfg.includesOnFailThrow());
     }
 
     static Config parse(String agentArgs) {
@@ -224,10 +223,8 @@ public final class AutoValhallaAgent {
                 case Config.INCLUDES_MODE -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
                 case Config.DEBUG -> debug = Boolean.parseBoolean(a[1]);
                 case Config.LOG_LEVEL -> logLevel = a[1].trim();
-                case Config.ANNOTATION_ON_FAIL_THROW ->
-                        annotationOnFailThrow = Boolean.parseBoolean(a[1]);
-                case Config.INCLUDES_ON_FAIL_THROW ->
-                        includesOnFailThrow = Boolean.parseBoolean(a[1]);
+                case Config.ANNOTATION_ON_FAIL_THROW -> annotationOnFailThrow = Boolean.parseBoolean(a[1]);
+                case Config.INCLUDES_ON_FAIL_THROW -> includesOnFailThrow = Boolean.parseBoolean(a[1]);
                 case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
                     annotationOnFailAppendTo = t.isEmpty() ? null : t;
@@ -266,8 +263,7 @@ public final class AutoValhallaAgent {
             try (BufferedReader br = Files.newBufferedReader(Path.of(value.trim()))) {
                 props.load(br);
             } catch (IOException e) {
-                System.err.println("[auto-valhalla] cannot read config file "
-                        + value + ": " + e);
+                InternalLogger.error("cannot read config file " + value + ": " + e);
                 return;
             }
             for (String rawKey : props.stringPropertyNames()) {
@@ -278,7 +274,7 @@ public final class AutoValhallaAgent {
             }
             return;
         }
-        assigns.add(new String[] { key, value });
+        assigns.add(new String[]{key, value});
     }
 
     private static String canonicalKey(String input) {
@@ -357,8 +353,7 @@ public final class AutoValhallaAgent {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[auto-valhalla] cannot read pattern file "
-                    + path + ": " + e);
+            InternalLogger.error("cannot read pattern file " + path + ": " + e);
         }
         return set;
     }
