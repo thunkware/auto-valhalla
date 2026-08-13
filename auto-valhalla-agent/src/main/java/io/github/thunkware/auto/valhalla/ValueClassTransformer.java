@@ -220,8 +220,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             transformedToFinal.add(internal);
         }
         if (debug) {
-            System.err.println("[auto-valhalla] " + internal + ": transformed to value class ("
-                    + out.length + " bytes)");
+            System.err.println("[auto-valhalla] " + internal.replace('/', '.')
+                    + ": transformed to value class (" + out.length + " bytes)");
         }
         return out;
     }
@@ -251,7 +251,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         appendOnFail(internal, onFailAppendTo);
         if (debug) {
-            System.err.println("[auto-valhalla] " + internal + ": transform failed:");
+            System.err.println("[auto-valhalla] " + internal.replace('/', '.')
+                    + ": transform failed:");
             t.printStackTrace(System.err);
         }
         return null;
@@ -265,7 +266,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             boolean onFailThrow, String onFailAppendTo) {
         appendOnFail(internal, onFailAppendTo);
         if (onFailThrow) {
-            System.err.println("[auto-valhalla] " + internal + " " + reason
+            System.err.println("[auto-valhalla] " + internal.replace('/', '.') + " " + reason
                     + "; the JVM will reject it rather than silently keep an"
                     + " identity class.");
             // A ClassFileTransformer exception would be swallowed by the JVM, so instead
@@ -273,7 +274,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             return brokenClass();
         }
         if (debug) {
-            System.err.println("[auto-valhalla] " + internal + ": " + reason
+            System.err.println("[auto-valhalla] " + internal.replace('/', '.') + ": " + reason
                     + ", leaving as identity class");
         }
         return null;
