@@ -207,6 +207,46 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void subclassOfRewrittenAbstractValueClassIsStillSuitable() throws Exception {
+        byte[] absBase = readResource("/sample/AbstractBase.class");
+        byte[] absSub = readResource("/sample/AbstractSub.class");
+        assertNotNull(absBase, "AbstractBase on classpath");
+        assertNotNull(absSub, "AbstractSub on classpath");
+        ClassFile cf = ClassFile.of();
+
+        // Rewrite the abstract superclass into an abstract value class first.
+        ValueClassTransformer t = new ValueClassTransformer(
+                Set.of("sample.AbstractBase", "sample.AbstractSub"), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, false, null, false, null);
+        byte[] baseOut = t.transform(null, null, "sample/AbstractBase", null, null, absBase);
+        assertNotNull(baseOut, "abstract class is rewritten into an abstract value class");
+        var baseModel = cf.parse(baseOut);
+        assertTrue(baseModel.flags().has(AccessFlag.ABSTRACT),
+                "the rewritten base must keep ACC_ABSTRACT");
+        assertTrue(ValueClassRewriter.alreadyValue(baseModel),
+                "the rewritten base must be a value class");
+
+        // Its subclass must now be a suitable candidate: a value class may extend
+        // an abstract value class. (No LinkageError, unlike a final superclass.)
+        assertTrue(ValueClassRewriter.suitabilityProblems(
+                        cf.parse(absSub), false, true, Set.of("sample/AbstractBase")).isEmpty(),
+                "AbstractSub extends a rewritten abstract value class, so it is suitable");
+        assertTrue(ValueClassRewriter.suitabilityProblems(
+                        cf.parse(absSub), false, false, Set.of("sample/AbstractBase")).stream()
+                        .anyMatch(p -> p.contains("it is not final")),
+                "without mark-class-final the non-final AbstractSub still lacks finality");
+        assertTrue(ValueClassRewriter.suitabilityProblems(
+                        cf.parse(absSub), false, true).stream()
+                        .anyMatch(p -> p.contains("extends the identity class sample/AbstractBase")),
+                "without the rewrite history the abstract superclass is treated as an identity class");
+
+        byte[] subOut = t.transform(null, null, "sample/AbstractSub", null, null, absSub);
+        assertNotNull(subOut, "AbstractSub rewrites once its superclass is an abstract value class");
+        assertTrue(cf.verify(subOut).isEmpty(), "rewritten AbstractSub must verify");
+    }
+
+    @Test
     void parseModeIsCaseAndSeparatorInsensitive() {
         assertEquals(EnumSet.of(Mode.SAFE),
                 Mode.parse("SAFE"));
@@ -286,8 +326,7 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void onFailThrowIsPerSelectionSource() throws Exception {
-        byte[] mutable = readResource("/sample/Mutable.class");
+    void onFailThrowIsPerSelectionSource() throws Exception {        byte[] mutable = readResource("/sample/Mutable.class");
         assertNotNull(mutable, "Mutable on classpath");
         String internal = "sample/Mutable";
 
@@ -324,6 +363,20 @@ class ValueClassRewriterTest {
         assertNotNull(mpOut, "annotation.on-fail-throw defaults to true for annotated classes");
         assertFalse(DemoFixturesTest.isUsableValueClass(mpOut),
                 "the annotation-default rejection is not a usable value class");
+    }
+
+    @Test
+    void unselectedUnparseableClassIsNotLoud() throws Exception {
+        // A class that is neither annotated nor included, whose classfile cannot
+        // be parsed, must not take the loud annotation.on-fail-throw default (it
+        // would crash the whole app for a class the agent never selected).
+        byte[] garbage = new byte[] { 0, 0, 0, 0 };
+        ValueClassTransformer t = new ValueClassTransformer(
+                Set.of(), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, true, null, true, null);
+        assertNull(t.transform(null, null, "com/example/Unselected", null, null, garbage),
+                "an unparseable unselected class stays an identity class");
     }
 
     @Test

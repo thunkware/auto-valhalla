@@ -25,6 +25,11 @@ public enum Mode {
      *  appears in a parsed set: {@link #parse(String)} expands it. */
     YOLO("yolo"),
 
+
+    /** Allow candidates with synchronized instance methods: their
+     *  {@code ACC_SYNCHRONIZED} is stripped so they can become value classes. */
+    IGNORE_SYNCHRONIZED("ignore-synchronized"),
+
     /** Allow non-final (non-abstract) candidates to be converted by marking the
      *  class {@code final}, so only opt in when no subclass exists (or you accept
      *  that subclasses will fail to load with an
@@ -32,10 +37,6 @@ public enum Mode {
      *  value-compatible without this mode: they stay abstract (see
      *  {@link ValueClassRewriter#isSuitable}). */
     MARK_CLASS_FINAL("mark-class-final"),
-
-    /** Allow candidates with synchronized instance methods: their
-     *  {@code ACC_SYNCHRONIZED} is stripped so they can become value classes. */
-    IGNORE_SYNCHRONIZED("ignore-synchronized"),
 
     /** If instance fields are non-{@code final} yet written only once in a
      *  constructor, mark them {@code final}. Candidates where a non-{@code final}

@@ -76,6 +76,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
+    /** Internal names of classes we turned into abstract value classes; such a
+     *  superclass is a legal base for both value and identity subclasses, so it
+     *  is recorded (not to error on, but so subclasses may themselves become
+     *  value classes). */
+    private final Set<String> transformedToAbstract = ConcurrentHashMap.newKeySet();
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
             Set<Mode> annotationMode, Set<Mode> includesMode,
@@ -106,10 +111,14 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         if (isExcluded(internal)) {
             return null;
         }
-        // Loudest-by-default while we haven't classified the selection yet;
-        // reassigned below once the selection source is known.
-        boolean onFailThrow = annotationOnFailThrow;
-        String onFailAppendTo = annotationOnFailAppendTo;
+        // Before a class has been classified as annotation- or includes-selected,
+        // failures must not take any loud on-fail setting: a class that is not
+        // selected at all must not crash the app because it happened to fail to
+        // parse. Pre-selection failures (e.g. an unparseable class file) are
+        // always treated as "leave as identity"; the selection's settings only
+        // apply once selection is known.
+        boolean onFailThrow = false;
+        String onFailAppendTo = null;
         try {
             ClassModel model = ClassFile.of().parse(classfileBuffer);
             Selection selection = select(internal, model);
@@ -180,7 +189,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
         boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
         List<String> problems = ValueClassRewriter.suitabilityProblems(
-                model, ignoreSync, markClassFinal);
+                model, ignoreSync, markClassFinal, transformedToAbstract);
         if (!problems.isEmpty()) {
             return onFail(internal, "is selected for value-class transformation but is not"
                     + " suitable: " + String.join("; ", problems),
@@ -194,18 +203,20 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     selection.onFailThrow(), selection.onFailAppendTo());
         }
         byte[] out = ValueClassRewriter.transform(model, selection.onFailThrow(),
-                ignoreSync, markClassFinal);
+                ignoreSync, markClassFinal, transformedToAbstract);
         if (out == null) {
             return onFail(internal,
                     "is selected for value-class transformation but could not be safely"
                     + " transformed", selection.onFailThrow(), selection.onFailAppendTo());
         }
-        // Record classes we turned from non-final (non-abstract) into final so
-        // that a later subclass load can be reported by superclass name.
-        // Abstract classes become abstract value classes, whose subclasses (value
-        // or identity) remain legal, so they are not recorded.
-        if (!model.flags().has(AccessFlag.FINAL)
-                && !model.flags().has(AccessFlag.ABSTRACT)) {
+        // Record what we turned classes into so later loads can reason about
+        // them: a non-final (non-abstract) class becomes a final value class
+        // (its subclasses stop loading), while an abstract class becomes an
+        // abstract value class (whose value and identity subclasses remain
+        // legal and may themselves be converted).
+        if (model.flags().has(AccessFlag.ABSTRACT)) {
+            transformedToAbstract.add(internal);
+        } else if (!model.flags().has(AccessFlag.FINAL)) {
             transformedToFinal.add(internal);
         }
         if (debug) {

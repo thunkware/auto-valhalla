@@ -36,7 +36,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -317,7 +316,7 @@ final class ConstructorRewriter {
                 return SAFE;
             }
             if (ins instanceof StackInstruction sp) {
-                return stackOp(sp.opcode().name(), stack);
+                return stackOp(sp.opcode(), stack);
             }
             if (ins instanceof FieldInstruction fi) {
                 return fieldOp(fi, stack);
@@ -334,10 +333,10 @@ final class ConstructorRewriter {
                 return SAFE;
             }
             if (ins instanceof OperatorInstruction op) {
-                return operator(op.opcode().name(), stack);
+                return operator(op, stack);
             }
             if (ins instanceof ConvertInstruction ci) {
-                return convert(ci.opcode().name(), stack);
+                return convert(ci, stack);
             }
             if (ins instanceof ArrayLoadInstruction) {
                 if (popNoThis(stack) == -1 || popNoThis(stack) == -1) return UNSAFE;
@@ -436,24 +435,29 @@ final class ConstructorRewriter {
             return SAFE;
         }
 
-        private int operator(String opcode, List<Integer> stack) {
-            String n = lower(opcode);
-            if (n.equals("arraylength")) {
-                if (popNoThis(stack) == -1) return UNSAFE;
-                stack.add(OTHER);
-                return SAFE;
-            }
-            if (n.equals("lcmp") || n.equals("dcmpl") || n.equals("dcmpg")) {
-                // pop two category-2 values (4 slots), push one int
-                for (int i = 0; i < 4; i++) {
+        private int operator(OperatorInstruction op, List<Integer> stack) {
+            switch (op.opcode()) {
+                case ARRAYLENGTH -> {
                     if (popNoThis(stack) == -1) return UNSAFE;
+                    stack.add(OTHER);
+                    return SAFE;
                 }
-                stack.add(OTHER);
-                return SAFE;
+                case LCMP, DCMPL, DCMPG -> {
+                    // pop two category-2 values (4 slots), push one int
+                    for (int i = 0; i < 4; i++) {
+                        if (popNoThis(stack) == -1) return UNSAFE;
+                    }
+                    stack.add(OTHER);
+                    return SAFE;
+                }
+                default -> { /* handled below */ }
             }
-            boolean unary = opcode.endsWith("neg");
-            boolean shift = opcode.endsWith("shl") || opcode.endsWith("shr") || opcode.endsWith("ushr");
-            int k = opSlots(opcode);
+            boolean unary = op.opcode() == Opcode.INEG || op.opcode() == Opcode.LNEG
+                    || op.opcode() == Opcode.FNEG || op.opcode() == Opcode.DNEG;
+            boolean shift = op.opcode() == Opcode.ISHL || op.opcode() == Opcode.LSHL
+                    || op.opcode() == Opcode.ISHR || op.opcode() == Opcode.LSHR
+                    || op.opcode() == Opcode.IUSHR || op.opcode() == Opcode.LUSHR;
+            int k = op.typeKind().slotSize();
             if (unary) {
                 for (int i = 0; i < k; i++) {
                     if (popNoThis(stack) == -1) return UNSAFE;
@@ -472,33 +476,31 @@ final class ConstructorRewriter {
             return SAFE;
         }
 
-        private int convert(String opcode, List<Integer> stack) {
-            char src = lower(opcode).charAt(0);
-            int popN = (src == 'l' || src == 'd') ? 2 : 1;
-            for (int i = 0; i < popN; i++) {
+        private int convert(ConvertInstruction ci, List<Integer> stack) {
+            for (int i = 0; i < ci.fromType().slotSize(); i++) {
                 if (popNoThis(stack) == -1) return UNSAFE;
             }
-            pushSlots(stack, pushSlots(opcode));
+            pushSlots(stack, ci.toType().slotSize());
             return SAFE;
         }
 
-        private int stackOp(String op, List<Integer> stack) {
+        private int stackOp(Opcode op, List<Integer> stack) {
             switch (op) {
-                case "POP" -> { return popNoThis(stack) == -1 ? UNSAFE : SAFE; }
-                case "POP2" -> {
+                case POP -> { return popNoThis(stack) == -1 ? UNSAFE : SAFE; }
+                case POP2 -> {
                     if (stack.size() >= 2) {
                         return (popNoThis(stack) == -1 || popNoThis(stack) == -1) ? UNSAFE : SAFE;
                     }
                     if (stack.size() == 1) return popNoThis(stack) == -1 ? UNSAFE : SAFE;
                     return UNSAFE;
                 }
-                case "DUP" -> {
+                case DUP -> {
                     int t = top(stack);
                     if (t == -1) return UNSAFE;
                     stack.add(t);
                     return SAFE;
                 }
-                case "DUP_X1" -> {
+                case DUP_X1 -> {
                     if (stack.size() < 2) return UNSAFE;
                     int t = stack.removeLast();
                     int u = stack.removeLast();
@@ -507,7 +509,7 @@ final class ConstructorRewriter {
                     stack.add(t);
                     return SAFE;
                 }
-                case "DUP_X2" -> {
+                case DUP_X2 -> {
                     if (stack.size() < 3) return UNSAFE;
                     int t = stack.removeLast();
                     int u = stack.removeLast();
@@ -518,13 +520,13 @@ final class ConstructorRewriter {
                     stack.add(t);
                     return SAFE;
                 }
-                case "DUP2" -> {
+                case DUP2 -> {
                     if (stack.size() < 2) return UNSAFE;
                     stack.add(stack.get(stack.size() - 2));
                     stack.add(stack.get(stack.size() - 2));
                     return SAFE;
                 }
-                case "DUP2_X1" -> {
+                case DUP2_X1 -> {
                     if (stack.size() < 3) return UNSAFE;
                     int t = stack.removeLast();
                     int u = stack.removeLast();
@@ -536,7 +538,7 @@ final class ConstructorRewriter {
                     stack.add(t);
                     return SAFE;
                 }
-                case "DUP2_X2" -> {
+                case DUP2_X2 -> {
                     if (stack.size() < 4) return UNSAFE;
                     int t = stack.removeLast();
                     int u = stack.removeLast();
@@ -550,29 +552,13 @@ final class ConstructorRewriter {
                     stack.add(t);
                     return SAFE;
                 }
-                case "SWAP" -> {
+                case SWAP -> {
                     if (stack.size() < 2) return UNSAFE;
                     Collections.swap(stack, stack.size() - 1, stack.size() - 2);
                     return SAFE;
                 }
                 default -> { return UNSAFE; }
             }
-        }
-
-    private static int pushSlots(String opcode) {
-        return switch (opcode) {
-            case "I2L", "I2D", "L2D", "F2L", "F2D", "D2L" -> 2;
-            default -> 1;
-        };
-    }
-
-        private static int opSlots(String opcode) {
-            char c = lower(opcode).charAt(0);
-            return (c == 'l' || c == 'd') ? 2 : 1;
-        }
-
-        private static String lower(String s) {
-            return s.toLowerCase(Locale.ROOT);
         }
 
         private static void pushSlots(List<Integer> stack, int slots) {

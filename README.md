@@ -115,13 +115,16 @@ unprefixed name (e.g. `includes-mode`).
 
 #### `mode` values
 
-| Mode | Effect |
-| --- | --- |
-| `safe` | Keep only selected classes that are *already `final`* (or abstract). Non-final candidates are skipped, because converting them would break their subclasses. |
-| `mark-class-final` | Also convert non-final candidates. They are made `final`, so only opt in when nothing subclasses them (otherwise subclasses fail with `IncompatibleClassChangeError`). |
-| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `ACC_SYNCHRONIZED` is stripped so they can become value classes. |
+The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_ classes should be converted. Mode further decides
+_which_ or _how_ those classes should be converted.
+
+| Mode | Effect                                                                                                                                                                                                                                 |
+| --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `safe` | Keep only candidates classes that can be safely converted.                                                                                                                                 |
+| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `ACC_SYNCHRONIZED` is stripped so they can become value classes.                                                                                                            |
+| `mark-class-final` | Also convert non-final candidates. They are made `final`, so only opt in when nothing subclasses them (otherwise subclasses fail with `IncompatibleClassChangeError`).                                                                 |
 | `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected, since a value class cannot have a mutable field. |
-| `yolo` | Shorthand for `mark-class-final,ignore-synchronized,mark-fields-final` (the default). |
+| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final` (the default).                                                                                                                                                  |
 
 Mode names are case-insensitive and may use `-`, `_` or camelCase. e.g. `mark-class-final`, `mark_class_final`, and 
 `markClassFinal` are all the same.

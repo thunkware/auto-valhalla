@@ -74,7 +74,23 @@ public final class ValueClassRewriter {
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
             boolean ignoreSynchronized, boolean markClassFinal) {
-        if (!isSuitable(model, ignoreSynchronized, markClassFinal)) {
+        return transform(model, keepIfInvalid, ignoreSynchronized, markClassFinal, Set.of());
+    }
+
+    /**
+     * Like {@link #transform(ClassModel, boolean, boolean, boolean)} but also
+     * treats every {@code abstractValueSuperclasses} entry (an internal class
+     * name, e.g. {@code com/example/Base}) as a legal direct superclass: a value
+     * class may extend an abstract value class. The transformer passes the set
+     * of abstract classes <em>it</em> has already rewritten, since whether a
+     * superclass is an abstract value class is only known from the rewrite
+     * history.
+     */
+    public static byte[] transform(ClassModel model, boolean keepIfInvalid,
+            boolean ignoreSynchronized, boolean markClassFinal,
+            Set<String> abstractValueSuperclasses) {
+        if (!isSuitable(model, ignoreSynchronized, markClassFinal,
+                abstractValueSuperclasses)) {
             return null;
         }
         if (alreadyValue(model)) {
@@ -190,14 +206,45 @@ public final class ValueClassRewriter {
     }
 
     /**
+     * Like {@link #isSuitable(ClassModel, boolean, boolean)} but with previously
+     * rewritten abstract value classes as legal superclasses (see
+     * {@link #suitabilityProblems(ClassModel, boolean, boolean, Set)}).
+     */
+    public static boolean isSuitable(ClassModel model, boolean ignoreSynchronized,
+            boolean markClassFinal, Set<String> abstractValueSuperclasses) {
+        return suitabilityProblems(model, ignoreSynchronized, markClassFinal,
+                abstractValueSuperclasses).isEmpty();
+    }
+
+    /**
      * Reports, as targeted messages, every JEP 401 structural rule the class
      * violates, so callers can surface <em>only</em> the actual problem(s)
      * instead of a blanket "not suitable". Empty when the class is a suitable
      * value-class candidate (see {@link #isSuitable(ClassModel, boolean, boolean)}
      * for what the {@code ignore*} flags mean).
      */
+    /**
+     * Like {@link #suitabilityProblems(ClassModel, boolean, boolean, Set)} with
+     * no previously-rewritten abstract value classes (nothing is exempt from the
+     * identity-superclass rule).
+     */
     public static List<String> suitabilityProblems(ClassModel model,
             boolean ignoreSynchronized, boolean markClassFinal) {
+        return suitabilityProblems(model, ignoreSynchronized, markClassFinal, Set.of());
+    }
+
+    /**
+     * Like {@link #suitabilityProblems(ClassModel, boolean, boolean)} but also
+     * treats every {@code abstractValueSuperclasses} entry (an internal class
+     * name, e.g. {@code com/example/Base}) as a legal direct superclass: a value
+     * class may extend an abstract value class. The transformer passes the set
+     * of abstract classes <em>it</em> has already rewritten, since whether a
+     * superclass is an abstract value class is only known from the rewrite
+     * history.
+     */
+    public static List<String> suitabilityProblems(ClassModel model,
+            boolean ignoreSynchronized, boolean markClassFinal,
+            Set<String> abstractValueSuperclasses) {
         List<String> problems = new ArrayList<>();
         AccessFlags flags = model.flags();
         if (flags.has(AccessFlag.INTERFACE)) {
@@ -214,10 +261,11 @@ public final class ValueClassRewriter {
         }
         String sup = model.superclass().map(ClassEntry::asInternalName)
                 .orElse("java/lang/Object");
-        if (!sup.equals("java/lang/Object") && !sup.equals("java/lang/Record")) {
+        if (!sup.equals("java/lang/Object") && !sup.equals("java/lang/Record")
+                && !abstractValueSuperclasses.contains(sup)) {
             problems.add("it extends the identity class " + sup
                     + "; a value class can extend only java.lang.Object or an"
-                    + " abstract value class, not an identity class");
+                    + " (agent-rewritten) abstract value class, not an identity class");
         }
         if (!markClassFinal && !flags.has(AccessFlag.FINAL)
                 && !flags.has(AccessFlag.ABSTRACT)) {
