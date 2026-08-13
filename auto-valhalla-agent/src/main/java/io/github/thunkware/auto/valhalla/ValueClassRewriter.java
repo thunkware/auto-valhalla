@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import static java.lang.classfile.Attributes.*;
+
 import java.lang.classfile.AccessFlags;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileVersion;
@@ -20,8 +22,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
-import static java.lang.classfile.Attributes.*;
 
 /**
  * Rewrites a loaded class file into a JEP 401 value class.

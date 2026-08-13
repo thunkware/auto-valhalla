@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.reflect.AccessFlag;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -324,6 +325,35 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void identityExceptionGuardInstrumentedIntoMonitorenterClasses() throws Exception {
+        Path out = Files.createTempFile("auto-valhalla-identity", ".txt");
+        out.toFile().deleteOnExit();
+
+        // SyncBlock synchronizes on this, so it is selected but unsuitable; with
+        // identity-exception-append-to set, its monitorenter is instrumented.
+        ValueClassTransformer t = new ValueClassTransformer(
+                Set.of("sample.SyncBlock"), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, false, null, null,
+                false, null, null, out.toString());
+
+        byte[] syncBlock = readResource("/sample/SyncBlock.class");
+        byte[] instrumented = t.transform(null, null, "sample/SyncBlock", null, null, syncBlock);
+        assertNotNull(instrumented, "a selected class with a synchronized block is instrumented");
+
+        ClassFile cf = ClassFile.of();
+        assertTrue(cf.verify(instrumented).isEmpty(), "instrumented class must verify");
+        boolean hasGuard = cf.parse(instrumented).methods().stream()
+                .anyMatch(m -> m.code().map(c -> c.elementList().stream()
+                        .anyMatch(e -> e instanceof InvokeInstruction ii
+                                && ii.owner().asInternalName()
+                                        .equals("io/github/thunkware/auto/valhalla/IdentityGuard")
+                                && ii.name().stringValue().equals("check")))
+                        .orElse(false));
+        assertTrue(hasGuard, "monitorenter must be preceded by IdentityGuard.check");
+    }
+
+    @Test
     void onSuccessAppendToRecordsConvertedClassWithoutDuplicates() throws Exception {
         Path success = Files.createTempFile("auto-valhalla-success", ".txt");
         Path fail = Files.createTempFile("auto-valhalla-fail", ".txt");
@@ -500,7 +530,7 @@ class ValueClassRewriterTest {
                     false, true, ann.getAbsolutePath(), true, inc.getAbsolutePath());
             both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
             assertEquals("demo5.broken.MutablePoint\n", Files.readString(ann.toPath()),
-                    "a both-selected class is appended to the annotation file as a dot name");
+                    "a both-selected class is appended to the annotation file as a class name");
             assertTrue(Files.readString(inc.toPath()).isEmpty(),
                     "the includes file is untouched when the annotation settings win");
 
@@ -514,7 +544,7 @@ class ValueClassRewriterTest {
                         false, false, null, false, inc2.getAbsolutePath());
                 includesOnly.transform(null, null, "sample/Mutable", null, null, mutable);
                 assertEquals("sample.Mutable\n", Files.readString(inc2.toPath()),
-                        "an includes-only class is appended to the includes file as a dot name");
+                        "an includes-only class is appended to the includes file as a class name");
             } finally {
                 inc2.delete();
             }

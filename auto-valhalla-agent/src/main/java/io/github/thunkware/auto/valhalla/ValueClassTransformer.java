@@ -3,7 +3,14 @@ package io.github.thunkware.auto.valhalla;
 import java.io.IOException;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
+import java.lang.classfile.ClassTransform;
+import java.lang.classfile.CodeTransform;
+import java.lang.classfile.Opcode;
 import java.lang.classfile.constantpool.ClassEntry;
+import java.lang.classfile.instruction.MonitorInstruction;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.MethodTypeDesc;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.reflect.AccessFlag;
 import java.nio.file.Files;
@@ -51,12 +58,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *       includes sweep cannot crash the application).</li>
  *   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} and
  *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
- *       Java dot name of each failing class (e.g. {@code com.example.Foo},
+ *       class name of each failing class (e.g. {@code com.example.Foo},
  *       not {@code com/example/Foo}) to the given file, per selection
  *       source.</li>
  *   <li>{@code auto-valhalla.annotation.on-success-append-to=file} and
  *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
- *       Java dot name of each successfully converted class. The file is read at
+ *       class name of each successfully converted class. The file is read at
  *       start-up so names already present are not re-appended.</li>
  * </ul>
  *
@@ -80,6 +87,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private final boolean includesOnFailThrow;
     private final String includesOnFailAppendTo;
     private final String includesOnSuccessAppendTo;
+    private final String identityExceptionAppendTo;
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
@@ -95,7 +103,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             boolean includesOnFailThrow, String includesOnFailAppendTo) {
         this(includes, excludes, annotationMode, includesMode, debug,
                 annotationOnFailThrow, annotationOnFailAppendTo, null,
-                includesOnFailThrow, includesOnFailAppendTo, null);
+                includesOnFailThrow, includesOnFailAppendTo, null, null);
     }
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
@@ -105,6 +113,19 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             String annotationOnSuccessAppendTo,
             boolean includesOnFailThrow, String includesOnFailAppendTo,
             String includesOnSuccessAppendTo) {
+        this(includes, excludes, annotationMode, includesMode, debug,
+                annotationOnFailThrow, annotationOnFailAppendTo, annotationOnSuccessAppendTo,
+                includesOnFailThrow, includesOnFailAppendTo, includesOnSuccessAppendTo, null);
+    }
+
+    ValueClassTransformer(Set<String> includes, Set<String> excludes,
+            Set<Mode> annotationMode, Set<Mode> includesMode,
+            boolean debug,
+            boolean annotationOnFailThrow, String annotationOnFailAppendTo,
+            String annotationOnSuccessAppendTo,
+            boolean includesOnFailThrow, String includesOnFailAppendTo,
+            String includesOnSuccessAppendTo,
+            String identityExceptionAppendTo) {
         this.includes = includes;
         this.excludes = excludes;
         this.annotationMode = annotationMode;
@@ -116,6 +137,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         this.includesOnFailThrow = includesOnFailThrow;
         this.includesOnFailAppendTo = includesOnFailAppendTo;
         this.includesOnSuccessAppendTo = includesOnSuccessAppendTo;
+        this.identityExceptionAppendTo = identityExceptionAppendTo;
         // Read each append-to file now (start-up) so names already present are
         // not re-appended; a missing file is silently treated as empty.
         for (String path : new String[] { annotationOnFailAppendTo,
@@ -156,12 +178,49 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             }
             onFailThrow = selection.onFailThrow();
             onFailAppendTo = selection.onFailAppendTo();
-            return rewrite(internal, model, selection);
+            byte[] out = rewrite(internal, model, selection);
+            if (out != null) {
+                return out;
+            }
+            // Selected but left identity (e.g. it synchronizes): if identity-exception
+            // recording is enabled, instrument its monitorenter instructions so a
+            // runtime IdentityException names the value class that was locked.
+            return instrumentIdentityGuard(model);
         } catch (LinkageError e) {
             throw e;
         } catch (Throwable t) {
             return onTransformError(internal, t, onFailThrow, onFailAppendTo);
         }
+    }
+
+    /**
+     * Instruments every {@code monitorenter} instruction with a call to
+     * {@link IdentityGuard#check(Object)} when {@code identity-exception-append-to}
+     * is configured. Returns {@code null} when disabled or the class has no
+     * monitorenter, so unrelated classes are left untouched.
+     */
+    private byte[] instrumentIdentityGuard(ClassModel model) {
+        if (identityExceptionAppendTo == null) {
+            return null;
+        }
+        boolean hasMonitor = model.methods().stream()
+                .anyMatch(m -> m.code().map(c -> c.elementList().stream()
+                        .anyMatch(e -> e instanceof MonitorInstruction mi
+                                && mi.opcode() == Opcode.MONITORENTER))
+                        .orElse(false));
+        if (!hasMonitor) {
+            return null;
+        }
+        CodeTransform guard = (cb, e) -> {
+            if (e instanceof MonitorInstruction mi && mi.opcode() == Opcode.MONITORENTER) {
+                cb.dup();
+                cb.invokestatic(ClassDesc.of("io.github.thunkware.auto.valhalla.IdentityGuard"),
+                        "check", MethodTypeDesc.of(ConstantDescs.CD_void, ConstantDescs.CD_Object));
+            }
+            cb.accept(e);
+        };
+        return ClassFile.of().transformClass(model,
+                ClassTransform.transformingMethodBodies(guard));
     }
 
     /**
@@ -311,7 +370,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         appendTo(onFailAppendTo, internal);
     }
 
-    /** Appends the Java dot name of {@code internal} to the file at {@code path}
+    /** Appends the class name of {@code internal} to the file at {@code path}
      *  (unless it is already recorded there), deduplicating across runs by reading
      *  the file at start-up. */
     private void appendTo(String path, String internal) {
@@ -323,7 +382,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     }
 
     /**
-     * Appends Java dot class names (e.g. {@code com.example.Foo}, not
+     * Appends class names (e.g. {@code com.example.Foo}, not
      * {@code com/example/Foo}) to a file, once per name, so the file can be fed
      * straight back to {@code includes-file} / {@code excludes-file}. The file is
      * read on construction so names already present are not re-appended; a
