@@ -52,13 +52,18 @@ import java.util.Set;
  *   <li>{@code auto-valhalla.includes.on-fail-throw=true} (default false) — the
  *       same, for <em>includes-selected</em> classes (off by default so a broad
  *       includes sweep cannot crash the application).</li>
-*   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} /
-     *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
-     *       Java dot name of each failing class (e.g. {@code com.example.Foo},
-     *       not {@code com/example/Foo}) to the given file, per selection
-     *       source (created if necessary). Dot names here read naturally for
-     *       {@code auto-valhalla.includes-file} / {@code auto-valhalla.excludes-file}
-     *       feedback.</li>
+ *   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} /
+ *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
+ *       Java dot name of each failing class (e.g. {@code com.example.Foo},
+ *       not {@code com/example/Foo}) to the given file, per selection
+ *       source (created if necessary). Dot names here read naturally for
+ *       {@code auto-valhalla.includes-file} / {@code auto-valhalla.excludes-file}
+ *       feedback.</li>
+ *   <li>{@code auto-valhalla.annotation.on-success-append-to=file} /
+ *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
+ *       Java dot name of each class that is successfully converted to a value
+ *       class. The file is read at start-up so a name already present is not
+ *       re-appended; a missing file is treated as empty, never an error.</li>
  *   <li>{@code auto-valhalla.config=file} — read options from a Java properties
  *       file (keys may omit the {@code auto-valhalla.} prefix).</li>
  * </ul>
@@ -114,7 +119,9 @@ public final class AutoValhallaAgent {
                 cfg.annotationMode(), cfg.includesMode(),
                 cfg.debug(),
                 cfg.annotationOnFailThrow(), cfg.annotationOnFailAppendTo(),
-                cfg.includesOnFailThrow(), cfg.includesOnFailAppendTo());
+                cfg.annotationOnSuccessAppendTo(),
+                cfg.includesOnFailThrow(), cfg.includesOnFailAppendTo(),
+                cfg.includesOnSuccessAppendTo());
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
 
@@ -179,8 +186,10 @@ public final class AutoValhallaAgent {
         // default. includes sweep broadly: stay quiet by default.
         boolean annotationOnFailThrow = true;
         String annotationOnFailAppendTo = null;
+        String annotationOnSuccessAppendTo = null;
         boolean includesOnFailThrow = false;
         String includesOnFailAppendTo = null;
+        String includesOnSuccessAppendTo = null;
 
         for (String[] a : assigns) {
             switch (a[0]) {
@@ -199,16 +208,26 @@ public final class AutoValhallaAgent {
                     String t = a[1].trim();
                     annotationOnFailAppendTo = t.isEmpty() ? null : t;
                 }
+                case Config.ANNOTATION_ON_SUCCESS_APPEND_TO -> {
+                    String t = a[1].trim();
+                    annotationOnSuccessAppendTo = t.isEmpty() ? null : t;
+                }
                 case Config.INCLUDES_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
                     includesOnFailAppendTo = t.isEmpty() ? null : t;
+                }
+                case Config.INCLUDES_ON_SUCCESS_APPEND_TO -> {
+                    String t = a[1].trim();
+                    includesOnSuccessAppendTo = t.isEmpty() ? null : t;
                 }
                 default -> { /* unreachable */ }
             }
         }
         return new Config(includes, excludes, annotationMode, includesMode,
                 debug, annotationOnFailThrow, annotationOnFailAppendTo,
-                includesOnFailThrow, includesOnFailAppendTo);
+                annotationOnSuccessAppendTo,
+                includesOnFailThrow, includesOnFailAppendTo,
+                includesOnSuccessAppendTo);
     }
 
     private static void emit(List<String[]> assigns, String key, String value) {

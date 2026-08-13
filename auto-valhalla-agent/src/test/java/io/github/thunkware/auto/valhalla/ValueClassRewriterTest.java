@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.lang.classfile.ClassFile;
 import java.lang.reflect.AccessFlag;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -309,6 +310,35 @@ class ValueClassRewriterTest {
         assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(publicField), false, true)
                         .stream().anyMatch(p -> p.contains("non-private mutable field")),
                 "a non-private mutable field must be reported as not suitable");
+    }
+
+    @Test
+    void onSuccessAppendToRecordsConvertedClassWithoutDuplicates() throws Exception {
+        Path success = Files.createTempFile("auto-valhalla-success", ".txt");
+        Path fail = Files.createTempFile("auto-valhalla-fail", ".txt");
+        success.toFile().deleteOnExit();
+        fail.toFile().deleteOnExit();
+
+        // A name already present in the file must not be re-appended.
+        Files.writeString(success, "sample.SampleX\n");
+
+        ValueClassTransformer t = new ValueClassTransformer(
+                Set.of("sample.SampleX", "sample.Mutable"), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, false, fail.toString(), success.toString(),
+                false, fail.toString(), success.toString());
+
+        byte[] sampleX = readResource("/sample/SampleX.class");
+        byte[] mutable = readResource("/sample/Mutable.class");
+        assertNotNull(t.transform(null, null, "sample/SampleX", null, null, sampleX),
+                "SampleX must be converted");
+        assertNull(t.transform(null, null, "sample/Mutable", null, null, mutable),
+                "Mutable must be left as an identity class");
+
+        assertEquals("sample.SampleX\n", Files.readString(success),
+                "the pre-existing name must not be re-appended");
+        assertTrue(Files.readString(fail).contains("sample.Mutable"),
+                "the failing class must be recorded in the on-fail file");
     }
 
     @Test

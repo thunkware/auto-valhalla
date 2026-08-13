@@ -11,7 +11,9 @@ record Config(Set<String> includes, Set<String> excludes,
         Set<Mode> annotationMode, Set<Mode> includesMode,
         boolean debug,
         boolean annotationOnFailThrow, String annotationOnFailAppendTo,
-        boolean includesOnFailThrow, String includesOnFailAppendTo) {
+        String annotationOnSuccessAppendTo,
+        boolean includesOnFailThrow, String includesOnFailAppendTo,
+        String includesOnSuccessAppendTo) {
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
      *  used by {@link AutoValhallaAgent#parse(String)} switch. */
@@ -24,8 +26,10 @@ record Config(Set<String> includes, Set<String> excludes,
     static final String DEBUG = "debug";
     static final String ANNOTATION_ON_FAIL_THROW = "annotation.on-fail-throw";
     static final String ANNOTATION_ON_FAIL_APPEND_TO = "annotation.on-fail-append-to";
+    static final String ANNOTATION_ON_SUCCESS_APPEND_TO = "annotation.on-success-append-to";
     static final String INCLUDES_ON_FAIL_THROW = "includes.on-fail-throw";
     static final String INCLUDES_ON_FAIL_APPEND_TO = "includes.on-fail-append-to";
+    static final String INCLUDES_ON_SUCCESS_APPEND_TO = "includes.on-success-append-to";
     static final String CONFIG = "config";
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), in
@@ -36,6 +40,8 @@ record Config(Set<String> includes, Set<String> excludes,
             ANNOTATION_MODE, INCLUDES_MODE,
             DEBUG,
             ANNOTATION_ON_FAIL_THROW, ANNOTATION_ON_FAIL_APPEND_TO,
+            ANNOTATION_ON_SUCCESS_APPEND_TO,
             INCLUDES_ON_FAIL_THROW, INCLUDES_ON_FAIL_APPEND_TO,
+            INCLUDES_ON_SUCCESS_APPEND_TO,
             CONFIG);
 }

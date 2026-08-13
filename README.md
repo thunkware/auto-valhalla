@@ -105,9 +105,15 @@ Within the agent-argument list, later options override earlier ones, and a `.con
 | `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions.                                                                                                                                                   |
 | `auto-valhalla.annotation.on-fail-throw` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_THROW` | `true` (default) to surface a loud `LinkageError` (a `ClassFormatError` at load) when an *annotation-selected* class cannot be safely transformed, instead of silently keeping it an identity class. |
 | `auto-valhalla.includes.on-fail-throw` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_THROW` | Same, for *includes-selected* classes. Defaults to `false` so a broad includes sweep cannot crash the application.                                                                                   |
-| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; the Java dot name (e.g. `com.example.Foo`, not `com/example/Foo`) of each annotation-selected class that fails to transform is appended (the file is created if it does not exist).  |
+| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; the Java dot name (e.g. `com.example.Foo`, not `com/example/Foo`) of each annotation-selected class that fails to transform is appended.                                              |
 | `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
+| `auto-valhalla.annotation.on-success-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS_APPEND_TO` | Path to a file; the Java dot name of each annotation-selected class that is successfully converted is appended.                                                                                    |
+| `auto-valhalla.includes.on-success-append-to` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
 | `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying the options above (keys may omit the `auto-valhalla.` prefix).                                                                                              |
+
+For every `*-append-to` option the target file is read once at start-up so names
+already present are not appended again, and a missing file is simply treated as
+empty (no error).
 
 Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the
 unprefixed name (e.g. `includes-mode`).
@@ -174,6 +180,17 @@ are skipped instead of surfacing errors:
 # later passes: skip the classes that failed before
 -Dauto-valhalla.includes=com.example. \
 -Dauto-valhalla.excludes-file=/var/tmp/auto-valhalla-failures.txt
+```
+
+The companion `includes.on-success-append-to` records the classes that *were*
+converted, which is handy for turning a broad `includes` sweep into an explicit
+`includes-file` list:
+
+```bash
+# record what a broad sweep actually converted
+-Dauto-valhalla.includes='*' \
+-Dauto-valhalla.includes-mode=safe \
+-Dauto-valhalla.includes.on-success-append-to=/var/tmp/auto-valhalla-converted.txt
 ```
 
 ## Notes & limitations

@@ -49,11 +49,15 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>{@code auto-valhalla.includes.on-fail-throw=true} (default false) — the
  *       same, for <em>includes-selected</em> classes (off by default so a broad
  *       includes sweep cannot crash the application).</li>
-*   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} and
-     *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
-     *       Java dot name of each failing class (e.g. {@code com.example.Foo},
-     *       not {@code com/example/Foo}) to the given file, per selection
-     *       source.</li>
+ *   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} and
+ *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
+ *       Java dot name of each failing class (e.g. {@code com.example.Foo},
+ *       not {@code com/example/Foo}) to the given file, per selection
+ *       source.</li>
+ *   <li>{@code auto-valhalla.annotation.on-success-append-to=file} and
+ *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
+ *       Java dot name of each successfully converted class. The file is read at
+ *       start-up so names already present are not re-appended.</li>
  * </ul>
  *
  * <p>A class selected by both the annotation and {@code includes} is treated as
@@ -72,17 +76,35 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private final boolean debug;
     private final boolean annotationOnFailThrow;
     private final String annotationOnFailAppendTo;
+    private final String annotationOnSuccessAppendTo;
     private final boolean includesOnFailThrow;
     private final String includesOnFailAppendTo;
+    private final String includesOnSuccessAppendTo;
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
+    /** Per-path {@link NameFile}s, shared so success and failure appends to the
+     *  same file deduplicate against each other. */
+    private final java.util.concurrent.ConcurrentMap<String, NameFile> appenders =
+            new ConcurrentHashMap<>();
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
             Set<Mode> annotationMode, Set<Mode> includesMode,
             boolean debug,
             boolean annotationOnFailThrow, String annotationOnFailAppendTo,
             boolean includesOnFailThrow, String includesOnFailAppendTo) {
+        this(includes, excludes, annotationMode, includesMode, debug,
+                annotationOnFailThrow, annotationOnFailAppendTo, null,
+                includesOnFailThrow, includesOnFailAppendTo, null);
+    }
+
+    ValueClassTransformer(Set<String> includes, Set<String> excludes,
+            Set<Mode> annotationMode, Set<Mode> includesMode,
+            boolean debug,
+            boolean annotationOnFailThrow, String annotationOnFailAppendTo,
+            String annotationOnSuccessAppendTo,
+            boolean includesOnFailThrow, String includesOnFailAppendTo,
+            String includesOnSuccessAppendTo) {
         this.includes = includes;
         this.excludes = excludes;
         this.annotationMode = annotationMode;
@@ -90,8 +112,19 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         this.debug = debug;
         this.annotationOnFailThrow = annotationOnFailThrow;
         this.annotationOnFailAppendTo = annotationOnFailAppendTo;
+        this.annotationOnSuccessAppendTo = annotationOnSuccessAppendTo;
         this.includesOnFailThrow = includesOnFailThrow;
         this.includesOnFailAppendTo = includesOnFailAppendTo;
+        this.includesOnSuccessAppendTo = includesOnSuccessAppendTo;
+        // Read each append-to file now (start-up) so names already present are
+        // not re-appended; a missing file is silently treated as empty.
+        for (String path : new String[] { annotationOnFailAppendTo,
+                annotationOnSuccessAppendTo, includesOnFailAppendTo,
+                includesOnSuccessAppendTo }) {
+            if (path != null) {
+                appenders.computeIfAbsent(path, p -> new NameFile(p, debug));
+            }
+        }
     }
 
     @Override
@@ -162,15 +195,17 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // failure settings, with no contribution from includes.
         boolean onFailThrow = annotationOnFailThrow;
         String onFailAppendTo = annotationOnFailAppendTo;
+        String onSuccessAppendTo = annotationOnSuccessAppendTo;
         EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
         if (annotated) {
             effective.addAll(annotationMode);
         } else {
             onFailThrow = includesOnFailThrow;
             onFailAppendTo = includesOnFailAppendTo;
+            onSuccessAppendTo = includesOnSuccessAppendTo;
             effective.addAll(includesMode);
         }
-        return new Selection(effective, onFailThrow, onFailAppendTo);
+        return new Selection(effective, onFailThrow, onFailAppendTo, onSuccessAppendTo);
     }
 
     /**
@@ -210,6 +245,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         if (!model.flags().has(AccessFlag.FINAL)) {
             transformedToFinal.add(internal);
         }
+        appendTo(selection.onSuccessAppendTo(), internal);
         if (debug) {
             System.err.println("[auto-valhalla] " + internal.replace('/', '.')
                     + ": transformed to value class (" + out.length + " bytes)");
@@ -223,7 +259,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * the annotation and includes is annotation-selected only.
      */
     private record Selection(Set<Mode> effective,
-            boolean onFailThrow, String onFailAppendTo) {}
+            boolean onFailThrow, String onFailAppendTo, String onSuccessAppendTo) {}
 
     /** Handles an unexpected failure: rethrows a {@link LinkageError}, otherwise
      *  surfaces a loud failure or leaves the class as identity per the effective
@@ -272,19 +308,66 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     }
 
     private void appendOnFail(String internal, String onFailAppendTo) {
-        if (onFailAppendTo == null) {
+        appendTo(onFailAppendTo, internal);
+    }
+
+    /** Appends the Java dot name of {@code internal} to the file at {@code path}
+     *  (unless it is already recorded there), deduplicating across runs by reading
+     *  the file at start-up. */
+    private void appendTo(String path, String internal) {
+        if (path == null) {
             return;
         }
-        // Write Java dot class names (demo5.Shape, not demo5/Shape) so the file
-        // can be fed straight back to includes-file / excludes-file.
-        try {
-            Files.writeString(Path.of(onFailAppendTo), internal.replace('/', '.') + "\n",
-                    StandardOpenOption.CREATE, StandardOpenOption.APPEND,
-                    StandardOpenOption.WRITE);
-        } catch (IOException e) {
-            if (debug) {
-                System.err.println("[auto-valhalla] cannot append to "
-                        + onFailAppendTo + ": " + e);
+        appenders.computeIfAbsent(path, p -> new NameFile(p, debug))
+                .append(internal.replace('/', '.'));
+    }
+
+    /**
+     * Appends Java dot class names (e.g. {@code com.example.Foo}, not
+     * {@code com/example/Foo}) to a file, once per name, so the file can be fed
+     * straight back to {@code includes-file} / {@code excludes-file}. The file is
+     * read on construction so names already present are not re-appended; a
+     * missing file is treated as empty and never causes an error.
+     */
+    private static final class NameFile {
+        private final String path;
+        private final Set<String> seen = ConcurrentHashMap.newKeySet();
+        private final boolean debug;
+
+        NameFile(String path, boolean debug) {
+            this.path = path;
+            this.debug = debug;
+            Path p = Path.of(path);
+            if (Files.exists(p)) {
+                try {
+                    for (String line : Files.readAllLines(p)) {
+                        String t = line.trim();
+                        if (!t.isEmpty()) {
+                            seen.add(t);
+                        }
+                    }
+                } catch (IOException e) {
+                    if (debug) {
+                        System.err.println("[auto-valhalla] cannot read append-to file "
+                                + path + ": " + e);
+                    }
+                }
+            }
+        }
+
+        void append(String dotName) {
+            if (!seen.add(dotName)) {
+                return; // already present (from the file or a prior append)
+            }
+            try {
+                Files.writeString(Path.of(path), dotName + "\n",
+                        StandardOpenOption.CREATE, StandardOpenOption.APPEND,
+                        StandardOpenOption.WRITE);
+            } catch (IOException e) {
+                if (debug) {
+                    System.err.println("[auto-valhalla] cannot append to "
+                            + path + ": " + e);
+                }
             }
         }
     }
