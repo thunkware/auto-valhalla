@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
  * configuration run-demo.sh uses, so a demo class that silently stops
  * transforming fails the agent's unit tests instead of only the demo.
  *
- * <p>Before the assertions were added, a regression in demo5.Point (a
+ * <p>Before the assertions were added, a regression in demo5.annotation.Point (a
  * non-final field also written by a setter) made the class fail to transform
  * while run-demo.sh still reported success.
  */
@@ -26,45 +26,49 @@ class DemoFixturesTest {
     @Test
     void demoFixturesAreRewrittenByDemoConfig() throws Exception {
         ClassFile cf = ClassFile.of();
-        // Mirrors run-demo.sh: includes=demo16,demo5, includes-mode=yolo, and
-        // the default failure handling (annotation throws, includes stay quiet).
+        // Mirrors run-demo.sh: includes=demo16.includes.,demo5.includes.,
+        // annotation-mode=yolo, includes-mode=yolo, and the default failure
+        // handling (annotation throws, includes stay quiet).
+        Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,
+                Mode.IGNORE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
         ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of("demo16", "demo5"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                Set.of("demo16.includes.", "demo5.includes."), Set.of(),
+                yolo, yolo,
                 false, true, null, false, null);
 
-        // Point is selected by BOTH @AutoValhalla and includes, so the effective
-        // mode set is the union, which includes mark-fields-final. Its fields are
-        // already final, so it must still be rewritten.
-        byte[] point = transformer.transform(null, null, "demo5/Point", null, null,
-                readResource("/demo5/Point.class"));
-        assertNotNull(point, "demo5.Point must be rewritten under the demo config"
-                + " (annotation + includes-mode=yolo)");
-        assertTrue(cf.verify(point).isEmpty(), "rewritten demo5.Point must verify");
+        // Point is selected only by @AutoValhalla (it is in demo5.annotation,
+        // outside the demo5.includes. prefix). annotation-mode=yolo marks its
+        // non-final `x` field final, so it must be rewritten.
+        byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
+                readResource("/demo5/annotation/Point.class"));
+        assertNotNull(point, "demo5.annotation.Point must be rewritten under the demo config"
+                + " (annotation-mode=yolo)");
+        assertTrue(cf.verify(point).isEmpty(), "rewritten demo5.annotation.Point must verify");
 
         // Square relies on includes-mode=yolo marking its non-final `side` field
         // (written exactly once, in the constructor) final.
-        byte[] square = transformer.transform(null, null, "demo5/Square", null, null,
-                readResource("/demo5/Square.class"));
-        assertNotNull(square, "demo5.Square must be rewritten with includes-mode=yolo");
-        assertTrue(cf.verify(square).isEmpty(), "rewritten demo5.Square must verify");
+        byte[] square = transformer.transform(null, null, "demo5/includes/Square", null, null,
+                readResource("/demo5/includes/Square.class"));
+        assertNotNull(square, "demo5.includes.Square must be rewritten with includes-mode=yolo");
+        assertTrue(cf.verify(square).isEmpty(), "rewritten demo5.includes.Square must verify");
 
-        // Circle is the annotation-selected analogue of Square: non-final `radius`
-        // written exactly once, in the constructor. Under the demo config it is
-        // selected by both sources, so it must be rewritten too.
-        byte[] circle = transformer.transform(null, null, "demo5/Circle", null, null,
-                readResource("/demo5/Circle.class"));
-        assertNotNull(circle, "demo5.Circle must be rewritten under the demo config");
-        assertTrue(cf.verify(circle).isEmpty(), "rewritten demo5.Circle must verify");
+        // Circle is the un-annotated analogue of Square: non-final `radius`
+        // written exactly once, in the constructor. Selected via the
+        // demo5.includes. prefix, it must be rewritten by includes-mode=yolo.
+        byte[] circle = transformer.transform(null, null, "demo5/includes/Circle", null, null,
+                readResource("/demo5/includes/Circle.class"));
+        assertNotNull(circle, "demo5.includes.Circle must be rewritten under the demo config");
+        assertTrue(cf.verify(circle).isEmpty(), "rewritten demo5.includes.Circle must verify");
     }
 
     @Test
     void annotatedMutableClassIsRejectedByDemoConfig() throws Exception {
         // MutablePoint is @AutoValhalla, but its non-final `y` is reassigned by
         // setY() outside the constructor, so it can never be a JEP 401 value
-        // class. The demo config selects it by both sources; the annotation
-        // settings win, so the default annotation.on-fail-throw=true makes the
-        // rejection loud instead of silently rewriting it.
+        // class. Under the demo config's annotation-mode=yolo it is selected by
+        // the annotation; the annotation settings win, so the default
+        // annotation.on-fail-throw=true makes the rejection loud instead of
+        // silently rewriting it.
         String internal = "demo5/broken/MutablePoint";
         byte[] original = readResource("/demo5/broken/MutablePoint.class");
         assertNotNull(original, "demo5.broken.MutablePoint must be on the test classpath");
@@ -79,9 +83,11 @@ class DemoFixturesTest {
         // Default failure handling: annotated classes fail loudly, so the
         // rejection returns an unloadable class file -- never a usable value
         // class.
+        Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,
+                Mode.IGNORE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
         ValueClassTransformer loud = new ValueClassTransformer(
-                Set.of("demo16", "demo5"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                Set.of(), Set.of(),
+                yolo, yolo,
                 false, true, null, false, null);
         byte[] loudOut = loud.transform(null, null, internal, null, null, original);
         assertNotNull(loudOut, "annotation.on-fail-throw=true surfaces the rejection");
@@ -91,8 +97,8 @@ class DemoFixturesTest {
         // With throwing disabled for both sources it is instead left as an
         // identity class -- still never rewritten into a value class.
         ValueClassTransformer quiet = new ValueClassTransformer(
-                Set.of("demo16", "demo5"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                Set.of(), Set.of(),
+                yolo, yolo,
                 false, false, null, false, null);
         assertNull(quiet.transform(null, null, internal, null, null, original),
                 "without on-fail-throw the annotated mutable class is left as identity");
@@ -143,11 +149,11 @@ class DemoFixturesTest {
                 Set.of(), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
                 false, true, null, false, null);
-        byte[] point = transformer.transform(null, null, "demo5/Point", null, null,
-                readResource("/demo5/Point.class"));
-        assertNotNull(point, "default annotation-mode (safe) rejects non-final demo5.Point loudly");
+        byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
+                readResource("/demo5/annotation/Point.class"));
+        assertNotNull(point, "default annotation-mode (safe) rejects non-final demo5.annotation.Point loudly");
         assertFalse(isUsableValueClass(point),
-                "the safe-default rejection of demo5.Point is not a usable value class");
+                "the safe-default rejection of demo5.annotation.Point is not a usable value class");
     }
 
     @Test
@@ -159,29 +165,11 @@ class DemoFixturesTest {
                 EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
                 Mode.INCLUDES_DEFAULT,
                 false, true, null, false, null);
-        byte[] point = transformer.transform(null, null, "demo5/Point", null, null,
-                readResource("/demo5/Point.class"));
-        assertNotNull(point, "@AutoValhalla + mark-class-final must convert demo5.Point");
+        byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
+                readResource("/demo5/annotation/Point.class"));
+        assertNotNull(point, "@AutoValhalla + mark-class-final must convert demo5.annotation.Point");
         assertTrue(ClassFile.of().verify(point).isEmpty(),
-                "annotation-rewritten demo5.Point must verify");
-    }
-
-    @Test
-    void annotatedCircleIsRewrittenWhenMarkClassFinalOptsIn() throws Exception {
-        // Like Square, Circle's `radius` is non-final yet written exactly once,
-        // in the constructor. It is selected by @AutoValhalla; with an explicit
-        // mark-class-final it converts even though the default safe annotation
-        // mode would skip it.
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
-                Mode.INCLUDES_DEFAULT,
-                false, true, null, false, null);
-        byte[] circle = transformer.transform(null, null, "demo5/Circle", null, null,
-                readResource("/demo5/Circle.class"));
-        assertNotNull(circle, "@AutoValhalla + mark-class-final must convert demo5.Circle");
-        assertTrue(ClassFile.of().verify(circle).isEmpty(),
-                "annotation-rewritten demo5.Circle must verify");
+                "annotation-rewritten demo5.annotation.Point must verify");
     }
 
     /** True if the bytes parse as a value class and pass verification. */

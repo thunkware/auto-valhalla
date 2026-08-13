@@ -1,10 +1,10 @@
-package demo16;
+package demo16.includes;
 
 /**
  * Not annotated. Converted to a value class only because the agent is started
- * with a package prefix that matches {@code demo16} (e.g.
- * {@code -Dauto-valhalla.includes=demo16}). Demonstrates that selection by
- * package prefix works for classes compiled to Java 16 bytecode.
+ * with a package prefix that matches {@code demo16.includes} (e.g.
+ * {@code -Dauto-valhalla.includes=demo16.includes.}). Demonstrates that
+ * selection by package prefix works for classes compiled to Java 16 bytecode.
  */
 public class Hsl {
     private final int h;

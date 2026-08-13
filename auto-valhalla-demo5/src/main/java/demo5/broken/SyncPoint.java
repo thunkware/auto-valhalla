@@ -1,5 +1,8 @@
 package demo5.broken;
 
+import demo5.annotation.Point;
+import demo5.includes.Square;
+
 /**
  * Deliberately <em>not</em> a JEP 401 value-class candidate even though it is
  * immutable: every field is {@code final} and written only in the constructor,
@@ -10,7 +13,7 @@ package demo5.broken;
  *
  * <p>Lives in the {@code demo5.broken} subpackage to keep the deliberately
  * broken fixtures apart from the demo's real value-class candidates
- * ({@link demo5.Point}, {@link demo5.Square}).
+ * ({@link Point}, {@link Square}).
  *
  * <p>Serves as a permanent regression guard for the synchronized-instance-method
  * rejection on genuine Java 5 bytecode (the {@code sample.Sync} fixture covers

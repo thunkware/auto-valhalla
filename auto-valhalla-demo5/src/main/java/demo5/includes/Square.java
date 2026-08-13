@@ -1,4 +1,4 @@
-package demo5;
+package demo5.includes;
 
 /**
  * Converted to a value class via {@code includes=demo5} combined with

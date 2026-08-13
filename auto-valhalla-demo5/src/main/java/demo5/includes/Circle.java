@@ -1,14 +1,10 @@
-package demo5;
-
-import io.github.thunkware.auto.valhalla.AutoValhalla;
+package demo5.includes;
 
 /**
  * Like {@link Square}: a non-final field written exactly once, in the
- * constructor, so it can safely be made {@code final} when `mode=mark-class-final`. Selected by the
- * {@code @AutoValhalla} annotation instead of {@code includes}. Compiled to
- * genuine Java 5 bytecode.
+ * constructor, so it can safely be made {@code final} when `mode=mark-class-final`.
+ * Compiled to Java 5 bytecode.
  */
-@AutoValhalla
 public class Circle {
     @SuppressWarnings("FieldMayBeFinal")
     private int radius;

@@ -1,4 +1,4 @@
-package demo5;
+package demo5.annotation;
 
 import io.github.thunkware.auto.valhalla.AutoValhalla;
 

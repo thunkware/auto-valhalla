@@ -69,9 +69,9 @@
                 <argument>${project.basedir}/../auto-valhalla-annotation/target/auto-valhalla-annotation-0.1.0-SNAPSHOT.jar</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
-                <argument>${project.basedir}/src/main/java/demo5/Point.java</argument>
-                <argument>${project.basedir}/src/main/java/demo5/Square.java</argument>
-                <argument>${project.basedir}/src/main/java/demo5/Circle.java</argument>
+                <argument>${project.basedir}/src/main/java/demo5/annotation/Point.java</argument>
+                <argument>${project.basedir}/src/main/java/demo5/includes/Square.java</argument>
+                <argument>${project.basedir}/src/main/java/demo5/includes/Circle.java</argument>
                 <argument>${project.basedir}/src/main/java/demo5/broken/MutablePoint.java</argument>
                 <argument>${project.basedir}/src/main/java/demo5/broken/SyncPoint.java</argument>
               </arguments>

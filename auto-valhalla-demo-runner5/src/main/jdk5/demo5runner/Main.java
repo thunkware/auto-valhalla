@@ -1,6 +1,6 @@
 package demo5runner;
 
-import demo5.Point;
+import demo5.annotation.Point;
 
 /**
  * JDK 5 compatible entry point used to prove the agent is safe to load/attach

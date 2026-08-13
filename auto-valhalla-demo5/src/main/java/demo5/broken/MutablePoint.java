@@ -1,5 +1,7 @@
 package demo5.broken;
 
+import demo5.annotation.Point;
+import demo5.includes.Square;
 import io.github.thunkware.auto.valhalla.AutoValhalla;
 
 /**
@@ -11,7 +13,7 @@ import io.github.thunkware.auto.valhalla.AutoValhalla;
  *
  * <p>Lives in the {@code demo5.broken} subpackage to keep the deliberately
  * broken fixtures apart from the demo's real value-class candidates
- * ({@link demo5.Point}, {@link demo5.Square}).
+ * ({@link Point}, {@link Square}).
  *
  * <p>Serves as a permanent regression guard for the {@code mark-fields-final}
  * rejection: an annotated mutable class must stay an identity class.

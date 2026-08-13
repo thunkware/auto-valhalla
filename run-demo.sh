@@ -39,7 +39,8 @@ echo "==== run WITH agent (annotation + includes selection, includes-mode=yolo) 
 "$JAVA_HOME/bin/java" --enable-preview \
     -javaagent:"$AGENT_JAR" \
     -Dauto-valhalla.expect=value \
-    -Dauto-valhalla.includes=demo16,demo5 \
+    -Dauto-valhalla.includes=demo16.includes.,demo5.includes. \
+    -Dauto-valhalla.annotation-mode=yolo \
     -Dauto-valhalla.includes-mode=yolo \
     -Dauto-valhalla.debug=true \
     "${EXTRA[@]}" \

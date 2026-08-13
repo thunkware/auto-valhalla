@@ -1,4 +1,4 @@
-package demo16;
+package demo16.annotation;
 
 import io.github.thunkware.auto.valhalla.AutoValhalla;
 
@@ -8,7 +8,7 @@ import io.github.thunkware.auto.valhalla.AutoValhalla;
  * newer than the JDK it was built against.
  */
 @AutoValhalla
-public class Money {
+public final class Money {
     private final long cents;
     private final String currency;
 

@@ -1,4 +1,4 @@
-package demo16;
+package demo16.includes;
 
 /**
  * A plain record. Records are not made value classes by the JVM in this JDK, so

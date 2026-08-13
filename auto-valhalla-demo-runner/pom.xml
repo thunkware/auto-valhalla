@@ -53,9 +53,12 @@
           <arguments>
             <argument>--enable-preview</argument>
              <argument>-javaagent:${project.basedir}/../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
-            <!-- select demo16.Hsl (and demo16.*) by package include; the
-                 annotated classes are also converted via the annotation. -->
-            <argument>-Dauto-valhalla.includes=demo16</argument>
+            <!-- select demo16.includes.* (and demo5.includes.*) by package
+                 include with includes-mode=yolo; the annotated classes are also
+                 converted via the annotation. -->
+            <argument>-Dauto-valhalla.includes=demo16.includes.,demo5.includes.</argument>
+            <argument>-Dauto-valhalla.annotation-mode=yolo</argument>
+            <argument>-Dauto-valhalla.includes-mode=yolo</argument>
             <argument>-cp</argument>
             <argument>${project.build.outputDirectory}:${project.basedir}/../auto-valhalla-demo5/target/auto-valhalla-demo5-0.1.0-SNAPSHOT.jar:${project.basedir}/../auto-valhalla-demo16/target/auto-valhalla-demo16-0.1.0-SNAPSHOT.jar:${project.basedir}/../auto-valhalla-annotation/target/auto-valhalla-annotation-0.1.0-SNAPSHOT.jar</argument>
             <argument>demo.runner.Main</argument>
