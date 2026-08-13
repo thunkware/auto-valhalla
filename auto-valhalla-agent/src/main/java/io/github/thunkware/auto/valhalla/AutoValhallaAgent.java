@@ -45,6 +45,9 @@ import java.util.Set;
      *       selected by {@code includes} (default {@code yolo} =
      *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
+ *   <li>{@code auto-valhalla.log-level} — logging level: {@code off}, {@code error},
+ *       {@code warning} (default), {@code info}, {@code debug}. Controls verbosity
+ *       of messages to stderr.</li>
  *   <li>{@code auto-valhalla.annotation.on-fail-throw=true} (default) — surface
  *       a loud {@link java.lang.LinkageError} if an <em>annotation-selected</em>
  *       class cannot be safely transformed instead of leaving it an identity
@@ -125,6 +128,7 @@ public final class AutoValhallaAgent {
             return;
         }
         Config cfg = parse(agentArgs);
+        InternalLogger.setLevel(cfg.logLevel());
         ValueClassTransformer transformer = new ValueClassTransformer(
                 cfg.includes(), cfg.excludes(),
                 cfg.annotationMode(), cfg.includesMode(),
@@ -199,6 +203,7 @@ public final class AutoValhallaAgent {
         Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
         Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
         boolean debug = false;
+        String logLevel = null;
         // annotation-selected classes are an explicit opt-in: fail loudly by
         // default. includes sweep broadly: stay quiet by default.
         boolean annotationOnFailThrow = true;
@@ -218,6 +223,7 @@ public final class AutoValhallaAgent {
                 case Config.ANNOTATION_MODE -> annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
                 case Config.INCLUDES_MODE -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
                 case Config.DEBUG -> debug = Boolean.parseBoolean(a[1]);
+                case Config.LOG_LEVEL -> logLevel = a[1].trim();
                 case Config.ANNOTATION_ON_FAIL_THROW ->
                         annotationOnFailThrow = Boolean.parseBoolean(a[1]);
                 case Config.INCLUDES_ON_FAIL_THROW ->
@@ -246,7 +252,7 @@ public final class AutoValhallaAgent {
             }
         }
         return new Config(includes, excludes, annotationMode, includesMode,
-                debug, annotationOnFailThrow, annotationOnFailAppendTo,
+                debug, logLevel, annotationOnFailThrow, annotationOnFailAppendTo,
                 annotationOnSuccessAppendTo,
                 includesOnFailThrow, includesOnFailAppendTo,
                 includesOnSuccessAppendTo,
