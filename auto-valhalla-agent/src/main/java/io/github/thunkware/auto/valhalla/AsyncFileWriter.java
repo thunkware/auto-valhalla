@@ -97,26 +97,31 @@ final class AsyncFileWriter {
             while (!Thread.currentThread().isInterrupted()) {
                 String name = queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS);
                 synchronized (lock) {
-                    if (writer == null) {
-                        // Open writer in append mode, not auto-flush (background thread will flush)
-                        this.writer = new BufferedWriter(Files.newBufferedWriter(file,
-                                StandardOpenOption.CREATE, StandardOpenOption.APPEND,
-                                StandardOpenOption.WRITE));
-                    }
-
                     if (name != null) {
+                        initWriter();
                         writer.write(name);
                         writer.write('\n');
                     }
                     long now = System.currentTimeMillis();
                     if (now - lastFlush >= FLUSH_INTERVAL_MS) {
-                        writer.flush();
+                        if (writer != null) {
+                            writer.flush();
+                        }
                         lastFlush = now;
                     }
                 }
             }
         } catch (Throwable ignored) {
             // best-effort writing; thread exits on any exception
+        }
+    }
+
+    private void initWriter() throws IOException {
+        if (writer == null) {
+            // Open writer in append mode, not auto-flush (background thread will flush)
+            this.writer = new BufferedWriter(Files.newBufferedWriter(file,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND,
+                    StandardOpenOption.WRITE));
         }
     }
 
