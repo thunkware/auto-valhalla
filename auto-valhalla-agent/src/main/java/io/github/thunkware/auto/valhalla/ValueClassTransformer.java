@@ -1,14 +1,10 @@
 package io.github.thunkware.auto.valhalla;
 
-import java.io.IOException;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.reflect.AccessFlag;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.security.ProtectionDomain;
 import java.util.EnumSet;
 import java.util.List;
@@ -181,18 +177,22 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             }
             onFailThrow = selection.onFailThrow();
             onFailAppendTo = selection.onFailAppendTo();
-            byte[] out = rewrite(internal, model, selection);
-            if (out != null) {
-                return out;
-            }
-            // Selected class that remains identity: if SYNCHRONIZATION_MONITOR mode
-            // is set and the config key is configured, instrument monitorenter calls
-            // to monitor synchronization attempts.
+            // SYNCHRONIZATION_MONITOR is an either-or mode: either rewrite the class
+            // to a value class, or instrument monitorenter calls, but not both.
             if (selection.effective().contains(Mode.SYNCHRONIZATION_MONITOR)) {
                 byte[] monitored = SynchronizationInstrumenter.instrument(model);
                 if (monitored != null) {
+                    if (debug) {
+                        System.err.println("[auto-valhalla] " + internal.replace('/', '.')
+                                + ": instrumented for synchronization monitoring");
+                    }
                     return monitored;
                 }
+                return null;
+            }
+            byte[] out = rewrite(internal, model, selection);
+            if (out != null) {
+                return out;
             }
             return null;
         } catch (LinkageError e) {
