@@ -402,7 +402,6 @@ class ValueClassRewriterTest {
         // the default includes-mode set and the yolo expansion
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse(null));
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("  "));
-        assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("unknown-token"));
         // yolo is a shorthand for the default includes-mode
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("yolo"));
         EnumSet<Mode> safeYolo = EnumSet.of(Mode.SAFE);
@@ -410,6 +409,18 @@ class ValueClassRewriterTest {
         assertEquals(safeYolo, Mode.parse("safe,yolo"));
         // the default annotation-mode set is safe (no mark-class-final)
         assertEquals(EnumSet.of(Mode.SAFE), Mode.ANNOTATION_DEFAULT);
+    }
+
+    @Test
+    void parseModeThrowsOnUnknownTokens() {
+        assertThrows(IllegalArgumentException.class, () -> Mode.parse("unknown-token"));
+        assertThrows(IllegalArgumentException.class, () -> Mode.parse("safe,typo"));
+        assertThrows(IllegalArgumentException.class,
+                () -> Mode.parse("ignoresync")); // typo for ignore-synchronized
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> Mode.parse("safe,xyz,abc"));
+        assertTrue(ex.getMessage().contains("xyz"), "error should mention unknown token");
+        assertTrue(ex.getMessage().contains("abc"), "error should mention unknown token");
     }
 
     @Test

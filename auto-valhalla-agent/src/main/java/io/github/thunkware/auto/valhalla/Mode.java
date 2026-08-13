@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
@@ -84,12 +85,14 @@ public enum Mode {
      *  unknown value yields {@code dflt}. {@code yolo} is a shorthand for
      *  {@link #INCLUDES_DEFAULT}. {@code SYNCHRONIZATION_MONITOR} cannot be
      *  combined with other modes; if present and other modes are also present,
-     *  an {@link IllegalArgumentException} is thrown. */
+     *  an {@link IllegalArgumentException} is thrown. Unknown tokens throw
+     *  {@link IllegalArgumentException}. */
     public static Set<Mode> parse(String s, Set<Mode> dflt) {
         EnumSet<Mode> set = EnumSet.noneOf(Mode.class);
         if (s == null || s.isBlank()) {
             return EnumSet.copyOf(dflt);
         }
+        Set<String> unknownTokens = new HashSet<>();
         for (String tok : s.split(",")) {
             tok = tok.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
             if (tok.isEmpty()) {
@@ -103,8 +106,13 @@ public enum Mode {
                         set.add(Mode.IGNORE_SYNCHRONIZED);
                 case "markfieldsfinal" -> set.add(Mode.MARK_FIELDS_FINAL);
                 case "synchronizationmonitor" -> set.add(Mode.SYNCHRONIZATION_MONITOR);
-                default -> { /* unknown token ignored */ }
+                default -> unknownTokens.add(tok);
             }
+        }
+        if (!unknownTokens.isEmpty()) {
+            throw new IllegalArgumentException("Unknown mode tokens: " + unknownTokens
+                    + "; valid modes are: safe, yolo, mark-class-final, "
+                    + "ignore-synchronized, mark-fields-final, synchronization-monitor");
         }
         if (set.contains(Mode.YOLO)) {
             set.remove(Mode.YOLO);
