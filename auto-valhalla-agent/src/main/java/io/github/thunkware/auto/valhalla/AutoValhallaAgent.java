@@ -192,9 +192,10 @@ public final class AutoValhallaAgent {
 
         Set<String> includes = new HashSet<>();
         Set<String> excludes = new HashSet<>();
-        // Default excludes: read failure and synchronization log files as patterns
-        excludes.addAll(readPatternFile("auto-valhalla.failures.txt"));
-        excludes.addAll(readPatternFile("auto-valhalla.synchronization.txt"));
+        // Default excludes: read failure and synchronization log files as patterns.
+        // Use quiet variant since these files may not exist on first run.
+        excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
+        excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
 
         Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
         Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
@@ -353,6 +354,39 @@ public final class AutoValhallaAgent {
         } catch (IOException e) {
             System.err.println("[auto-valhalla] cannot read pattern file "
                     + path + ": " + e);
+        }
+        return set;
+    }
+
+    private static Set<String> readPatternFileQuietly(String path) {
+        Set<String> set = new HashSet<>();
+        try (BufferedReader br = Files.newBufferedReader(Path.of(path.trim()))) {
+            String line;
+            boolean isCsv = false;
+            while ((line = br.readLine()) != null) {
+                String t = line.trim();
+                if (t.isEmpty() || t.startsWith("#")) {
+                    continue;
+                }
+                if (set.isEmpty() && !isCsv) {
+                    isCsv = looksLikeCsv(t);
+                }
+                if (isCsv) {
+                    for (String field : parseCsvLine(t)) {
+                        String n = normalizePattern(field);
+                        if (n != null) {
+                            set.add(n);
+                        }
+                    }
+                } else {
+                    String n = normalizePattern(t);
+                    if (n != null) {
+                        set.add(n);
+                    }
+                }
+            }
+        } catch (IOException ignored) {
+            // file may not exist on first run; silently ignore
         }
         return set;
     }
