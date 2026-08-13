@@ -245,11 +245,6 @@ public final class ValueClassRewriter {
         }
         if (flags.has(AccessFlag.ABSTRACT)) {
             problems.add("it is abstract; converting an abstract class is not yet supported");
-//            problems.add("it is abstract; an abstract class is not converted"
-//                    + " (an agent-converted abstract value class whose identity"
-//                    + " subclass loads later triggers a duplicate class"
-//                    + " definition in the JVM, so abstract classes stay"
-//                    + " identity classes)");
         }
         String sup = model.superclass().map(ClassEntry::asInternalName)
                 .orElse("java/lang/Object");
@@ -292,6 +287,21 @@ public final class ValueClassRewriter {
             problems.add("it uses a synchronized block (monitorenter) in method(s) " + syncBlocks
                     + "; a value object has no identity, so synchronizing on it"
                     + " throws IdentityException at runtime");
+        }
+        // The rewrite marks every non-static field final and strict. That is only
+        // safe if no other class can write the field: a non-private (public /
+        // protected / package-private) field may be mutated by sibling classes,
+        // which would then fail with IllegalAccessError (e.g. H2's
+        // org.h2.mvstore.CursorPos.index written by org.h2.mvstore.Cursor).
+        String openFields = model.fields().stream()
+                .filter(f -> !f.flags().has(AccessFlag.STATIC)
+                        && !f.flags().has(AccessFlag.FINAL)
+                        && !f.flags().has(AccessFlag.PRIVATE))
+                .map(f -> f.fieldName().stringValue())
+                .collect(Collectors.joining(", "));
+        if (!openFields.isEmpty()) {
+            problems.add("it has non-private mutable field(s) " + openFields
+                    + "; another class may write them, so they cannot be marked final");
         }
         return problems;
     }

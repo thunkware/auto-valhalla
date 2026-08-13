@@ -336,6 +336,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         if (internal.startsWith("java/")
                 || internal.startsWith("javax/")
                 || internal.startsWith("sun/")
+                || internal.startsWith("com/sun/")
                 || internal.startsWith("jdk/")) {
             return true;
         }

@@ -1,7 +1,7 @@
 package sample;
 
 public class ArrayLen {
-    int n;
+    private int n;
 
     public ArrayLen(int[] xs) {
         n = xs.length;

@@ -299,6 +299,19 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void nonPrivateMutableFieldIsRejected() throws Exception {
+        byte[] publicField = readResource("/sample/PublicField.class");
+        assertNotNull(publicField, "PublicField on classpath");
+        ClassFile cf = ClassFile.of();
+
+        // A final class with a public mutable field can still be written by
+        // sibling classes, so marking the field final would break them.
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(publicField), false, true)
+                        .stream().anyMatch(p -> p.contains("non-private mutable field")),
+                "a non-private mutable field must be reported as not suitable");
+    }
+
+    @Test
     void parseModeIsCaseAndSeparatorInsensitive() {
         assertEquals(EnumSet.of(Mode.SAFE),
                 Mode.parse("SAFE"));
