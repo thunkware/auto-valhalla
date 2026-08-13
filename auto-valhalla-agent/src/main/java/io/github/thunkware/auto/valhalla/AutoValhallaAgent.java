@@ -40,8 +40,7 @@ import java.util.Set;
  *       — path to a file with one pattern per line (blank lines and {@code #}
  *       comments ignored).</li>
      *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
-     *       selected by {@code @AutoValhalla} (default
-     *       {@code mark-class-final,ignore-synchronized}).</li>
+     *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
      *       selected by {@code includes} (default {@code yolo} =
      *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>

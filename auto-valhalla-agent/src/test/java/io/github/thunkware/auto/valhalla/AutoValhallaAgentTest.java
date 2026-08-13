@@ -40,7 +40,7 @@ class AutoValhallaAgentTest {
     void modeFlagsHaveDistinctDefaults() {
         var cfg = AutoValhallaAgent.parse("includes=a.");
         assertEquals(Mode.ANNOTATION_DEFAULT, cfg.annotationMode(),
-                "annotation-mode must default to mark-class-final,ignore-synchronized");
+                "annotation-mode must default to safe");
         assertEquals(Mode.INCLUDES_DEFAULT, cfg.includesMode(),
                 "includes-mode must default to yolo");
         var safe = AutoValhallaAgent.parse("includes-mode=safe");

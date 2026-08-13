@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>{@code auto-valhalla.excludes} — classes/packages to skip (wins over
  *       includes and the annotation).</li>
  *   <li>{@code auto-valhalla.annotation-mode} — modes for annotated classes
- *       (default {@code mark-class-final,ignore-synchronized}).</li>
+ *       (default {@code safe}).</li>
  *   <li>{@code auto-valhalla.includes-mode} — modes for included classes
  *       (default {@code yolo} = {@code mark-class-final,ignore-synchronized,
  *       mark-fields-final}).</li>
@@ -188,6 +188,14 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         Set<Mode> effective = selection.effective();
         boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
         boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
+        // safe mode: a selected non-final (non-abstract) class is simply not a
+        // candidate, so it is skipped silently -- making it final would break its
+        // subclasses. This narrowing happens before any on-fail gate, so the
+        // loud annotation on-fail settings do not fire for it.
+        if (!markClassFinal && !model.flags().has(AccessFlag.FINAL)
+                && !model.flags().has(AccessFlag.ABSTRACT)) {
+            return null;
+        }
         List<String> problems = ValueClassRewriter.suitabilityProblems(
                 model, ignoreSync, markClassFinal, transformedToAbstract);
         if (!problems.isEmpty()) {

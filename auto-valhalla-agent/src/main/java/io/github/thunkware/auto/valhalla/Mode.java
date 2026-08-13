@@ -51,10 +51,11 @@ public enum Mode {
     }
 
     /** The default set for {@code annotation-mode} (classes selected by the
-     *  {@code @AutoValhalla} annotation):
-     *  {@code mark-class-final,ignore-synchronized}. */
+     *  {@code @AutoValhalla} annotation): {@code safe} — only classes that are
+     *  <em>already final</em> (or abstract) are converted. Non-final candidates
+     *  are skipped unless {@code mark-class-final} is opted in explicitly. */
     public static final Set<Mode> ANNOTATION_DEFAULT =
-            EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED);
+            EnumSet.of(Mode.SAFE);
 
     /** The default set for {@code includes-mode} (classes selected by
      *  {@code includes}) — and the {@code yolo} expansion:

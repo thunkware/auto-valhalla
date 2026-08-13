@@ -132,33 +132,50 @@ class DemoFixturesTest {
     }
 
     @Test
-    void annotatedPointIsRewrittenByAnnotationSelectionAlone() throws Exception {
-        // With no includes selection, Point must still convert purely through
-        // @AutoValhalla under the default annotation-mode.
+    void annotatedPointIsSkippedBySafeAnnotationDefault() throws Exception {
+        // Point is selected by @AutoValhalla but is not final. The default
+        // annotation-mode is safe, which converts only already-final (or
+        // abstract) classes, so Point must stay an identity class unless the
+        // user opts into mark-class-final.
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of(), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
                 false, true, null, false, null);
         byte[] point = transformer.transform(null, null, "demo5/Point", null, null,
                 readResource("/demo5/Point.class"));
-        assertNotNull(point, "@AutoValhalla alone must convert demo5.Point");
+        assertNull(point, "default annotation-mode (safe) must not convert non-final demo5.Point");
+    }
+
+    @Test
+    void annotatedPointIsRewrittenWhenMarkClassFinalOptsIn() throws Exception {
+        // The same class converts once the user explicitly opts into
+        // mark-class-final (the old annotation default), even without includes.
+        ValueClassTransformer transformer = new ValueClassTransformer(
+                Set.of(), Set.of(),
+                EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
+                Mode.INCLUDES_DEFAULT,
+                false, true, null, false, null);
+        byte[] point = transformer.transform(null, null, "demo5/Point", null, null,
+                readResource("/demo5/Point.class"));
+        assertNotNull(point, "@AutoValhalla + mark-class-final must convert demo5.Point");
         assertTrue(ClassFile.of().verify(point).isEmpty(),
                 "annotation-rewritten demo5.Point must verify");
     }
 
     @Test
-    void annotatedCircleIsRewrittenByAnnotationSelectionAlone() throws Exception {
+    void annotatedCircleIsRewrittenWhenMarkClassFinalOptsIn() throws Exception {
         // Like Square, Circle's `radius` is non-final yet written exactly once,
-        // in the constructor; unlike Square it is selected by @AutoValhalla.
-        // The default annotation-mode has no mark-fields-final, but the field is
-        // safe to mark final, so annotation selection alone must convert it.
+        // in the constructor. It is selected by @AutoValhalla; with an explicit
+        // mark-class-final it converts even though the default safe annotation
+        // mode would skip it.
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of(), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
+                Mode.INCLUDES_DEFAULT,
                 false, true, null, false, null);
         byte[] circle = transformer.transform(null, null, "demo5/Circle", null, null,
                 readResource("/demo5/Circle.class"));
-        assertNotNull(circle, "@AutoValhalla alone must convert demo5.Circle");
+        assertNotNull(circle, "@AutoValhalla + mark-class-final must convert demo5.Circle");
         assertTrue(ClassFile.of().verify(circle).isEmpty(),
                 "annotation-rewritten demo5.Circle must verify");
     }

@@ -66,8 +66,7 @@ java --enable-preview \
 Selection always happens through the `@AutoValhalla` annotation or `includes`;
 the [`mode`](#mode-values) options then narrow which of those selected classes
 are actually converted: 
-  * `annotation-mode` applies to annotated classes (defaults
-to `mark-class-final,ignore-synchronized`)
+  * `annotation-mode` applies to annotated classes (defaults to `safe`)
   * `includes-mode` to included ones (defaults to `yolo`)
 
 To convert every structurally suitable class, select everything with the `*`
@@ -101,7 +100,7 @@ Within the agent-argument list, later options override earlier ones, and a `.con
 | `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but never convert matching classes (wins over `includes` and the annotation). |
 | `auto-valhalla.includes-file` | `AUTO_VALHALLA_INCLUDES_FILE` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
 | `auto-valhalla.excludes-file` | `AUTO_VALHALLA_EXCLUDES_FILE` | As above, for excludes. |
-| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `mark-class-final,ignore-synchronized`. See the mode table below. |
+| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `safe`. See the mode table below. |
 | `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Modes narrowing includes-selected classes. Defaults to `yolo`. See the mode table below. |
 | `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions. |
 | `auto-valhalla.annotation.on-fail-throw` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_THROW` | `true` (default) to surface a loud `LinkageError` (a `ClassFormatError` at load) when an *annotation-selected* class cannot be safely transformed, instead of silently keeping it an identity class. |
