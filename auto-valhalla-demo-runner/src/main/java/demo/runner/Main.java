@@ -14,7 +14,7 @@ import demo16.Pair;
  */
 public class Main {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         System.out.println("=== auto-valhalla cross-version demo ===");
 
         Point p1 = new Point(5, 7);

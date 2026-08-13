@@ -1,7 +1,5 @@
 package io.github.thunkware.auto.valhalla;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.ClassTransform;
 import java.lang.classfile.CodeBuilder;
@@ -22,21 +20,17 @@ import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.LineNumber;
 import java.lang.classfile.instruction.LoadInstruction;
 import java.lang.classfile.instruction.LocalVariable;
-import java.lang.classfile.instruction.MonitorInstruction;
 import java.lang.classfile.instruction.NewMultiArrayInstruction;
 import java.lang.classfile.instruction.NewObjectInstruction;
 import java.lang.classfile.instruction.NewPrimitiveArrayInstruction;
 import java.lang.classfile.instruction.NewReferenceArrayInstruction;
 import java.lang.classfile.instruction.NopInstruction;
 import java.lang.classfile.instruction.OperatorInstruction;
-import java.lang.classfile.instruction.ReturnInstruction;
 import java.lang.classfile.instruction.StackInstruction;
 import java.lang.classfile.instruction.StoreInstruction;
-import java.lang.classfile.instruction.ThrowInstruction;
 import java.lang.classfile.instruction.TypeCheckInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -114,22 +108,22 @@ final class ConstructorRewriter {
         public void atEnd(CodeBuilder cb) {
             int s = superCallIndex();
             if (s < 0) {
-                elems.forEach(cb::accept);
+                elems.forEach(cb);
                 return;
             }
             Result r = reorder(s);
             if (r.failed) {
                 failed.set(true);
-                elems.forEach(cb::accept);
+                elems.forEach(cb);
                 return;
             }
             if (!r.changed) {
-                elems.forEach(cb::accept);
+                elems.forEach(cb);
                 return;
             }
             if (!satisfiable(r.movable)) {
                 failed.set(true);
-                elems.forEach(cb::accept);
+                elems.forEach(cb);
                 return;
             }
 
@@ -138,11 +132,11 @@ final class ConstructorRewriter {
                 // invoke super(), so drop the prologue (the leading this-load and
                 // the invokespecial Object.<init>) entirely; the remaining body is
                 // valid on its own (typically just a return).
-                r.late.forEach(cb::accept);
+                r.late.forEach(cb);
                 return;
             }
 
-            r.prefix.forEach(cb::accept);
+            r.prefix.forEach(cb);
             Map<String, Integer> fieldLocal = new HashMap<>();
             String self = owner.thisClass().asInternalName();
             for (int k = 0; k < r.movable.size(); k++) {
@@ -158,7 +152,7 @@ final class ConstructorRewriter {
                 emitEarly(cb, e, self, fieldLocal);
             }
             cb.accept(r.superElem);
-            r.late.forEach(cb::accept);
+            r.late.forEach(cb);
         }
 
         /**
@@ -506,8 +500,8 @@ final class ConstructorRewriter {
                 }
                 case "DUP_X1" -> {
                     if (stack.size() < 2) return UNSAFE;
-                    int t = stack.remove(stack.size() - 1);
-                    int u = stack.remove(stack.size() - 1);
+                    int t = stack.removeLast();
+                    int u = stack.removeLast();
                     stack.add(t);
                     stack.add(u);
                     stack.add(t);
@@ -515,9 +509,9 @@ final class ConstructorRewriter {
                 }
                 case "DUP_X2" -> {
                     if (stack.size() < 3) return UNSAFE;
-                    int t = stack.remove(stack.size() - 1);
-                    int u = stack.remove(stack.size() - 1);
-                    int v = stack.remove(stack.size() - 1);
+                    int t = stack.removeLast();
+                    int u = stack.removeLast();
+                    int v = stack.removeLast();
                     stack.add(t);
                     stack.add(v);
                     stack.add(u);
@@ -532,9 +526,9 @@ final class ConstructorRewriter {
                 }
                 case "DUP2_X1" -> {
                     if (stack.size() < 3) return UNSAFE;
-                    int t = stack.remove(stack.size() - 1);
-                    int u = stack.remove(stack.size() - 1);
-                    int v = stack.remove(stack.size() - 1);
+                    int t = stack.removeLast();
+                    int u = stack.removeLast();
+                    int v = stack.removeLast();
                     stack.add(u);
                     stack.add(t);
                     stack.add(v);
@@ -544,10 +538,10 @@ final class ConstructorRewriter {
                 }
                 case "DUP2_X2" -> {
                     if (stack.size() < 4) return UNSAFE;
-                    int t = stack.remove(stack.size() - 1);
-                    int u = stack.remove(stack.size() - 1);
-                    int v = stack.remove(stack.size() - 1);
-                    int w = stack.remove(stack.size() - 1);
+                    int t = stack.removeLast();
+                    int u = stack.removeLast();
+                    int v = stack.removeLast();
+                    int w = stack.removeLast();
                     stack.add(u);
                     stack.add(t);
                     stack.add(w);
@@ -588,17 +582,17 @@ final class ConstructorRewriter {
         }
 
         private int pop(List<Integer> stack) {
-            return stack.isEmpty() ? -1 : stack.remove(stack.size() - 1);
+            return stack.isEmpty() ? -1 : stack.removeLast();
         }
 
         private int popNoThis(List<Integer> stack) {
             if (stack.isEmpty()) return -1;
-            int v = stack.remove(stack.size() - 1);
+            int v = stack.removeLast();
             return v == THIS ? -1 : v;
         }
 
         private int top(List<Integer> stack) {
-            return stack.isEmpty() ? -1 : stack.get(stack.size() - 1);
+            return stack.isEmpty() ? -1 : stack.getLast();
         }
 
         private static int descSlots(ClassDesc d) {

@@ -13,13 +13,13 @@ Background: Project Valhalla JEP 401 (https://openjdk.org/jeps/401).
 
 ### 1. Opt in with the annotation
 
-Add `auto-valhalla-annotation` dependency and annotate your plain identity class:
+Add `auto-valhalla-annotation` dependency and annotate your plain identity class or record:
 
 ```java
 import io.github.thunkware.auto.valhalla.AutoValhalla;
 
 @AutoValhalla
-public class Point {
+public final class Point {
     public final int x;
     public final int y;
     public Point(int x, int y) { 
@@ -27,9 +27,12 @@ public class Point {
         this.y = y; 
     }
 }
+
+@AutoValhalla
+public record Circle(Point center, int radius) { }
 ```
 
-Then launch with the agent:
+Then download the agent and launch:
 
 ```bash
 java --enable-preview \
@@ -37,16 +40,18 @@ java --enable-preview \
      -jar myapp.jar
 ```
 
-After transformation, your class behaves like a value class: `Objects.hasIdentity(new Point(1, 2))` returns `false`.
+After transformation, your class or record behaves like a value object:
+  * `Objects.hasIdentity(new Point(1, 2)) == false`
+  * `Objects.hasIdentity(new Circle(point, 3)) == false`
 
 Because `@AutoValhalla` annotation was compiled with Java 5, it is
-compatible **JDK 1.5 and later**. You can annotate classes in older codebases
+compatible **JDK 1.5 and later**. You can apply the annotation in older codebases
 without raising their JDK compile version.
 
 ### 2. Select by package or class with `includes`
 
 Use `-Dauto-valhalla.includes` to convert classes if you cannot or do not want to edit
-their source code. A value ending in `.` matches a package prefix; otherwise it is an
+the source code. A setting ending in `.` matches a package prefix; otherwise it is an
 exact class name:
 
 ```bash
@@ -83,15 +88,12 @@ java --enable-preview \
 
 ## Options
 
-Flags are supplied as **agent arguments** (`-javaagent:auto-valhalla.jar=...`),
-**system properties**, or **environment variables** (in that order of
-precedence). Within the agent-argument list, later options override earlier ones,
-and a `.config` file is expanded in place (see below).
+Flags are supplied as, in that order of precedence:
+  * agent arguments `-javaagent:auto-valhalla.jar=option1=value1,option2=value2`, or
+  * system properties `-Doption1=value1`, or
+  * environment variables. 
 
-Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the
-unprefixed name (e.g. `includes-mode`). Environment variables map to the
-`AUTO_VALHALLA_*` form (e.g. `auto-valhalla.includes` →
-`AUTO_VALHALLA_INCLUDES`).
+Within the agent-argument list, later options override earlier ones, and a `.config` file is expanded in place (see below).
 
 | Option | Env var | Description |
 | --- | --- | --- |
@@ -106,6 +108,9 @@ unprefixed name (e.g. `includes-mode`). Environment variables map to the
 | `auto-valhalla.on-fail-append-to` | `AUTO_VALHALLA_ON_FAIL_APPEND_TO` | Path to a file; the internal name of each selected class that fails to transform is appended (the file is created if it does not exist). |
 | `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying the options above (keys may omit the `auto-valhalla.` prefix). |
 
+Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the
+unprefixed name (e.g. `includes-mode`).
+
 #### `mode` values
 
 | Mode | Effect |
@@ -116,16 +121,16 @@ unprefixed name (e.g. `includes-mode`). Environment variables map to the
 | `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected, since a value class cannot have a mutable field. |
 | `yolo` | Shorthand for `ignore-non-final,ignore-synchronized,mark-fields-final` (the default). |
 
-Tokens are case-insensitive and may use `-`, `_` or camelCase. e.g. `ignore-non-final`, `ignore_non_final`, and 
+Mode names are case-insensitive and may use `-`, `_` or camelCase. e.g. `ignore-non-final`, `ignore_non_final`, and 
 `ignoreNonFinal` are all the same.
 
 ### `.config` precedence
 
-When `.config` is expanded, its entries are placed at that position in the option
+When `.config` agent argument is expanded, its entries are placed at that position in the agent argument
 stream. Therefore:
 
-- if `.config` appears **first**, later CLI options override it;
-- if CLI options appear **first** and `.config` later, the file overrides them.
+- if `.config` appears **first**, later agent arguments override it;
+- if agent argument options appear **first** and `.config` later, the file overrides them.
 
 ### Examples
 
@@ -170,12 +175,11 @@ surfacing errors:
 
 - Classes that fail verification after rewriting are, by default, left as identity
   classes. Use `on-fail-throw` to make such cases fail with an exception.
+- A converted class is `final`. If anything subclasses it, that subclass will stop loading.
 - The agent rewrites identity records and final classes only. It never transforms
   JDK/system classes or its own support classes. Non-final classes are converted
-  only with `includes-mode=ignore-non-final` (or via `@AutoValhalla`/`includes`); in that
-  case the class is made final and any existing subclasses will fail to load with
-  an `IncompatibleClassChangeError`.
-- **A converted class is `final`.** If anything subclasses it, that subclass will stop loading.
+  (as final) when the effective mode set includes `ignore-non-final` — the default
+  for both `annotation-mode` and `includes-mode`; any existing subclass then fails to load.
 - **Semantics change.** For a converted class, `==` becomes value equality (two
   instances with equal fields compare `==`), `equals`/`hashCode` of the two
   fields, `synchronized` methods no longer take a monitor, and
@@ -183,8 +187,8 @@ surfacing errors:
   per-instance identity. A value class has no identity, so identity-keyed caches
   and `==`-based deduplication silently change behavior. **This is especially
   dangerous with `includes-mode`**, which converts classes without annotating them.
-- **Safe to attach anywhere.** The agent's entry point is a JDK 5 class file, so
-  the jar loads on any JVM from JDK 5 up. On a JVM older than JDK 28 (or on JDK 28
+- **Safe to use with any JDK.** The agent's entry point is a JDK 5 class file, so
+  the agent jar loads on any JVM from JDK 5 up. On a JVM older than JDK 28 (or on JDK 28
   without `--enable-preview`) the agent prints a single warning and does nothing —
   your classes keep their original (identity) behavior and the application runs
   unchanged. There is no need to guard its use behind a JVM-version check.

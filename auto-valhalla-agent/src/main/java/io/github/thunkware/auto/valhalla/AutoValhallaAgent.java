@@ -224,7 +224,7 @@ public final class AutoValhallaAgent {
     }
 
     /**
-     * Normalises a user-supplied pattern to an internal form:
+     * Normalizes a user-supplied pattern to an internal form:
      * {@code *} matches everything; {@code foo.*} or {@code foo/*} becomes a
      * package prefix (trailing slash); a value ending in {@code .} becomes a
      * package prefix; a value containing a dot is an exact class name; a bare
