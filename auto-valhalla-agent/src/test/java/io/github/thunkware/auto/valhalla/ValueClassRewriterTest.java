@@ -347,10 +347,10 @@ class ValueClassRewriterTest {
                 .anyMatch(m -> m.code().map(c -> c.elementList().stream()
                         .anyMatch(e -> e instanceof InvokeInstruction ii
                                 && ii.owner().asInternalName()
-                                        .equals("io/github/thunkware/auto/valhalla/SynchronizationInspector")
+                                        .equals("io/github/thunkware/auto/valhalla/SynchronizationMonitor")
                                 && ii.name().stringValue().equals("check")))
                         .orElse(false));
-        assertTrue(hasGuard, "monitorenter must be preceded by SynchronizationInspector.check");
+        assertTrue(hasGuard, "monitorenter must be preceded by SynchronizationMonitor.check");
     }
 
     @Test

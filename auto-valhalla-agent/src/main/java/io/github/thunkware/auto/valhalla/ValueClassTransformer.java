@@ -141,10 +141,10 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 AsyncFileWriter.forFile(path);
             }
         }
-        // Configure SynchronizationInspector with the path so it can record
+        // Configure SynchronizationMonitor with the path so it can record
         // classes being synchronized on.
         if (synchronizationMonitorAppendTo != null) {
-            SynchronizationInspector.configure(synchronizationMonitorAppendTo);
+            SynchronizationMonitor.configure(synchronizationMonitorAppendTo);
         }
     }
 

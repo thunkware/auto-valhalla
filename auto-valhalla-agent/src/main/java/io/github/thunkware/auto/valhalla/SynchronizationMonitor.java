@@ -12,11 +12,11 @@ package io.github.thunkware.auto.valhalla;
  * lives in the agent's own package, which is never transformed) and must never
  * throw, so every operation is defensive.
  */
-public final class SynchronizationInspector {
+public final class SynchronizationMonitor {
 
     private static volatile AsyncFileWriter writer;
 
-    private SynchronizationInspector() {}
+    private SynchronizationMonitor() {}
 
     /** Enables recording to {@code path}. The file is read once so names already
      *  present are not appended again. */

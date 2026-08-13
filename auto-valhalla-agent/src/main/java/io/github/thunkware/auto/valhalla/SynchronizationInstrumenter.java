@@ -12,7 +12,7 @@ import java.lang.constant.MethodTypeDesc;
 
 /**
  * Instruments {@code monitorenter} instructions in a class to call
- * {@link SynchronizationInspector#check(Object)}, which records the class being
+ * {@link SynchronizationMonitor#check(Object)}, which records the class being
  * synchronized on for monitoring.
  *
  * <p>This is applied when {@code Mode.SYNCHRONIZATION_MONITOR} is set and
@@ -24,7 +24,7 @@ final class SynchronizationInstrumenter {
 
     /**
      * Instruments all {@code monitorenter} instructions in the model by
-     * inserting a {@link SynchronizationInspector#check(Object)} call before each one.
+     * inserting a {@link SynchronizationMonitor#check(Object)} call before each one.
      * Returns {@code null} if the class has no {@code monitorenter}, so
      * unrelated classes are left untouched.
      */
@@ -40,7 +40,7 @@ final class SynchronizationInstrumenter {
         CodeTransform guard = (cb, e) -> {
             if (e instanceof MonitorInstruction mi && mi.opcode() == Opcode.MONITORENTER) {
                 cb.dup();
-                cb.invokestatic(ClassDesc.of("io.github.thunkware.auto.valhalla.SynchronizationInspector"),
+                cb.invokestatic(ClassDesc.of("io.github.thunkware.auto.valhalla.SynchronizationMonitor"),
                         "check", MethodTypeDesc.of(ConstantDescs.CD_void, ConstantDescs.CD_Object));
             }
             cb.accept(e);
