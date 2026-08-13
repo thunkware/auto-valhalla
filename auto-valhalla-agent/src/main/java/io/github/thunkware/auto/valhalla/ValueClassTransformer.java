@@ -3,14 +3,7 @@ package io.github.thunkware.auto.valhalla;
 import java.io.IOException;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.ClassTransform;
-import java.lang.classfile.CodeTransform;
-import java.lang.classfile.Opcode;
 import java.lang.classfile.constantpool.ClassEntry;
-import java.lang.classfile.instruction.MonitorInstruction;
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-import java.lang.constant.MethodTypeDesc;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.reflect.AccessFlag;
 import java.nio.file.Files;
@@ -65,6 +58,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
  *       class name of each successfully converted class. The file is read at
  *       start-up so names already present are not re-appended.</li>
+ *   <li>{@code auto-valhalla.synchronization-monitor.append-to=file} — when
+ *       {@code Mode.SYNCHRONIZATION_MONITOR} is enabled, instrument selected
+ *       classes to record the name of any class being synchronized on
+ *       ({@code monitorenter}). Useful for detecting value classes that are
+ *       being locked, which causes {@link java.lang.IdentityException} at runtime.</li>
  * </ul>
  *
  * <p>A class selected by both the annotation and {@code includes} is treated as
@@ -87,14 +85,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private final boolean includesOnFailThrow;
     private final String includesOnFailAppendTo;
     private final String includesOnSuccessAppendTo;
-    private final String identityExceptionAppendTo;
+    private final String synchronizationMonitorAppendTo;
+    /** Internal names of classes we turned into abstract value classes. */
+    private final Set<String> transformedToAbstract = ConcurrentHashMap.newKeySet();
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
-    /** Per-path {@link NameFile}s, shared so success and failure appends to the
-     *  same file deduplicate against each other. */
-    private final java.util.concurrent.ConcurrentMap<String, NameFile> appenders =
-            new ConcurrentHashMap<>();
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
             Set<Mode> annotationMode, Set<Mode> includesMode,
@@ -125,7 +121,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             String annotationOnSuccessAppendTo,
             boolean includesOnFailThrow, String includesOnFailAppendTo,
             String includesOnSuccessAppendTo,
-            String identityExceptionAppendTo) {
+            String synchronizationMonitorAppendTo) {
         this.includes = includes;
         this.excludes = excludes;
         this.annotationMode = annotationMode;
@@ -137,15 +133,22 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         this.includesOnFailThrow = includesOnFailThrow;
         this.includesOnFailAppendTo = includesOnFailAppendTo;
         this.includesOnSuccessAppendTo = includesOnSuccessAppendTo;
-        this.identityExceptionAppendTo = identityExceptionAppendTo;
-        // Read each append-to file now (start-up) so names already present are
-        // not re-appended; a missing file is silently treated as empty.
+        this.synchronizationMonitorAppendTo = synchronizationMonitorAppendTo;
+        // Initialize AsyncFileWriter for each append-to path so files are read
+        // at startup (deduplicating against existing names). AsyncFileWriter is
+        // shared per-path, so success and failure appends to the same file
+        // deduplicate against each other.
         for (String path : new String[] { annotationOnFailAppendTo,
                 annotationOnSuccessAppendTo, includesOnFailAppendTo,
-                includesOnSuccessAppendTo }) {
+                includesOnSuccessAppendTo, synchronizationMonitorAppendTo }) {
             if (path != null) {
-                appenders.computeIfAbsent(path, p -> new NameFile(p, debug));
+                AsyncFileWriter.forFile(path);
             }
+        }
+        // Configure SynchronizationInspector with the path so it can record
+        // classes being synchronized on.
+        if (synchronizationMonitorAppendTo != null) {
+            SynchronizationInspector.configure(synchronizationMonitorAppendTo);
         }
     }
 
@@ -182,45 +185,21 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             if (out != null) {
                 return out;
             }
-            // Selected but left identity (e.g. it synchronizes): if identity-exception
-            // recording is enabled, instrument its monitorenter instructions so a
-            // runtime IdentityException names the value class that was locked.
-            return instrumentIdentityGuard(model);
+            // Selected class that remains identity: if SYNCHRONIZATION_MONITOR mode
+            // is set and the config key is configured, instrument monitorenter calls
+            // to monitor synchronization attempts.
+            if (selection.effective().contains(Mode.SYNCHRONIZATION_MONITOR)) {
+                byte[] monitored = SynchronizationInstrumenter.instrument(model);
+                if (monitored != null) {
+                    return monitored;
+                }
+            }
+            return null;
         } catch (LinkageError e) {
             throw e;
         } catch (Throwable t) {
             return onTransformError(internal, t, onFailThrow, onFailAppendTo);
         }
-    }
-
-    /**
-     * Instruments every {@code monitorenter} instruction with a call to
-     * {@link IdentityGuard#check(Object)} when {@code identity-exception-append-to}
-     * is configured. Returns {@code null} when disabled or the class has no
-     * monitorenter, so unrelated classes are left untouched.
-     */
-    private byte[] instrumentIdentityGuard(ClassModel model) {
-        if (identityExceptionAppendTo == null) {
-            return null;
-        }
-        boolean hasMonitor = model.methods().stream()
-                .anyMatch(m -> m.code().map(c -> c.elementList().stream()
-                        .anyMatch(e -> e instanceof MonitorInstruction mi
-                                && mi.opcode() == Opcode.MONITORENTER))
-                        .orElse(false));
-        if (!hasMonitor) {
-            return null;
-        }
-        CodeTransform guard = (cb, e) -> {
-            if (e instanceof MonitorInstruction mi && mi.opcode() == Opcode.MONITORENTER) {
-                cb.dup();
-                cb.invokestatic(ClassDesc.of("io.github.thunkware.auto.valhalla.IdentityGuard"),
-                        "check", MethodTypeDesc.of(ConstantDescs.CD_void, ConstantDescs.CD_Object));
-            }
-            cb.accept(e);
-        };
-        return ClassFile.of().transformClass(model,
-                ClassTransform.transformingMethodBodies(guard));
     }
 
     /**
@@ -263,6 +242,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             onFailAppendTo = includesOnFailAppendTo;
             onSuccessAppendTo = includesOnSuccessAppendTo;
             effective.addAll(includesMode);
+        }
+        // SYNCHRONIZATION_MONITOR cannot be used in combination with other modes
+        if (effective.contains(Mode.SYNCHRONIZATION_MONITOR) && effective.size() > 1) {
+            throw new IllegalArgumentException(
+                    "mode=synchronization-monitor cannot be combined with other modes; "
+                    + "got: " + effective);
         }
         return new Selection(effective, onFailThrow, onFailAppendTo, onSuccessAppendTo);
     }
@@ -372,62 +357,14 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     /** Appends the class name of {@code internal} to the file at {@code path}
      *  (unless it is already recorded there), deduplicating across runs by reading
-     *  the file at start-up. */
+     *  the file at start-up. Uses {@link AsyncFileWriter} for non-blocking I/O. */
     private void appendTo(String path, String internal) {
         if (path == null) {
             return;
         }
-        appenders.computeIfAbsent(path, p -> new NameFile(p, debug))
-                .append(internal.replace('/', '.'));
-    }
-
-    /**
-     * Appends class names (e.g. {@code com.example.Foo}, not
-     * {@code com/example/Foo}) to a file, once per name, so the file can be fed
-     * straight back to {@code includes-file} / {@code excludes-file}. The file is
-     * read on construction so names already present are not re-appended; a
-     * missing file is treated as empty and never causes an error.
-     */
-    private static final class NameFile {
-        private final String path;
-        private final Set<String> seen = ConcurrentHashMap.newKeySet();
-        private final boolean debug;
-
-        NameFile(String path, boolean debug) {
-            this.path = path;
-            this.debug = debug;
-            Path p = Path.of(path);
-            if (Files.exists(p)) {
-                try {
-                    for (String line : Files.readAllLines(p)) {
-                        String t = line.trim();
-                        if (!t.isEmpty()) {
-                            seen.add(t);
-                        }
-                    }
-                } catch (IOException e) {
-                    if (debug) {
-                        System.err.println("[auto-valhalla] cannot read append-to file "
-                                + path + ": " + e);
-                    }
-                }
-            }
-        }
-
-        void append(String dotName) {
-            if (!seen.add(dotName)) {
-                return; // already present (from the file or a prior append)
-            }
-            try {
-                Files.writeString(Path.of(path), dotName + "\n",
-                        StandardOpenOption.CREATE, StandardOpenOption.APPEND,
-                        StandardOpenOption.WRITE);
-            } catch (IOException e) {
-                if (debug) {
-                    System.err.println("[auto-valhalla] cannot append to "
-                            + path + ": " + e);
-                }
-            }
+        AsyncFileWriter writer = AsyncFileWriter.forFile(path);
+        if (writer != null) {
+            writer.record(internal.replace('/', '.'));
         }
     }
 

@@ -12,7 +12,8 @@ import java.util.Set;
  * {@code includes-mode} narrows includes-selected ones. The property may list
  * several comma-separated tokens (case-insensitive; {@code -}, {@code _} and
  * camelCase are all accepted); they are collected into an {@link EnumSet}
- * internally.
+ * internally. {@code SYNCHRONIZATION_MONITOR} is exclusive: it cannot be
+ * combined with other modes; doing so throws {@link IllegalArgumentException}.
  */
 public enum Mode {
     /** Narrow selection to classes that are <em>already final</em> ({@code safe}).
@@ -41,7 +42,15 @@ public enum Mode {
      *  constructor, mark them {@code final}. Candidates where a non-{@code final}
      *  field is written elsewhere (or more than once) are rejected, since a value
      *  class cannot have a mutable field. */
-    MARK_FIELDS_FINAL("mark-fields-final");
+    MARK_FIELDS_FINAL("mark-fields-final"),
+
+    /** Instrument selected classes to monitor synchronization attempts (calls to
+     *  {@code monitorenter}). When set and {@code synchronization-monitor.append-to}
+     *  is configured, each class with a {@code monitorenter} is instrumented to
+     *  record which classes are being synchronized on. <em>Cannot be combined with
+     *  other modes</em>; specifying both this and any other mode results in an
+     *  {@link IllegalArgumentException}. */
+    SYNCHRONIZATION_MONITOR("synchronization-monitor");
 
     public final String flag;
 
@@ -73,7 +82,9 @@ public enum Mode {
 
     /** Parses a mode string into a set of {@link Mode}s. A {@code null}, blank or
      *  unknown value yields {@code dflt}. {@code yolo} is a shorthand for
-     *  {@link #INCLUDES_DEFAULT}. */
+     *  {@link #INCLUDES_DEFAULT}. {@code SYNCHRONIZATION_MONITOR} cannot be
+     *  combined with other modes; if present and other modes are also present,
+     *  an {@link IllegalArgumentException} is thrown. */
     public static Set<Mode> parse(String s, Set<Mode> dflt) {
         EnumSet<Mode> set = EnumSet.noneOf(Mode.class);
         if (s == null || s.isBlank()) {
@@ -91,6 +102,7 @@ public enum Mode {
                 case "ignoresynchronized" ->
                         set.add(Mode.IGNORE_SYNCHRONIZED);
                 case "markfieldsfinal" -> set.add(Mode.MARK_FIELDS_FINAL);
+                case "synchronizationmonitor" -> set.add(Mode.SYNCHRONIZATION_MONITOR);
                 default -> { /* unknown token ignored */ }
             }
         }
@@ -98,6 +110,17 @@ public enum Mode {
             set.remove(Mode.YOLO);
             set.addAll(INCLUDES_DEFAULT);
         }
-        return set.isEmpty() ? EnumSet.copyOf(dflt) : set;
+        if (set.isEmpty()) {
+            return EnumSet.copyOf(dflt);
+        }
+        // SYNCHRONIZATION_MONITOR is exclusive: cannot be combined with other modes
+        if (set.contains(Mode.SYNCHRONIZATION_MONITOR)) {
+            if (set.size() > 1) {
+                throw new IllegalArgumentException(
+                        "mode=synchronization-monitor cannot be combined with other modes; "
+                        + "got: " + set);
+            }
+        }
+        return set;
     }
 }

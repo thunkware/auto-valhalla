@@ -64,12 +64,11 @@ import java.util.Set;
  *       class name of each class that is successfully converted to a value
  *       class. The file is read at start-up so a name already present is not
  *       re-appended; a missing file is treated as empty, never an error.</li>
- *   <li>{@code auto-valhalla.identity-exception-append-to=file} — append the
- *       class name of each value class that is used in an identity-sensitive
- *       way at runtime (e.g. synchronized on, causing
- *       {@link java.lang.IdentityException}), so a later run can add it to
- *       {@code excludes-file}. When set, {@code monitorenter} instructions in
- *       selected classes are instrumented to detect this.</li>
+ *   <li>{@code auto-valhalla.synchronization-monitor.append-to=file} — when
+ *       {@code Mode.SYNCHRONIZATION_MONITOR} is enabled, append the class name
+ *       of each class being synchronized on at runtime. Useful for detecting value
+ *       classes that are locked, which causes {@link java.lang.IdentityException}.
+ *       The file is read at start-up so names already present are not re-appended.</li>
  *   <li>{@code auto-valhalla.config=file} — read options from a Java properties
  *       file (keys may omit the {@code auto-valhalla.} prefix).</li>
  * </ul>
@@ -120,9 +119,6 @@ public final class AutoValhallaAgent {
             return;
         }
         Config cfg = parse(agentArgs);
-        if (cfg.identityExceptionAppendTo() != null) {
-            IdentityGuard.configure(cfg.identityExceptionAppendTo());
-        }
         ValueClassTransformer transformer = new ValueClassTransformer(
                 cfg.includes(), cfg.excludes(),
                 cfg.annotationMode(), cfg.includesMode(),
@@ -131,7 +127,7 @@ public final class AutoValhallaAgent {
                 cfg.annotationOnSuccessAppendTo(),
                 cfg.includesOnFailThrow(), cfg.includesOnFailAppendTo(),
                 cfg.includesOnSuccessAppendTo(),
-                cfg.identityExceptionAppendTo());
+                cfg.synchronizationMonitorAppendTo());
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
 
@@ -200,7 +196,7 @@ public final class AutoValhallaAgent {
         boolean includesOnFailThrow = false;
         String includesOnFailAppendTo = null;
         String includesOnSuccessAppendTo = null;
-        String identityExceptionAppendTo = null;
+        String synchronizationMonitorAppendTo = null;
 
         for (String[] a : assigns) {
             switch (a[0]) {
@@ -231,9 +227,9 @@ public final class AutoValhallaAgent {
                     String t = a[1].trim();
                     includesOnSuccessAppendTo = t.isEmpty() ? null : t;
                 }
-                case Config.IDENTITY_EXCEPTION_APPEND_TO -> {
+                case Config.SYNCHRONIZATION_MONITOR_APPEND_TO -> {
                     String t = a[1].trim();
-                    identityExceptionAppendTo = t.isEmpty() ? null : t;
+                    synchronizationMonitorAppendTo = t.isEmpty() ? null : t;
                 }
                 default -> { /* unreachable */ }
             }
@@ -243,7 +239,7 @@ public final class AutoValhallaAgent {
                 annotationOnSuccessAppendTo,
                 includesOnFailThrow, includesOnFailAppendTo,
                 includesOnSuccessAppendTo,
-                identityExceptionAppendTo);
+                synchronizationMonitorAppendTo);
     }
 
     private static void emit(List<String[]> assigns, String key, String value) {
