@@ -1,9 +1,13 @@
 package io.github.thunkware.auto.valhalla;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 /**
  * Logging facade for the auto-valhalla agent. Supports log levels: {@code OFF},
  * {@code ERROR}, {@code WARNING}, {@code INFO}, {@code DEBUG}. Messages are
- * prefixed with {@code [auto-valhalla]} and the log level.
+ * prefixed with an ISO 8601 timestamp (with millisecond precision and timezone
+ * offset), {@code [auto-valhalla]}, and the log level.
  *
  * <p>The global log level is set once at startup via {@link #setLevel(String)}.
  */
@@ -17,6 +21,8 @@ public final class InternalLogger {
     }
 
     private static volatile Level level = Level.INFO;
+    private static final DateTimeFormatter TIMESTAMP_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
 
     private InternalLogger() {}
 
@@ -62,7 +68,8 @@ public final class InternalLogger {
 
     private static void log(Level lv, String msg) {
         if (lv.rank <= level.rank) {
-            System.err.println("[auto-valhalla] [" + lv + "] " + msg);
+            String timestamp = ZonedDateTime.now().format(TIMESTAMP_FORMAT);
+            System.err.println(timestamp + " [auto-valhalla] [" + lv + "] " + msg);
         }
     }
 }
