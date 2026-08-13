@@ -8,6 +8,8 @@ import java.lang.classfile.ClassTransform;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
+import java.lang.classfile.attribute.InnerClassInfo;
+import java.lang.classfile.attribute.InnerClassesAttribute;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.reflect.AccessFlag;
@@ -110,6 +112,29 @@ public final class ValueClassRewriter {
                 int flags = af.flagsMask() & ~ACC_IDENTITY
                         | (af.has(AccessFlag.ABSTRACT) ? 0 : ClassFile.ACC_FINAL);
                 cb.withFlags(flags);
+            } else if (ce instanceof InnerClassesAttribute ica) {
+                // The JVM only injects ACC_IDENTITY into InnerClasses-attribute
+                // entries for legacy class files; for a value-class (inline)
+                // version each entry must carry one of ACC_IDENTITY /
+                // ACC_INTERFACE / (ACC_ABSTRACT | ACC_FINAL) itself, or
+                // ClassFileParser throws "Illegal class modifiers in inner
+                // class ... of class ...". Member classes declared in an
+                // identity class file are identity classes, so mark every
+                // non-interface, non-module entry with ACC_IDENTITY, matching
+                // exactly what HotSpot does for pre-inline class files.
+                List<InnerClassInfo> entries = ica.classes().stream()
+                        .map(info -> {
+                            int mask = info.flagsMask();
+                            if ((mask & (ACC_IDENTITY | ClassFile.ACC_INTERFACE
+                                    | ClassFile.ACC_MODULE)) == 0) {
+                                info = InnerClassInfo.of(info.innerClass(),
+                                        info.outerClass(), info.innerName(),
+                                        mask | ACC_IDENTITY);
+                            }
+                            return info;
+                        })
+                        .toList();
+                cb.with(InnerClassesAttribute.of(entries));
             } else {
                 cb.accept(ce);
             }

@@ -127,6 +127,48 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void memberClassAccessFlagsGainIdentityWhenBumpingVersion() throws Exception {
+        String internal = "sample/NestedOuter";
+        byte[] original = readResource("/sample/NestedOuter.class");
+        assertNotNull(original, "sample class must be on the test classpath");
+
+        ClassFile cf = ClassFile.of();
+        var inModel = cf.parse(original);
+        // The compiled class (pre-inline version) records its member classes
+        // with ACC_STATIC only -- no ACC_IDENTITY, matching what Spring Boot's
+        // FileDataBlock does. The rewriter must add ACC_IDENTITY itself once it
+        // bumps the version, or the JVM rejects the class at load time with
+        // "Illegal class modifiers in inner class ... of class ...".
+        var inInner = inModel.findAttribute(java.lang.classfile.Attributes.innerClasses()).orElseThrow();
+        assertFalse(inInner.classes().stream()
+                        .allMatch(ici -> (ici.flagsMask() & ValueClassRewriter.ACC_IDENTITY) != 0),
+                "the input's InnerClasses entries must lack ACC_IDENTITY to prove the fix");
+
+        ValueClassTransformer transformer = new ValueClassTransformer(
+                Set.of(internal), Set.of(),
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
+                false, false, null, false, null);
+        byte[] out = transformer.transform(null, null, internal, null, null, original);
+        assertNotNull(out, "a class with member classes should be rewritten");
+
+        var outModel = cf.parse(out);
+        assertTrue(ValueClassRewriter.alreadyValue(outModel),
+                "output should encode a value class");
+        var outInner = outModel.findAttribute(java.lang.classfile.Attributes.innerClasses()).orElseThrow();
+        assertFalse(outInner.classes().isEmpty(), "output keeps its InnerClasses attribute");
+        for (var ici : outInner.classes()) {
+            int mask = ici.flagsMask();
+            assertTrue((mask & ValueClassRewriter.ACC_IDENTITY) != 0
+                            || (mask & ClassFile.ACC_INTERFACE) != 0
+                            || (mask & ClassFile.ACC_MODULE) != 0,
+                    "each member-class entry must carry ACC_IDENTITY (or be an interface)"
+                            + " so the JVM accepts the value-class version: " + ici.innerClass().asInternalName());
+        }
+        // The rewritten class must load as a value class: no ClassFormatError.
+        assertTrue(cf.verify(out).isEmpty(), "rewritten class must verify");
+    }
+
+    @Test
     void safeModeNarrowsSelectionToFinalClasses() throws Exception {
         byte[] base = readResource("/sample/Base.class");
         assertNotNull(base, "Base on classpath");
