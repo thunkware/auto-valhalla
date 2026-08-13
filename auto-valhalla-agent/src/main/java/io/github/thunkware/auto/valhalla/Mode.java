@@ -52,8 +52,10 @@ public enum Mode {
 
     /** The default set for {@code annotation-mode} (classes selected by the
      *  {@code @AutoValhalla} annotation): {@code safe} — only classes that are
-     *  <em>already final</em> (or abstract) are converted. Non-final candidates
-     *  are skipped unless {@code mark-class-final} is opted in explicitly. */
+     *  <em>already final</em> (or abstract) are converted. A selected
+     *  non-final class is not converted and is handled by the {@code on-fail-*}
+     *  settings (by default a loud failure for annotated classes, so
+     *  {@code mark-class-final} must be opted in explicitly to convert it). */
     public static final Set<Mode> ANNOTATION_DEFAULT =
             EnumSet.of(Mode.SAFE);
 

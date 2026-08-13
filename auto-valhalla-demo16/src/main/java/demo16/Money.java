@@ -4,7 +4,7 @@ import io.github.thunkware.auto.valhalla.AutoValhalla;
 
 /**
  * Converted to a value class by the {@code @AutoValhalla} annotation. Compiled
- * to Java 16 bytecode (major version 60) to prove the agent handles class files
+ * to Java 16 bytecode to prove the agent handles class files
  * newer than the JDK it was built against.
  */
 @AutoValhalla

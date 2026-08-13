@@ -18,8 +18,7 @@
   </description>
 
   <properties>
-    <!-- Compile with a real JDK 5 so the class file is genuine Java 5 bytecode
-         (major version 49), loadable on any JVM >= 5. -->
+    <!-- Compile with a real JDK 5 so the class file is genuine Java 5 bytecode, loadable on any JDK 5+. -->
     <java5.home>${env.JAVA5_HOME}</java5.home>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
   </properties>

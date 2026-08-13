@@ -114,8 +114,9 @@ unprefixed name (e.g. `includes-mode`).
 
 #### `mode` values
 
-The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_ classes should be converted. Mode further decides
-_which_ or _how_ those classes should be converted.
+The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_ classes should be selected. Mode further decides
+_which_ or _how_ those selected classes should be converted. If a class is selected but not converted, that's considered
+a failure; see `on-fail-*` flags for failure handling.
 
 | Mode | Effect                                                                                                                                                                                                                                 |
 | --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

@@ -350,25 +350,15 @@ class ValueClassRewriterTest {
                 "a loud rejection is not a usable value class");
 
         // Annotation-selected classes default to loud: under the safe default
-        // annotation-mode, a non-final annotated class is skipped silently
-        // before the on-fail setting can apply...
+        // annotation-mode, a non-final annotated class is selected-but-not-
+        // converted, which is a failure handled per the on-fail settings. The
+        // loud annotation default must not come back as either a silent
+        // identity class or a usable value class.
         byte[] mp = readResource("/demo5/broken/MutablePoint.class");
         assertNotNull(mp, "MutablePoint on classpath");
-        ValueClassTransformer annoSafe = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, true, null, false, null);
-        assertNull(annoSafe.transform(null, null, "demo5/broken/MutablePoint", null, null, mp),
-                "the safe default skips a non-final annotated class silently");
-
-        // ...so the loud annotation.on-fail setting only fires for classes that
-        // are expression candidates: opting into mark-class-final makes the
-        // mutable annotated class fail loudly, and the result is never a usable
-        // value class.
         ValueClassTransformer annoLoud = new ValueClassTransformer(
                 Set.of(), Set.of(),
-                EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
-                Mode.INCLUDES_DEFAULT,
+                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
                 false, true, null, false, null);
         byte[] mpOut = annoLoud.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
         assertNotNull(mpOut, "annotation.on-fail-throw defaults to true for annotated classes");

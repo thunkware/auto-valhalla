@@ -14,13 +14,11 @@
   <name>auto-valhalla demo5 (Java 5 bytecode)</name>
 
   <description>
-    A value-class candidate compiled to genuine Java 5 bytecode (major version
-    49) with a real JDK 5, proving the agent handles legacy class files.
+    A value-class candidate compiled to genuine Java 5 bytecode with a real JDK 5, proving the agent handles legacy class files.
   </description>
 
   <properties>
-    <!-- Compile with a real JDK 5 so the class file is genuine Java 5 bytecode
-         (major version 49), loadable on any JVM &gt;= 5. -->
+    <!-- Compile with a real JDK 5 so the class file is genuine Java 5 bytecode, loadable on any JDK 5+. -->
     <java5.home>${env.JAVA5_HOME}</java5.home>
     <!-- Neutralise the parent's JDK 28 preview settings for this module.
          (An empty maven.compiler.release would make javadoc fail with

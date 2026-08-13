@@ -132,18 +132,22 @@ class DemoFixturesTest {
     }
 
     @Test
-    void annotatedPointIsSkippedBySafeAnnotationDefault() throws Exception {
+    void annotatedPointIsRejectedBySafeAnnotationDefault() throws Exception {
         // Point is selected by @AutoValhalla but is not final. The default
         // annotation-mode is safe, which converts only already-final (or
-        // abstract) classes, so Point must stay an identity class unless the
-        // user opts into mark-class-final.
+        // abstract) classes, so Point is selected-but-not-converted: a failure
+        // handled by the on-fail settings. The loud annotation default
+        // (annotation.on-fail-throw=true) surfaces a broken class, never a
+        // usable value class.
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of(), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
                 false, true, null, false, null);
         byte[] point = transformer.transform(null, null, "demo5/Point", null, null,
                 readResource("/demo5/Point.class"));
-        assertNull(point, "default annotation-mode (safe) must not convert non-final demo5.Point");
+        assertNotNull(point, "default annotation-mode (safe) rejects non-final demo5.Point loudly");
+        assertFalse(isUsableValueClass(point),
+                "the safe-default rejection of demo5.Point is not a usable value class");
     }
 
     @Test

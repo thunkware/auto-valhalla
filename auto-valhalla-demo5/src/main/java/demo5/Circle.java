@@ -3,10 +3,10 @@ package demo5;
 import io.github.thunkware.auto.valhalla.AutoValhalla;
 
 /**
- * Like {@link Square} — a non-final field written exactly once, in the
- * constructor, so it can safely be made {@code final} — but selected by the
+ * Like {@link Square}: a non-final field written exactly once, in the
+ * constructor, so it can safely be made {@code final} when `mode=mark-class-final`. Selected by the
  * {@code @AutoValhalla} annotation instead of {@code includes}. Compiled to
- * genuine Java 5 bytecode (major version 49).
+ * genuine Java 5 bytecode.
  */
 @AutoValhalla
 public class Circle {

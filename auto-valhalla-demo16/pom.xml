@@ -14,7 +14,7 @@
   <name>auto-valhalla demo16 (Java 16 bytecode)</name>
 
   <description>
-    Value-class candidates compiled to Java 16 bytecode (major version 60),
+    Value-class candidates compiled to Java 16 bytecode,
     proving the agent handles newer class files and rewrites Java 16 features
     such as records.
   </description>
