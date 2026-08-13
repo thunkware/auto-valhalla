@@ -25,7 +25,6 @@ public enum Mode {
      *  appears in a parsed set: {@link #parse(String)} expands it. */
     YOLO("yolo"),
 
-
     /** Allow candidates with synchronized instance methods: their
      *  {@code ACC_SYNCHRONIZED} is stripped so they can become value classes. */
     IGNORE_SYNCHRONIZED("ignore-synchronized"),

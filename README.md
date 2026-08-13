@@ -61,29 +61,28 @@ java --enable-preview \
      -jar myapp.jar
 ```
 
-### 3. Convert everything with `includes=*`
+### 3. Discover classes that can be converted:
 
-Selection always happens through the `@AutoValhalla` annotation or `includes`;
-the [`mode`](#mode-values) options then narrow which of those selected classes
-are actually converted: 
-  * `annotation-mode` applies to annotated classes (defaults to `safe`)
-  * `includes-mode` to included ones (defaults to `yolo`)
-
-To convert every structurally suitable class, select everything with the `*`
-include and (optionally) narrow with `includes-mode`:
+To discover classes that can or cannot be converted, run this a few times:
 
 ```bash
 java --enable-preview \
-     -Dauto-valhalla.includes='*' \
-     -javaagent:auto-valhalla.jar \
-     -jar myapp.jar
+    -Dauto-valhalla.includes-mode=safe \
+    -Dauto-valhalla.includes='*' \
+    -Dauto-valhalla.includes.on-success-append-to=success.txt \
+    -Dauto-valhalla.includes.on-fail-append-to=failures.txt \
+    -Dauto-valhalla.excludes-file=failures.txt \
+    -javaagent:auto-valhalla.jar \
+    -jar myapp.jar
 ```
 
-> **Warning:** a converted class becomes `final` and loses identity — `==`
-> becomes value equality and `System.identityHashCode`, `synchronized`,
-> `WeakReference`, and `IdentityHashMap` behave differently. This is especially
-> dangerous when converting everything, which happens without annotating
-> anything.
+success.txt will contain all classes that can be converted, and failures.txt that cannot.
+
+Be warned that a converted class becomes `final` and loses identity — `==`
+becomes value equality and `System.identityHashCode`, `synchronized`,
+`WeakReference`, and `IdentityHashMap` behave differently. 
+Just because a class can be converted does not mean your application will behave correctly on
+all execution paths.
 
 ## Options
 
@@ -103,12 +102,12 @@ Within the agent-argument list, later options override earlier ones, and a `.con
 | `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `safe`. See the mode table below.                                                                                                           |
 | `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Modes narrowing includes-selected classes. Defaults to `yolo`. See the mode table below.                                                                                                             |
 | `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions.                                                                                                                                                   |
+| `auto-valhalla.annotation.on-success-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS_APPEND_TO` | Path to a file; Appends class name of each annotation-selected class that is successfully converted.                                                                                                 |
+| `auto-valhalla.includes.on-success-append-to` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
 | `auto-valhalla.annotation.on-fail-throw` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_THROW` | `true` (default) to surface a loud `LinkageError` (a `ClassFormatError` at load) when an *annotation-selected* class cannot be safely transformed, instead of silently keeping it an identity class. |
 | `auto-valhalla.includes.on-fail-throw` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_THROW` | Same, for *includes-selected* classes. Defaults to `false` so a broad includes sweep cannot crash the application.                                                                                   |
-| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; the Java dot name (e.g. `com.example.Foo`, not `com/example/Foo`) of each annotation-selected class that fails to transform is appended.                                              |
+| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; Appends class name of each annotation-selected class that fails to transform.                                                                                                        |
 | `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
-| `auto-valhalla.annotation.on-success-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS_APPEND_TO` | Path to a file; the Java dot name of each annotation-selected class that is successfully converted is appended.                                                                                    |
-| `auto-valhalla.includes.on-success-append-to` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
 | `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying the options above (keys may omit the `auto-valhalla.` prefix).                                                                                              |
 
 For every `*-append-to` option the target file is read once at start-up so names
