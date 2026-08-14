@@ -38,7 +38,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.SampleX"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null, false, null);
+                false, null, false, null);
 
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "suitable class should be rewritten");
@@ -73,7 +73,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.Sync"), Set.of(),
                 EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
-                false, false, null, false, null);
+                false, null, false, null);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNull(out, "synchronized-instance-method class must not be rewritten by includes-mode=safe");
     }
@@ -99,7 +99,7 @@ class ValueClassRewriterTest {
                 Set.of("sample.Sync"), Set.of(),
                 EnumSet.noneOf(Mode.class),
                 EnumSet.of(Mode.IGNORE_SYNCHRONIZED, Mode.MARK_CLASS_FINAL),
-                false, false, null, false, null);
+                false, null, false, null);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "synchronized non-final class should be rewritten with"
                 + " mark-class-final + ignore-synchronized");
@@ -149,7 +149,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of(internal), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null, false, null);
+                false, null, false, null);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "a class with member classes should be rewritten");
 
@@ -179,13 +179,13 @@ class ValueClassRewriterTest {
         ValueClassTransformer safe = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
                 EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
-                false, false, null, false, null);
+                false, null, false, null);
         assertNull(safe.transform(null, null, "sample.Base", null, null, base),
                 "includes-mode=safe must not convert a non-final class (would break its subclasses)");
         ValueClassTransformer def = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null, false, null);
+                false, null, false, null);
         assertNotNull(def.transform(null, null, "sample.Base", null, null, base),
                 "default includes-mode must convert the selected non-final class");
     }
@@ -219,7 +219,7 @@ class ValueClassRewriterTest {
         mff.add(Mode.MARK_FIELDS_FINAL);
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("sample.Once", "sample.TwoCtors", "sample.Mutable", "sample.SampleX"),
-                Set.of(), EnumSet.noneOf(Mode.class), mff, false, false, null, false, null);
+                Set.of(), EnumSet.noneOf(Mode.class), mff, false, null, false, null);
         assertNotNull(transformer.transform(null, null, "sample.Once", null, null, once),
                 "includes-mode=mark-fields-final converts classes with non-final fields written in the ctor");
         assertNotNull(transformer.transform(null, null, "sample.TwoCtors", null, null, twoCtors),
@@ -239,7 +239,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer t = new ValueClassTransformer(
                 Set.of("sample.Base"), Set.of(),
                 EnumSet.noneOf(Mode.class), EnumSet.of(Mode.MARK_CLASS_FINAL),
-                false, false, null, false, null);
+                false, null, false, null);
         assertNotNull(t.transform(null, null, "sample.Base", null, null, base),
                 "Base rewrites (made final)");
         // Sub extends Base, which was just made final; loading Sub must now fail,
@@ -261,7 +261,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer t = new ValueClassTransformer(
                 Set.of("sample.AbstractBase", "sample.AbstractSub"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null, false, null);
+                false, null, false, null);
 
         // An abstract class is never converted: an agent-converted abstract
         // value class whose identity subclass loads later triggers a duplicate
@@ -334,7 +334,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer t = new ValueClassTransformer(
                 Set.of("sample.SyncBlock"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null, null,
+                false, null, null,
                 false, null, null, out.toString());
 
         byte[] syncBlock = readResource("/sample/SyncBlock.class");
@@ -366,7 +366,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer t = new ValueClassTransformer(
                 Set.of("sample.SampleX", "sample.Mutable"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, fail.toString(), success.toString(),
+                false, fail.toString(), success.toString(),
                 false, fail.toString(), success.toString());
 
         byte[] sampleX = readResource("/sample/SampleX.class");
@@ -481,7 +481,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer includesQuiet = new ValueClassTransformer(
                 Set.of("sample.Mutable"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null, false, null);
+                false, null, false, null);
         assertNull(includesQuiet.transform(null, null, internal, null, null, mutable),
                 "includes.on-fail-throw=false leaves the class as identity");
 
@@ -490,7 +490,7 @@ class ValueClassRewriterTest {
         ValueClassTransformer includesLoud = new ValueClassTransformer(
                 Set.of("sample.Mutable"), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, false, null, true, null);
+                false, null, true, null);
         byte[] out = includesLoud.transform(null, null, internal, null, null, mutable);
         assertNotNull(out, "includes.on-fail-throw=true surfaces the rejection");
         assertFalse(DemoFixturesTest.isUsableValueClass(out),
@@ -552,7 +552,7 @@ class ValueClassRewriterTest {
                 ValueClassTransformer includesOnly = new ValueClassTransformer(
                         Set.of("sample.Mutable"), Set.of(),
                         Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                        false, false, null, false, inc2.getAbsolutePath());
+                        false, null, false, inc2.getAbsolutePath());
                 includesOnly.transform(null, null, "sample/Mutable", null, null, mutable);
                 assertEquals("sample.Mutable\n", Files.readString(inc2.toPath()),
                         "an includes-only class is appended to the includes file as a class name");
