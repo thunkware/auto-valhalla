@@ -29,7 +29,7 @@ class ConstructorPatternsTest {
         var model = cf.parse(original);
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
                 internal + " must be suitable (mark-class-final + ignore-synchronized)");
-        byte[] out = ValueClassRewriter.transform(model, false, true, true);
+        byte[] out = ValueClassRewriter.transform(model, false, true, true, null);
         assertNotNull(out, internal + " must be rewritten into a value class");
         var outModel = cf.parse(out);
         assertTrue(ValueClassRewriter.alreadyValue(outModel),
@@ -44,7 +44,7 @@ class ConstructorPatternsTest {
         var model = cf.parse(original);
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
                 internal + " must be structurally suitable");
-        byte[] out = ValueClassRewriter.transform(model, false, true, true);
+        byte[] out = ValueClassRewriter.transform(model, false, true, true, null);
         assertNull(out, internal
                 + " must be left as an identity class (relocating its constructor"
                 + " would produce illegal early-phase bytecode)");

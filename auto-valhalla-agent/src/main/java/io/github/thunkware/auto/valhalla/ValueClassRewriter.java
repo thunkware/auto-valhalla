@@ -67,8 +67,8 @@ public final class ValueClassRewriter {
      *         must remain an identity class
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
-            boolean ignoreSynchronized) {
-        return transform(model, keepIfInvalid, ignoreSynchronized, false);
+            boolean ignoreSynchronized, ClassLoader loader) {
+        return transform(model, keepIfInvalid, ignoreSynchronized, false, loader);
     }
 
     /**
@@ -82,7 +82,7 @@ public final class ValueClassRewriter {
      * classes are left as identity classes.
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
-            boolean ignoreSynchronized, boolean markClassFinal) {
+            boolean ignoreSynchronized, boolean markClassFinal, ClassLoader loader) {
         if (!isSuitable(model, ignoreSynchronized, markClassFinal)) {
             return null;
         }
@@ -138,7 +138,7 @@ public final class ValueClassRewriter {
         ClassTransform ctors = ConstructorRewriter.transformConstructors(model, ctorFailed);
         ClassTransform methods = ignoreSynchronized ? stripSynchronized() : ClassTransform.ACCEPT_ALL;
 
-        ClassFile cf = ClassFiles.of();
+        ClassFile cf = ClassFiles.of(loader);
         byte[] out;
         try {
             out = cf.transformClass(model,

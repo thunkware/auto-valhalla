@@ -41,7 +41,7 @@ final class SynchronizationInstrumenter {
      * {@link #hasMonitorEnter} first to distinguish "nothing to instrument" from
      * an instrumentation failure.
      */
-    static byte[] instrument(ClassModel model) {
+    static byte[] instrument(ClassModel model, ClassLoader loader) {
         CodeTransform guard = (cb, e) -> {
             if (e instanceof MonitorInstruction mi && mi.opcode() == Opcode.MONITORENTER) {
                 cb.dup();
@@ -50,7 +50,7 @@ final class SynchronizationInstrumenter {
             }
             cb.accept(e);
         };
-        ClassFile cf = ClassFiles.of();
+        ClassFile cf = ClassFiles.of(loader);
         byte[] out = cf.transformClass(model, ClassTransform.transformingMethodBodies(guard));
         // Stack-map regeneration can produce incorrect frames when the class
         // references types not in the system classloader (e.g. H2, Spring types).

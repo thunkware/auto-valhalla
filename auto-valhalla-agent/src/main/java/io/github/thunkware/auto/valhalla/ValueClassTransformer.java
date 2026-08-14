@@ -89,9 +89,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             // SYNCHRONIZATION_MONITOR is an either-or mode: either rewrite the class
             // to a value class, or instrument monitorenter calls, but not both.
             if (selection.effective().contains(Mode.SYNCHRONIZATION_MONITOR)) {
-                return monitorSynchronization(model, className, selection);
+                return monitorSynchronization(model, className, selection, loader);
             }
-            return rewrite(className, model, selection);
+            return rewrite(className, model, selection, loader);
         } catch (LinkageError e) {
             throw e;
         } catch (Throwable t) {
@@ -99,11 +99,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
     }
 
-    private byte[] monitorSynchronization(ClassModel model, ClassName className, Selection selection) {
+    private byte[] monitorSynchronization(ClassModel model, ClassName className,
+            Selection selection, ClassLoader loader) {
         if (!SynchronizationInstrumenter.hasMonitorEnter(model)) {
             return null;
         }
-        byte[] monitored = SynchronizationInstrumenter.instrument(model);
+        byte[] monitored = SynchronizationInstrumenter.instrument(model, loader);
         if (monitored != null) {
             InternalLogger.debug(className.java()
                     + ": instrumented for synchronization monitoring");
@@ -171,7 +172,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * later subclass loads can be reported by superclass name. Failure handling
      * follows the selection's settings.
      */
-    private byte[] rewrite(ClassName className, ClassModel model, Selection selection) {
+    private byte[] rewrite(ClassName className, ClassModel model, Selection selection,
+            ClassLoader loader) {
         Set<Mode> effective = selection.effective();
         boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
         boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
@@ -190,7 +192,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     selection.onFailThrow(), selection.onFailAppendTo());
         }
         byte[] out = ValueClassRewriter.transform(model, selection.onFailThrow(),
-                ignoreSync, markClassFinal);
+                ignoreSync, markClassFinal, loader);
         if (out == null) {
             return onFail(className,
                     "is selected for value-class transformation but could not be safely"
