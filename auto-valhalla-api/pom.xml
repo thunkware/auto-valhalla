@@ -10,11 +10,11 @@
     <version>0.1.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>auto-valhalla-annotation</artifactId>
-  <name>auto-valhalla annotation</name>
+  <artifactId>auto-valhalla-api</artifactId>
+  <name>auto-valhalla api</name>
 
   <description>
-    The @AutoValhalla annotation
+    The @AutoValhalla annotation and AutoValhallaVerifier
   </description>
 
   <properties>
@@ -73,8 +73,9 @@
                 <argument>1.5</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
-                <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/AutoValhalla.java</argument>
-                <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaVerifier.java</argument>
+                <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/api/AutoValhalla.java</argument>
+                <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/api/AutoValhallaVerifier.java</argument>
+                <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/api/ConfiguredVerifier.java</argument>
               </arguments>
             </configuration>
           </execution>

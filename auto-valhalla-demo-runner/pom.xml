@@ -21,7 +21,7 @@
   <dependencies>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-annotation</artifactId>
+      <artifactId>auto-valhalla-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

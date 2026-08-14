@@ -30,7 +30,7 @@
   <dependencies>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-annotation</artifactId>
+      <artifactId>auto-valhalla-api</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>
@@ -66,7 +66,7 @@
                 <argument>-target</argument>
                 <argument>1.5</argument>
                 <argument>-cp</argument>
-                <argument>${project.basedir}/../auto-valhalla-annotation/target/auto-valhalla-annotation-0.1.0-SNAPSHOT.jar</argument>
+                <argument>${project.basedir}/../auto-valhalla-api/target/auto-valhalla-api-0.1.0-SNAPSHOT.jar</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>${project.basedir}/src/main/java/demo5/annotation/Point.java</argument>
@@ -81,4 +81,43 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- When JAVA5_HOME is absent, fall back to the modern compiler. -->
+    <profile>
+      <id>skip-jdk5</id>
+      <activation>
+        <property>
+          <name>!env.JAVA5_HOME</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.13.0</version>
+            <configuration combine.self="override"/>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <executions>
+              <execution>
+                <id>compile-jdk5</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

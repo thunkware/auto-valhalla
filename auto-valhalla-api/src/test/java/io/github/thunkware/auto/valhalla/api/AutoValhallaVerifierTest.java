@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.api;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

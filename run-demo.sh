@@ -23,7 +23,7 @@ find_jar() { ls "$1"/target/"$2"-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sour
 AGENT_JAR=$(find_jar auto-valhalla-agent auto-valhalla-agent)
 DEMO5_JAR=$(find_jar auto-valhalla-demo5 auto-valhalla-demo5)
 DEMO16_JAR=$(find_jar auto-valhalla-demo16 auto-valhalla-demo16)
-ANNO_JAR=$(find_jar auto-valhalla-annotation auto-valhalla-annotation)
+ANNO_JAR=$(find_jar auto-valhalla-api auto-valhalla-api)
 
 # the runner and the (JDK 5) annotation artifact, plus the demo5/demo16 jars
 CP="auto-valhalla-demo-runner/target/classes:$DEMO5_JAR:$DEMO16_JAR:$ANNO_JAR"

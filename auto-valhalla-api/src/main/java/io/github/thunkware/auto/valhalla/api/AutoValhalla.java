@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.api;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -31,8 +31,8 @@ import java.lang.annotation.Target;
  * Other modes — such as {@code mark-class-final} or {@code remove-synchronized}
  * — relax individual conditions; see the agent documentation for details.
  *
- * <p>Use {@link AutoValhallaVerifier} to check these conditions at development
- * time, before deploying the agent:
+ * <p>Use {@link AutoValhallaVerifier} to check these conditions at build
+ * time, before running the agent:
  * <pre>
  * AutoValhallaVerifier.verify(Foo.class, Bar.class);
  * </pre>

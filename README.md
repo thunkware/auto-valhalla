@@ -50,6 +50,14 @@ Because `@AutoValhalla` annotation was compiled with Java 5, it is compatible wi
 **JDK 1.5 and later**. You can apply the annotation in older codebases
 without raising their compile version to JDK28.
 
+To detect errors earlier at build time, run the verifier in a unit test:
+```java
+@Test
+void test() {
+    AutoValhallaVerifier.verify(Point.class, Pair.class);
+}
+```
+
 ### 2. Select by package or class with `includes`
 
 Use `-Dauto-valhalla.includes` to convert classes if you cannot or do not

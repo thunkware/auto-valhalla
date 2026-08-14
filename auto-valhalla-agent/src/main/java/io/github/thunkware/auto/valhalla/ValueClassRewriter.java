@@ -1,7 +1,5 @@
 package io.github.thunkware.auto.valhalla;
 
-import static java.lang.classfile.Attributes.*;
-
 import java.lang.classfile.AccessFlags;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileVersion;
@@ -22,6 +20,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import static java.lang.classfile.Attributes.runtimeVisibleAnnotations;
 
 /**
  * Rewrites a loaded class file into a JEP 401 value class.
@@ -58,7 +58,7 @@ public final class ValueClassRewriter {
     static final int PREVIEW_MINOR_VERSION = 65535;
     static final int JAVA_28_MAJOR_VERSION = 72;
 
-    static final String ANNOTATION_DESCRIPTOR = "Lio/github/thunkware/auto/valhalla/AutoValhalla;";
+    static final String ANNOTATION_DESCRIPTOR = "Lio/github/thunkware/auto/valhalla/api/AutoValhalla;";
 
     private ValueClassRewriter() {}
 

@@ -2,7 +2,7 @@ package demo5.broken;
 
 import demo5.annotation.Point;
 import demo5.includes.Square;
-import io.github.thunkware.auto.valhalla.AutoValhalla;
+import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
 /**
  * Deliberately <em>not</em> a JEP 401 value-class candidate even though it is

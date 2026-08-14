@@ -57,7 +57,7 @@ DEMO5_JAR=$(ls auto-valhalla-demo5/target/auto-valhalla-demo5-*.jar 2>/dev/null 
 echo "== 2. agent jar class-file audit =="
 SHIM=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent5.class)
 REAL=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent.class)
-ANNO=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhalla.class)
+ANNO=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/api/AutoValhalla.class)
 COUNT=$("$JAVA_HOME/bin/jar" tf "$AGENT_JAR" | grep -c "io/github/thunkware/auto/valhalla/AutoValhallaAgent.class$")
 [ "$SHIM" = "49" ]; check $? "shim is class-file 49 (JDK 5) [got $SHIM]"
 [ "$REAL" = "72" ]; check $? "real agent is class-file 72 (JDK 28) [got $REAL]"

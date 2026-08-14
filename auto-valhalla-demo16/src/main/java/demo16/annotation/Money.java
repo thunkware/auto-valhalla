@@ -1,6 +1,6 @@
 package demo16.annotation;
 
-import io.github.thunkware.auto.valhalla.AutoValhalla;
+import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
 /**
  * Converted to a value class by the {@code @AutoValhalla} annotation. Compiled

@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.api;
 
 import java.util.List;
 

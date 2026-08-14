@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.api;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

@@ -23,7 +23,7 @@
   </organization>
 
   <modules>
-    <module>auto-valhalla-annotation</module>
+    <module>auto-valhalla-api</module>
     <module>auto-valhalla-agent5</module>
     <module>auto-valhalla-agent</module>
     <module>auto-valhalla-demo5</module>

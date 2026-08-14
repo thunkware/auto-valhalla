@@ -26,7 +26,7 @@
   <dependencies>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-annotation</artifactId>
+      <artifactId>auto-valhalla-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -68,7 +68,7 @@
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>auto-valhalla-annotation</includeArtifactIds>
+              <includeArtifactIds>auto-valhalla-api</includeArtifactIds>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
           </execution>
