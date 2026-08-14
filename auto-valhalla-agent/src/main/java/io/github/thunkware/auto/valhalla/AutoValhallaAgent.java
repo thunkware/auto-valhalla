@@ -7,11 +7,13 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Java agent entry point. Installs {@link ValueClassTransformer} to convert
@@ -238,22 +240,23 @@ public final class AutoValhallaAgent {
             }
         }
 
-        // Log the configuration as provided (before resolving file contents)
+        // Log the configuration as provided (before resolving file contents);
+        // null and empty values are omitted.
         InternalLogger.info("Configuration:"
-                + " includes=" + cfg.includes
-                + " includes-files=" + cfg.includesFiles
-                + " excludes=" + cfg.excludes
-                + " excludes-files=" + cfg.excludesFiles
-                + " annotation-mode=" + cfg.annotationMode
-                + " includes-mode=" + cfg.includesMode
-                + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow
-                + " annotation.on-fail-append-to=" + cfg.annotationOnFailAppendTo
-                + " annotation.on-success-append-to=" + cfg.annotationOnSuccessAppendTo
-                + " includes.on-fail-throw=" + cfg.includesOnFailThrow
-                + " includes.on-fail-append-to=" + cfg.includesOnFailAppendTo
-                + " includes.on-success-append-to=" + cfg.includesOnSuccessAppendTo
-                + " synchronization-monitor.append-to=" + cfg.synchronizationMonitorAppendTo
-                + " log-level=" + cfg.logLevel);
+                + getLogString(Config.INCLUDES, cfg.includes)
+                + getLogString(Config.INCLUDES_FILES, cfg.includesFiles)
+                + getLogString(Config.EXCLUDES, cfg.excludes)
+                + getLogString(Config.EXCLUDES_FILES, cfg.excludesFiles)
+                + getLogString(Config.ANNOTATION_MODE, cfg.annotationMode)
+                + getLogString(Config.INCLUDES_MODE, cfg.includesMode)
+                + getLogString(Config.ANNOTATION_ON_FAIL_THROW, cfg.annotationOnFailThrow)
+                + getLogString(Config.ANNOTATION_ON_FAIL_APPEND_TO, cfg.annotationOnFailAppendTo)
+                + getLogString(Config.ANNOTATION_ON_SUCCESS_APPEND_TO, cfg.annotationOnSuccessAppendTo)
+                + getLogString(Config.INCLUDES_ON_FAIL_THROW, cfg.includesOnFailThrow)
+                + getLogString(Config.INCLUDES_ON_FAIL_APPEND_TO, cfg.includesOnFailAppendTo)
+                + getLogString(Config.INCLUDES_ON_SUCCESS_APPEND_TO, cfg.includesOnSuccessAppendTo)
+                + getLogString(Config.SYNCHRONIZATION_MONITOR_APPEND_TO, cfg.synchronizationMonitorAppendTo)
+                + getLogString(Config.LOG_LEVEL, cfg.logLevel));
 
         // Now resolve file contents
         for (String p : cfg.includesFiles) {
@@ -388,6 +391,20 @@ public final class AutoValhallaAgent {
             return false;
         }
         return canonicalKey(t.substring(0, eq).trim()) != null;
+    }
+
+    /** Returns {@code " label=value"}, or {@code ""} when value is null or an
+     *  empty collection. Collections are formatted as {@code a,b,c} (no brackets). */
+    private static String getLogString(String label, Object value) {
+        if (value == null) return "";
+        if (value instanceof Collection<?> c) {
+            if (c.isEmpty()) return "";
+            String combined = c.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(","));
+            return " " + label + "=" + combined;
+        }
+        return " " + label + "=" + value;
     }
 
     private static String envName(String prop) {

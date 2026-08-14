@@ -9,6 +9,7 @@ import java.lang.classfile.instruction.MonitorInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
+import java.util.List;
 
 /**
  * Instruments {@code monitorenter} instructions in a class to call
@@ -22,21 +23,25 @@ final class SynchronizationInstrumenter {
 
     private SynchronizationInstrumenter() {}
 
-    /**
-     * Instruments all {@code monitorenter} instructions in the model by
-     * inserting a {@link SynchronizationMonitor#check(Object)} call before each one.
-     * Returns {@code null} if the class has no {@code monitorenter}, so
-     * unrelated classes are left untouched.
-     */
-    static byte[] instrument(ClassModel model) {
-        boolean hasMonitor = model.methods().stream()
+    /** Returns true if any method in the class contains a {@code monitorenter}. */
+    static boolean hasMonitorEnter(ClassModel model) {
+        return model.methods().stream()
                 .anyMatch(m -> m.code().map(c -> c.elementList().stream()
                         .anyMatch(e -> e instanceof MonitorInstruction mi
                                 && mi.opcode() == Opcode.MONITORENTER))
                         .orElse(false));
-        if (!hasMonitor) {
-            return null;
-        }
+    }
+
+    /**
+     * Instruments all {@code monitorenter} instructions in the model by
+     * inserting a {@link SynchronizationMonitor#check(Object)} call before each one.
+     * Returns {@code null} when stack-map regeneration produces invalid frames
+     * (e.g. the class references types absent from the system classloader); the
+     * caller is responsible for failure handling. Callers should check
+     * {@link #hasMonitorEnter} first to distinguish "nothing to instrument" from
+     * an instrumentation failure.
+     */
+    static byte[] instrument(ClassModel model) {
         CodeTransform guard = (cb, e) -> {
             if (e instanceof MonitorInstruction mi && mi.opcode() == Opcode.MONITORENTER) {
                 cb.dup();
@@ -45,7 +50,11 @@ final class SynchronizationInstrumenter {
             }
             cb.accept(e);
         };
-        return ClassFile.of().transformClass(model,
-                ClassTransform.transformingMethodBodies(guard));
+        ClassFile cf = ClassFiles.of();
+        byte[] out = cf.transformClass(model, ClassTransform.transformingMethodBodies(guard));
+        // Stack-map regeneration can produce incorrect frames when the class
+        // references types not in the system classloader (e.g. H2, Spring types).
+        List<VerifyError> errors = cf.verify(out);
+        return errors.isEmpty() ? out : null;
     }
 }

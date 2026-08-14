@@ -8,8 +8,10 @@ import java.lang.reflect.AccessFlag;
 import java.security.ProtectionDomain;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * A {@link ClassFileTransformer} that converts matching classes into JEP 401
@@ -21,45 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>{@code annotation-mode} narrows annotation-selected candidates and
  * {@code includes-mode} narrows includes-selected ones (see {@link Mode}).
- *
- * <p>Selection and behavior are controlled by the following flags, supplied
- * either as agent arguments ({@code -javaagent:auto-valhalla.jar=...}), as
- * system properties, as environment variables, or via a {@code .config}
- * properties file (canonical hyphenated form):
- * <ul>
- *   <li>{@code auto-valhalla.includes} — classes/packages to convert. {@code *}
- *       matches everything; a value ending in {@code .} or {@code .*} is a
- *       package prefix.</li>
- *   <li>{@code auto-valhalla.excludes} — classes/packages to skip (wins over
- *       includes and the annotation).</li>
- *   <li>{@code auto-valhalla.annotation-mode} — modes for annotated classes
- *       (default {@code safe}).</li>
- *   <li>{@code auto-valhalla.includes-mode} — modes for included classes
- *       (default {@code yolo} = {@code mark-class-final,ignore-synchronized,
- *       mark-fields-final}).</li>
- *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
- *   <li>{@code auto-valhalla.annotation.on-fail-throw=true} (default) — surface
- *       a loud {@link java.lang.LinkageError} if an <em>annotation-selected</em>
- *       class cannot be safely transformed instead of silently leaving it an
- *       identity class.</li>
- *   <li>{@code auto-valhalla.includes.on-fail-throw=true} (default false) — the
- *       same, for <em>includes-selected</em> classes (off by default so a broad
- *       includes sweep cannot crash the application).</li>
- *   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} and
- *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
- *       class name of each failing class (e.g. {@code com.example.Foo},
- *       not {@code com/example/Foo}) to the given file, per selection
- *       source.</li>
- *   <li>{@code auto-valhalla.annotation.on-success-append-to=file} and
- *       {@code auto-valhalla.includes.on-success-append-to=file} — append the
- *       class name of each successfully converted class. The file is read at
- *       start-up so names already present are not re-appended.</li>
- *   <li>{@code auto-valhalla.synchronization-monitor.append-to=file} — when
- *       {@code Mode.SYNCHRONIZATION_MONITOR} is enabled, instrument selected
- *       classes to record the name of any class being synchronized on
- *       ({@code monitorenter}). Useful for detecting value classes that are
- *       being locked, which causes {@link java.lang.IdentityException} at runtime.</li>
- * </ul>
+ * For the full list of configuration options see {@link AutoValhallaAgent}.
  *
  * <p>A class selected by both the annotation and {@code includes} is treated as
  * annotation-selected only: its mode set and failure settings come from the
@@ -71,8 +35,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ValueClassTransformer implements ClassFileTransformer {
 
     private final Config config;
-    /** Internal names of classes we turned into abstract value classes. */
-    private final Set<String> transformedToAbstract = ConcurrentHashMap.newKeySet();
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
@@ -83,13 +45,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // at startup (deduplicating against existing names). AsyncFileWriter is
         // shared per-path, so success and failure appends to the same file
         // deduplicate against each other.
-        for (String path : new String[] { cfg.annotationOnFailAppendTo,
-                cfg.annotationOnSuccessAppendTo, cfg.includesOnFailAppendTo,
-                cfg.includesOnSuccessAppendTo, cfg.synchronizationMonitorAppendTo }) {
-            if (path != null) {
-                AsyncFileWriter.forFile(path);
-            }
-        }
+        Stream.of(cfg.annotationOnFailAppendTo, cfg.annotationOnSuccessAppendTo, cfg.includesOnFailAppendTo,
+                        cfg.includesOnSuccessAppendTo, cfg.synchronizationMonitorAppendTo)
+                .filter(Objects::nonNull)
+                .forEach(AsyncFileWriter::forFile);
+
         // Configure SynchronizationMonitor with the path so it can record
         // classes being synchronized on.
         if (cfg.synchronizationMonitorAppendTo != null) {
@@ -98,16 +58,16 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     }
 
     @Override
-    public byte[] transform(Module module, ClassLoader loader, String className,
+    public byte[] transform(Module module, ClassLoader loader, String classNameJvm,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
-        if (className == null || className.isEmpty() || classBeingRedefined != null) {
+        if (classNameJvm == null || classNameJvm.isEmpty() || classBeingRedefined != null) {
             // No name, or a retransform: changing class modifiers
             // (ACC_IDENTITY / ACC_FINAL) is not a legal redefinition.
             return null;
         }
-        String internal = className.replace('.', '/');
-        if (isExcluded(internal)) {
+        ClassName className = ClassName.of(classNameJvm);
+        if (isExcluded(className)) {
             return null;
         }
         // Before a class has been classified as annotation- or includes-selected,
@@ -120,7 +80,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         String onFailAppendTo = null;
         try {
             ClassModel model = ClassFile.of().parse(classfileBuffer);
-            Selection selection = select(internal, model);
+            Selection selection = select(className, model);
             if (selection == null) {
                 return null;
             }
@@ -129,24 +89,30 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             // SYNCHRONIZATION_MONITOR is an either-or mode: either rewrite the class
             // to a value class, or instrument monitorenter calls, but not both.
             if (selection.effective().contains(Mode.SYNCHRONIZATION_MONITOR)) {
-                byte[] monitored = SynchronizationInstrumenter.instrument(model);
-                if (monitored != null) {
-                    InternalLogger.debug(internal.replace('/', '.')
-                            + ": instrumented for synchronization monitoring");
-                    return monitored;
-                }
-                return null;
+                return monitorSynchronization(model, className, selection);
             }
-            byte[] out = rewrite(internal, model, selection);
-            if (out != null) {
-                return out;
-            }
-            return null;
+            return rewrite(className, model, selection);
         } catch (LinkageError e) {
             throw e;
         } catch (Throwable t) {
-            return onTransformError(internal, t, onFailThrow, onFailAppendTo);
+            return onTransformError(className, t, onFailThrow, onFailAppendTo);
         }
+    }
+
+    private byte[] monitorSynchronization(ClassModel model, ClassName className, Selection selection) {
+        if (!SynchronizationInstrumenter.hasMonitorEnter(model)) {
+            return null;
+        }
+        byte[] monitored = SynchronizationInstrumenter.instrument(model);
+        if (monitored != null) {
+            InternalLogger.debug(className.java()
+                    + ": instrumented for synchronization monitoring");
+            return monitored;
+        }
+        return onFail(className,
+                "is selected for synchronization monitoring but could not be"
+                        + " instrumented (stack-map verification failed)",
+                selection.onFailThrow(), selection.onFailAppendTo());
     }
 
     /**
@@ -159,18 +125,18 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * was previously rewritten into a final value class, since this class cannot
      * be loaded at all.
      */
-    private Selection select(String internal, ClassModel model) {
+    private Selection select(ClassName className, ClassModel model) {
         String sup = model.superclass().map(ClassEntry::asInternalName).orElse(null);
         if (sup != null && transformedToFinal.contains(sup)) {
-            throw new LinkageError("auto-valhalla: class " + internal
+            throw new LinkageError("auto-valhalla: class " + className.java()
                     + " cannot be loaded: it extends " + sup
                     + " which was rewritten into a final value class");
         }
-        if (patternMatches(config.excludes, internal)) {
+        if (patternMatches(config.excludes, className)) {
             return null;
         }
         boolean annotated = ValueClassRewriter.hasAutoValhallaAnnotation(model);
-        boolean included = patternMatches(config.includes, internal);
+        boolean included = patternMatches(config.includes, className);
         if (!annotated && !included) {
             return null;
         }
@@ -205,20 +171,20 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * later subclass loads can be reported by superclass name. Failure handling
      * follows the selection's settings.
      */
-    private byte[] rewrite(String internal, ClassModel model, Selection selection) {
+    private byte[] rewrite(ClassName className, ClassModel model, Selection selection) {
         Set<Mode> effective = selection.effective();
         boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
         boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
         List<String> problems = ValueClassRewriter.suitabilityProblems(
                 model, ignoreSync, markClassFinal);
         if (!problems.isEmpty()) {
-            return onFail(internal, "is selected for value-class transformation but is not"
+            return onFail(className, "is selected for value-class transformation but is not"
                     + " suitable: " + String.join("; ", problems),
                     selection.onFailThrow(), selection.onFailAppendTo());
         }
         if (effective.contains(Mode.MARK_FIELDS_FINAL)
                 && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
-            return onFail(internal,
+            return onFail(className,
                     "is selected for value-class transformation but has a non-final field"
                     + " not written in every constructor (mode=mark-fields-final)",
                     selection.onFailThrow(), selection.onFailAppendTo());
@@ -226,7 +192,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         byte[] out = ValueClassRewriter.transform(model, selection.onFailThrow(),
                 ignoreSync, markClassFinal);
         if (out == null) {
-            return onFail(internal,
+            return onFail(className,
                     "is selected for value-class transformation but could not be safely"
                     + " transformed", selection.onFailThrow(), selection.onFailAppendTo());
         }
@@ -234,11 +200,10 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // them: a non-final class becomes a final value class (its subclasses
         // stop loading). Abstract classes are never converted.
         if (!model.flags().has(AccessFlag.FINAL)) {
-            transformedToFinal.add(internal);
+            transformedToFinal.add(className.jvm());
         }
-        appendTo(selection.onSuccessAppendTo(), internal);
-        InternalLogger.debug(internal.replace('/', '.')
-                + ": transformed to value class (" + out.length + " bytes)");
+        appendTo(selection.onSuccessAppendTo(), className);
+        InternalLogger.debug(className.java() + ": transformed to value class (" + out.length + " bytes)");
         return out;
     }
 
@@ -253,7 +218,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     /** Handles an unexpected failure: rethrows a {@link LinkageError}, otherwise
      *  surfaces a loud failure or leaves the class as identity per the effective
      *  {@code onFail} settings. */
-    private byte[] onTransformError(String internal, Throwable t,
+    private byte[] onTransformError(ClassName className, Throwable t,
             boolean onFailThrow, String onFailAppendTo) {
         if (t instanceof LinkageError) {
             // e.g. a superclass was rewritten into a final value class: this
@@ -262,12 +227,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             throw (LinkageError) t;
         }
         if (onFailThrow) {
-            throw new LinkageError("auto-valhalla: failed to transform " + internal
+            throw new LinkageError("auto-valhalla: failed to transform " + className.java()
                     + " into a value class: " + t, t);
         }
-        appendOnFail(internal, onFailAppendTo);
-        InternalLogger.debug(internal.replace('/', '.')
-                + ": transform failed:");
+        appendOnFail(className, onFailAppendTo);
+        InternalLogger.debug(className.java() + ": transform failed:");
         InternalLogger.error("", t);
         return null;
     }
@@ -276,35 +240,33 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      *  and either surfaces a loud failure ({@code onFailThrow}) or leaves the
      *  class as an identity class. {@code onFailThrow} / {@code onFailAppendTo}
      *  come from the class's selection source (annotation vs includes). */
-    private byte[] onFail(String internal, String reason,
+    private byte[] onFail(ClassName className, String reason,
             boolean onFailThrow, String onFailAppendTo) {
-        appendOnFail(internal, onFailAppendTo);
+        appendOnFail(className, onFailAppendTo);
         if (onFailThrow) {
-            InternalLogger.error(internal.replace('/', '.') + " " + reason
+            InternalLogger.error(className.java() + " " + reason
                     + "; the JVM will reject it rather than silently keep an"
                     + " identity class.");
             // A ClassFileTransformer exception would be swallowed by the JVM, so instead
             // hand back a class file that fails to load, surfacing the failure loudly.
             return brokenClass();
         }
-        InternalLogger.debug(internal.replace('/', '.') + ": " + reason
-                + ", leaving as identity class");
+        InternalLogger.debug(className.java() + ": " + reason + ", leaving as identity class");
         return null;
     }
 
-    private void appendOnFail(String internal, String onFailAppendTo) {
-        appendTo(onFailAppendTo, internal);
+    private void appendOnFail(ClassName className, String onFailAppendTo) {
+        appendTo(onFailAppendTo, className);
     }
 
-    /** Appends the class name of {@code internal} to the file at {@code path}
+    /** Appends the Java name of {@code className} to the file at {@code path}
      *  (unless it is already recorded there), deduplicating across runs by reading
      *  the file at start-up. Uses {@link AsyncFileWriter} for non-blocking I/O. */
-    private void appendTo(String path, String internal) {
+    private void appendTo(String path, ClassName className) {
         if (path == null || path.isEmpty()) {
             return;
         }
-        AsyncFileWriter.forFile(path)
-                .record(internal.replace('/', '.'));
+        AsyncFileWriter.forFile(path).record(className.java());
     }
 
     /**
@@ -319,24 +281,27 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      *       class of that name.</li>
      * </ul>
      */
-    static boolean patternMatches(Set<String> patterns, String internalName) {
+    static boolean patternMatches(Set<String> patterns, ClassName className) {
         if (patterns == null || patterns.isEmpty()) {
             return false;
         }
+        String jvm = className.jvm();
         for (String p : patterns) {
+            // patterns may be in dot form (e.g. from tests or config files) or
+            // already in slash form (e.g. after AutoValhallaAgent.normalizePattern)
             String norm = p.replace('.', '/');
             if (norm.equals("*")) {
                 return true;
             }
             if (norm.endsWith("/")) {
-                if (internalName.startsWith(norm)) {
+                if (jvm.startsWith(norm)) {
                     return true;
                 }
             } else if (norm.contains("/")) {
-                if (internalName.equals(norm)) {
+                if (jvm.equals(norm)) {
                     return true;
                 }
-            } else if (internalName.equals(norm) || internalName.startsWith(norm + "/")) {
+            } else if (jvm.equals(norm) || jvm.startsWith(norm + "/")) {
                 return true;
             }
         }
@@ -350,16 +315,17 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         return new byte[] { 0, 0, 0, 0 };
     }
 
-    private static boolean isExcluded(String internal) {
-        if (internal.startsWith("java/")
-                || internal.startsWith("javax/")
-                || internal.startsWith("sun/")
-                || internal.startsWith("com/sun/")
-                || internal.startsWith("jdk/")) {
+    private static boolean isExcluded(ClassName className) {
+        String jvm = className.jvm();
+        if (jvm.startsWith("java/")
+                || jvm.startsWith("javax/")
+                || jvm.startsWith("sun/")
+                || jvm.startsWith("com/sun/")
+                || jvm.startsWith("jdk/")) {
             return true;
         }
         // never transform the agent's own support classes (which include the
         // embedded @AutoValhalla annotation)
-        return internal.startsWith("io/github/thunkware/auto/valhalla/");
+        return jvm.startsWith("io/github/thunkware/auto/valhalla/");
     }
 }

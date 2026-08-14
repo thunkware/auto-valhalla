@@ -26,6 +26,14 @@
       <artifactId>auto-valhalla-demo5</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- Ensures the agent JAR is packaged before the run-on-jdk5 exec tries to
+         load it via -javaagent:../auto-valhalla-agent/target/... -->
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-agent</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>

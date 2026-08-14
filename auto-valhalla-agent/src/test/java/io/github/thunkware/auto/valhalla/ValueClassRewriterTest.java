@@ -189,7 +189,7 @@ class ValueClassRewriterTest {
         safeCfg.annotationMode = EnumSet.noneOf(Mode.class);
         safeCfg.includesMode = EnumSet.of(Mode.SAFE);
         ValueClassTransformer safe = new ValueClassTransformer(safeCfg);
-        assertNull(safe.transform(null, null, "sample.Base", null, null, base),
+        assertNull(safe.transform(null, null, "sample/Base", null, null, base),
                 "includes-mode=safe must not convert a non-final class (would break its subclasses)");
 
         Config defCfg = new Config();
@@ -198,7 +198,7 @@ class ValueClassRewriterTest {
         defCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         defCfg.includesMode = Mode.INCLUDES_DEFAULT;
         ValueClassTransformer def = new ValueClassTransformer(defCfg);
-        assertNotNull(def.transform(null, null, "sample.Base", null, null, base),
+        assertNotNull(def.transform(null, null, "sample/Base", null, null, base),
                 "default includes-mode must convert the selected non-final class");
     }
 
@@ -235,13 +235,13 @@ class ValueClassRewriterTest {
         cfg.annotationMode = EnumSet.noneOf(Mode.class);
         cfg.includesMode = mff;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
-        assertNotNull(transformer.transform(null, null, "sample.Once", null, null, once),
+        assertNotNull(transformer.transform(null, null, "sample/Once", null, null, once),
                 "includes-mode=mark-fields-final converts classes with non-final fields written in the ctor");
-        assertNotNull(transformer.transform(null, null, "sample.TwoCtors", null, null, twoCtors),
+        assertNotNull(transformer.transform(null, null, "sample/TwoCtors", null, null, twoCtors),
                 "includes-mode=mark-fields-final allows a field written in every constructor");
-        assertNotNull(transformer.transform(null, null, "sample.SampleX", null, null, sampleX),
+        assertNotNull(transformer.transform(null, null, "sample/SampleX", null, null, sampleX),
                 "includes-mode=mark-fields-final also converts classes with already-final fields");
-        assertNull(transformer.transform(null, null, "sample.Mutable", null, null, mutable),
+        assertNull(transformer.transform(null, null, "sample/Mutable", null, null, mutable),
                 "includes-mode=mark-fields-final rejects classes with a field written outside the ctor");
     }
 
@@ -257,12 +257,12 @@ class ValueClassRewriterTest {
         cfg.annotationMode = EnumSet.noneOf(Mode.class);
         cfg.includesMode = EnumSet.of(Mode.MARK_CLASS_FINAL);
         ValueClassTransformer t = new ValueClassTransformer(cfg);
-        assertNotNull(t.transform(null, null, "sample.Base", null, null, base),
+        assertNotNull(t.transform(null, null, "sample/Base", null, null, base),
                 "Base rewrites (made final)");
         // Sub extends Base, which was just made final; loading Sub must now fail,
         // and the agent reports the offending superclass by name.
         LinkageError ex = assertThrows(LinkageError.class,
-                () -> t.transform(null, null, "sample.Sub", null, null, sub));
+                () -> t.transform(null, null, "sample/Sub", null, null, sub));
         assertTrue(ex.getMessage().contains("sample/Base"),
                 "subclass failure must name its superclass: " + ex.getMessage());
     }
@@ -494,8 +494,8 @@ class ValueClassRewriterTest {
 
     @Test
     void starPatternMatchesEverything() {
-        assertTrue(ValueClassTransformer.patternMatches(Set.of("*"), "any/pkg/Cls"));
-        assertFalse(ValueClassTransformer.patternMatches(Set.of(), "any/pkg/Cls"));
+        assertTrue(ValueClassTransformer.patternMatches(Set.of("*"), ClassName.of("any/pkg/Cls")));
+        assertFalse(ValueClassTransformer.patternMatches(Set.of(), ClassName.of("any/pkg/Cls")));
     }
 
     @Test

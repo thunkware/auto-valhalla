@@ -138,9 +138,10 @@ public final class ValueClassRewriter {
         ClassTransform ctors = ConstructorRewriter.transformConstructors(model, ctorFailed);
         ClassTransform methods = ignoreSynchronized ? stripSynchronized() : ClassTransform.ACCEPT_ALL;
 
+        ClassFile cf = ClassFiles.of();
         byte[] out;
         try {
-            out = ClassFile.of().transformClass(model,
+            out = cf.transformClass(model,
                     versionAndFlags.andThen(strictFields).andThen(ctors).andThen(methods));
         } catch (RuntimeException e) {
             // e.g. strict-field-init violation detected while rebuilding code
@@ -149,7 +150,7 @@ public final class ValueClassRewriter {
         if (ctorFailed.get()) {
             return null;
         }
-        List<VerifyError> errors = ClassFile.of().verify(out);
+        List<VerifyError> errors = cf.verify(out);
         if (!errors.isEmpty()) {
             return keepIfInvalid ? out : null;
         }
