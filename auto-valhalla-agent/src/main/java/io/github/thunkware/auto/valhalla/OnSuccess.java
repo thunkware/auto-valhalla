@@ -7,10 +7,11 @@ package io.github.thunkware.auto.valhalla;
  * <ul>
  *   <li>{@code info} — log at INFO (default for both annotation and includes).</li>
  *   <li>{@code debug} — log at DEBUG.</li>
+ *   <li>{@code off} — do not log.</li>
  * </ul>
  */
 public enum OnSuccess {
-    INFO, DEBUG;
+    INFO, DEBUG, OFF;
 
     static OnSuccess parse(String s, OnSuccess defaultValue) {
         if (s == null || s.isBlank()) {
@@ -19,6 +20,7 @@ public enum OnSuccess {
         return switch (s.trim().toLowerCase()) {
             case "info"  -> INFO;
             case "debug" -> DEBUG;
+            case "off"   -> OFF;
             default -> {
                 InternalLogger.warning("Unknown on-success value '" + s.trim()
                         + "'; using " + defaultValue.name().toLowerCase());

@@ -203,10 +203,10 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         appendTo(selection.onSuccessAppendTo(), className);
         String successMsg = "Transformed to value class: " + className.java();
-        if (selection.onSuccess() == OnSuccess.DEBUG) {
-            InternalLogger.debug(successMsg);
-        } else {
-            InternalLogger.info(successMsg);
+        switch (selection.onSuccess()) {
+            case DEBUG -> InternalLogger.debug(successMsg);
+            case INFO  -> InternalLogger.info(successMsg);
+            case OFF   -> {}
         }
         return out;
     }
@@ -237,12 +237,13 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     + " into a value class: " + t, t);
         }
         appendOnFail(className, selection.onFailAppendTo());
-        String msg = className.java() + ": transform failed: " + t;
+        String msg = "Transform failed: " + className.java();
         switch (selection.onFail()) {
             case ERROR   -> InternalLogger.error(msg, t);
             case WARNING -> InternalLogger.warning(msg);
             case INFO    -> InternalLogger.info(msg);
-            default      -> InternalLogger.debug(msg);
+            case DEBUG   -> InternalLogger.debug(msg);
+            default      -> {}
         }
         return null;
     }
@@ -273,10 +274,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 InternalLogger.info(base + ", leaving as identity class");
                 yield null;
             }
-            default -> {
+            case DEBUG -> {
                 InternalLogger.debug(base + ", leaving as identity class");
                 yield null;
             }
+            default -> null;
         };
     }
 

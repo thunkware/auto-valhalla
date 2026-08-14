@@ -1,13 +1,18 @@
 package io.github.thunkware.auto.valhalla;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Monitors synchronization attempts in instrumented classes. Called before each
  * {@code monitorenter} instruction when {@code Mode.SYNCHRONIZATION_MONITOR} is
  * enabled.
  *
- * <p>Logs every synchronization attempt at the configured level. Optionally
- * records each first-seen class name to a file via {@link BackgroundFileWriter}
- * when {@code synchronization-monitor.append-to} is configured.
+ * <p>Logs each first-seen class name (per JVM run) at the configured level.
+ * Optionally also records class names to a file via {@link BackgroundFileWriter}
+ * when {@code synchronization-monitor.append-to} is configured (file writes are
+ * deduplicated against existing file contents; the log seen-set is always empty
+ * at start-up regardless).
  *
  * <p>This class must be loadable from the instrumented application classes (it
  * lives in the agent's own package, which is never transformed) and must never
@@ -18,6 +23,7 @@ public final class SynchronizationMonitor {
     private static volatile BackgroundFileWriter writer;
     private static volatile OnSuccess logLevel = OnSuccess.INFO;
     private static volatile boolean active = false;
+    private static final Set<String> seen = ConcurrentHashMap.newKeySet();
 
     private SynchronizationMonitor() {}
 
@@ -32,8 +38,9 @@ public final class SynchronizationMonitor {
     }
 
     /** Called immediately before each {@code monitorenter} with the object being
-     *  locked. Logs the event at the configured level; also appends the class
-     *  name to the file (deduplicated) if one is configured. */
+     *  locked. Logs the first occurrence of each class per JVM run at the
+     *  configured level; also appends to the file (deduplicated) if one is
+     *  configured. */
     public static void check(Object o) {
         if (o == null || !active) {
             return;
@@ -45,11 +52,13 @@ public final class SynchronizationMonitor {
             if (localWriter != null) {
                 localWriter.record(name);
             }
-            String msg = "Synchronized on: " + name;
-            if (logLevel == OnSuccess.DEBUG) {
-                InternalLogger.debug(msg);
-            } else {
-                InternalLogger.info(msg);
+            if (seen.add(name)) {
+                String msg = "Synchronized on: " + name;
+                switch (logLevel) {
+                    case DEBUG -> InternalLogger.debug(msg);
+                    case INFO  -> InternalLogger.info(msg);
+                    case OFF   -> {}
+                }
             }
         });
     }

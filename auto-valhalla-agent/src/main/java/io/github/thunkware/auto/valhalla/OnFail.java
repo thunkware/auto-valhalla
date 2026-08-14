@@ -12,10 +12,11 @@ package io.github.thunkware.auto.valhalla;
  *   <li>{@code info} — log at INFO and leave the class as an identity class.</li>
  *   <li>{@code debug} — log at DEBUG and leave the class as an identity class
  *       (default for includes-selected classes).</li>
+ *   <li>{@code off} — do nothing; the class is silently left as an identity class.</li>
  * </ul>
  */
 enum OnFail {
-    THROW, ERROR, WARNING, INFO, DEBUG;
+    THROW, ERROR, WARNING, INFO, DEBUG, OFF;
 
     static OnFail parse(String s, OnFail defaultValue) {
         if (s == null || s.isBlank()) {
@@ -27,6 +28,7 @@ enum OnFail {
             case "warning", "warn" -> WARNING;
             case "info"            -> INFO;
             case "debug"           -> DEBUG;
+            case "off"             -> OFF;
             default -> {
                 InternalLogger.warning("Unknown on-fail value '" + s.trim()
                         + "'; using " + defaultValue.name().toLowerCase());
