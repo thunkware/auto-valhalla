@@ -90,8 +90,8 @@ final class BackgroundFileWriter {
             String name = queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS);
             synchronized (lock) {
                 if (name != null) {
-                    write(name);
-                    write("\n");
+                    writeLocked(name);
+                    writeLocked("\n");
                 }
                 long now = System.currentTimeMillis();
                 if (now - lastFlush >= FLUSH_INTERVAL_MS) {
@@ -104,10 +104,10 @@ final class BackgroundFileWriter {
         }
     }
 
-    private void write(String str) throws IOException {
+    private void writeLocked(String str) throws IOException {
         if (writer == null) {
             // Open writer in append mode, not auto-flush (background thread will flush)
-            this.writer = new BufferedWriter(Files.newBufferedWriter(file,
+            writer = new BufferedWriter(Files.newBufferedWriter(file,
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND,
                     StandardOpenOption.WRITE));
         }
@@ -122,8 +122,8 @@ final class BackgroundFileWriter {
                 while ((pending = w.queue.poll()) != null) {
                     String finalPending = pending;
                     Failable.runQuietly(() -> {
-                        w.write(finalPending);
-                        w.write("\n");
+                        w.writeLocked(finalPending);
+                        w.writeLocked("\n");
                     });
                 }
                 if (w.writer != null) {
@@ -140,8 +140,8 @@ final class BackgroundFileWriter {
             // may have been interrupted before it processed them.
             String pending;
             while ((pending = queue.poll()) != null) {
-                write(pending);
-                write("\n");
+                writeLocked(pending);
+                writeLocked("\n");
             }
             if (writer != null) {
                 writer.flush();

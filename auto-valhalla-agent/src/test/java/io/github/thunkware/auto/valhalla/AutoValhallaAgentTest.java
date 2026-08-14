@@ -8,23 +8,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class AutoValhallaAgentTest {
 
-    @Test
-    void prefixedAgentArgsAreHonored() {
-        var cfg = AutoValhallaAgent.parse("auto-valhalla.includes=p.,auto-valhalla.log-level=debug");
-        assertTrue(cfg.includes.contains("p/"), "includes must be honored via the auto-valhalla. prefix");
-        assertEquals("debug", cfg.logLevel, "log-level must be honored via the auto-valhalla. prefix");
-    }
-
-    @Test
-    void prefixedKeyIsTopLevelAssignment() {
-        assertTrue(AutoValhallaAgent.isTopLevelAssignment("auto-valhalla.log-level=debug"));
-        assertTrue(AutoValhallaAgent.isTopLevelAssignment("log-level=debug"));
-        assertFalse(AutoValhallaAgent.isTopLevelAssignment("foo=true"));
+    /**
+     * Sets system properties for the duration of a parse() call, then restores
+     * the previous values (or clears if absent). Keys are bare option names
+     * without the auto-valhalla. prefix; values alternate key, value, key, value.
+     */
+    private static Config parseWith(String... keyValues) {
+        Map<String, String> saved = new HashMap<>();
+        for (int i = 0; i < keyValues.length; i += 2) {
+            String prop = "auto-valhalla." + keyValues[i];
+            saved.put(prop, System.getProperty(prop));
+            System.setProperty(prop, keyValues[i + 1]);
+        }
+        try {
+            return AutoValhallaAgent.parse();
+        } finally {
+            for (Map.Entry<String, String> e : saved.entrySet()) {
+                if (e.getValue() == null) {
+                    System.clearProperty(e.getKey());
+                } else {
+                    System.setProperty(e.getKey(), e.getValue());
+                }
+            }
+        }
     }
 
     @Test
@@ -39,12 +52,13 @@ class AutoValhallaAgentTest {
 
     @Test
     void modeFlagsHaveDistinctDefaults() {
-        var cfg = AutoValhallaAgent.parse("includes=a.");
+        var cfg = AutoValhallaAgent.parse();
         assertEquals(Mode.ANNOTATION_DEFAULT, cfg.annotationMode,
                 "annotation-mode must default to safe");
         assertEquals(Mode.INCLUDES_DEFAULT, cfg.includesMode,
                 "includes-mode must default to yolo");
-        var safe = AutoValhallaAgent.parse("includes-mode=safe");
+
+        var safe = parseWith("includes-mode", "safe");
         assertEquals(EnumSet.of(Mode.SAFE), safe.includesMode);
         assertEquals(Mode.ANNOTATION_DEFAULT, safe.annotationMode,
                 "annotation-mode keeps its own default");
@@ -52,7 +66,7 @@ class AutoValhallaAgentTest {
 
     @Test
     void onFailHasDistinctDefaults() {
-        var cfg = AutoValhallaAgent.parse("includes=a.");
+        var cfg = AutoValhallaAgent.parse();
         assertEquals(OnFail.THROW, cfg.annotationOnFail,
                 "annotation.on-fail must default to throw (loud for an explicit opt-in)");
         assertEquals(OnFail.DEBUG, cfg.includesOnFail,
@@ -60,9 +74,11 @@ class AutoValhallaAgentTest {
         assertNull(cfg.annotationOnFailAppendTo, "annotation.on-fail-append-to defaults to unset");
         assertNull(cfg.includesOnFailAppendTo, "includes.on-fail-append-to defaults to unset");
 
-        var split = AutoValhallaAgent.parse(
-                "annotation.on-fail=warning,includes.on-fail=error,"
-                + "annotation.on-fail-append-to=a.log,includes.on-fail-append-to=i.log");
+        var split = parseWith(
+                "annotation.on-fail", "warning",
+                "includes.on-fail", "error",
+                "annotation.on-fail-append-to", "a.log",
+                "includes.on-fail-append-to", "i.log");
         assertEquals(OnFail.WARNING, split.annotationOnFail);
         assertEquals(OnFail.ERROR, split.includesOnFail);
         assertEquals("a.log", split.annotationOnFailAppendTo);
@@ -74,7 +90,7 @@ class AutoValhallaAgentTest {
         File f = File.createTempFile("inc", ".txt");
         Files.writeString(f.toPath(), "com.B\n");
         try {
-            var cfg = AutoValhallaAgent.parse("includes=a.,includes-files=" + f.getAbsolutePath());
+            var cfg = parseWith("includes", "a.", "includes-files", f.getAbsolutePath());
             assertTrue(cfg.includes.contains("a/"), "explicit includes retained");
             assertTrue(cfg.includes.contains("com/B"), "includes-files patterns merged in");
         } finally {
@@ -115,9 +131,20 @@ class AutoValhallaAgentTest {
     }
 
     @Test
-    void unknownAgentArgIsIgnoredGracefully() {
-        var cfg = AutoValhallaAgent.parse("foo=bar,includes=a.");
-        assertTrue(cfg.includes.contains("a/"), "known arg still applied despite unknown arg");
+    void includesFilesSupportsMultipleFiles() throws Exception {
+        File f1 = File.createTempFile("inc1", ".txt");
+        File f2 = File.createTempFile("inc2", ".txt");
+        Files.writeString(f1.toPath(), "com.A\n");
+        Files.writeString(f2.toPath(), "com.B\n");
+        try {
+            var bySemicolon = parseWith(
+                    "includes-files", f1.getAbsolutePath() + ";" + f2.getAbsolutePath());
+            assertTrue(bySemicolon.includes.contains("com/A"), "first file loaded (semicolon)");
+            assertTrue(bySemicolon.includes.contains("com/B"), "second file loaded (semicolon)");
+        } finally {
+            f1.delete();
+            f2.delete();
+        }
     }
 
     @Test
@@ -129,7 +156,7 @@ class AutoValhallaAgentTest {
 
     @Test
     void onSuccessDefaultsToInfo() {
-        var cfg = AutoValhallaAgent.parse("includes=a.");
+        var cfg = AutoValhallaAgent.parse();
         assertEquals(OnSuccess.INFO, cfg.annotationOnSuccess,
                 "annotation.on-success must default to info");
         assertEquals(OnSuccess.INFO, cfg.includesOnSuccess,
@@ -138,71 +165,48 @@ class AutoValhallaAgentTest {
 
     @Test
     void onSuccessIsParsed() {
-        var cfg = AutoValhallaAgent.parse(
-                "annotation.on-success=debug,includes.on-success=off");
+        var cfg = parseWith("annotation.on-success", "debug", "includes.on-success", "off");
         assertEquals(OnSuccess.DEBUG, cfg.annotationOnSuccess);
         assertEquals(OnSuccess.OFF, cfg.includesOnSuccess);
     }
 
     @Test
     void onFailOffIsParsed() {
-        var cfg = AutoValhallaAgent.parse("annotation.on-fail=off,includes.on-fail=off");
+        var cfg = parseWith("annotation.on-fail", "off", "includes.on-fail", "off");
         assertEquals(OnFail.OFF, cfg.annotationOnFail);
         assertEquals(OnFail.OFF, cfg.includesOnFail);
     }
 
     @Test
     void synchronizationMonitorLogLevelDefaultsToInfo() {
-        var cfg = AutoValhallaAgent.parse("");
+        var cfg = AutoValhallaAgent.parse();
         assertEquals(OnSuccess.INFO, cfg.synchronizationMonitorLogLevel,
                 "synchronization-monitor.log-level must default to info");
     }
 
     @Test
     void synchronizationMonitorLogLevelIsParsed() {
-        var cfg = AutoValhallaAgent.parse("synchronization-monitor.log-level=debug");
+        var cfg = parseWith("synchronization-monitor.log-level", "debug");
         assertEquals(OnSuccess.DEBUG, cfg.synchronizationMonitorLogLevel);
     }
 
     @Test
     void synchronizationMonitorAppendToHasDefaultValue() {
-        var cfg = AutoValhallaAgent.parse("");
+        var cfg = AutoValhallaAgent.parse();
         assertEquals("auto-valhalla.synchronization.txt", cfg.synchronizationMonitorAppendTo,
                 "synchronization-monitor.append-to defaults to auto-valhalla.synchronization.txt");
     }
 
     @Test
     void synchronizationMonitorAppendToIsParsed() {
-        var cfg = AutoValhallaAgent.parse("synchronization-monitor.append-to=custom.txt");
+        var cfg = parseWith("synchronization-monitor.append-to", "custom.txt");
         assertEquals("custom.txt", cfg.synchronizationMonitorAppendTo);
     }
 
     @Test
     void synchronizationMonitorAppendToEmptyClearsDefault() {
-        var cfg = AutoValhallaAgent.parse("synchronization-monitor.append-to=");
+        var cfg = parseWith("synchronization-monitor.append-to", "");
         assertNull(cfg.synchronizationMonitorAppendTo,
                 "empty synchronization-monitor.append-to disables file writing (log-only mode)");
-    }
-
-    @Test
-    void includesFilesSupportsMultipleFiles() throws Exception {
-        File f1 = File.createTempFile("inc1", ".txt");
-        File f2 = File.createTempFile("inc2", ".txt");
-        Files.writeString(f1.toPath(), "com.A\n");
-        Files.writeString(f2.toPath(), "com.B\n");
-        try {
-            var bySemicolon = AutoValhallaAgent.parse(
-                    "includes-files=" + f1.getAbsolutePath() + ";" + f2.getAbsolutePath());
-            assertTrue(bySemicolon.includes.contains("com/A"), "first file loaded (semicolon)");
-            assertTrue(bySemicolon.includes.contains("com/B"), "second file loaded (semicolon)");
-
-            var byRepeat = AutoValhallaAgent.parse(
-                    "includes-files=" + f1.getAbsolutePath() + ",includes-files=" + f2.getAbsolutePath());
-            assertTrue(byRepeat.includes.contains("com/A"), "first file loaded (repeated option)");
-            assertTrue(byRepeat.includes.contains("com/B"), "second file loaded (repeated option)");
-        } finally {
-            f1.delete();
-            f2.delete();
-        }
     }
 }

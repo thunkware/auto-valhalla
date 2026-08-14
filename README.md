@@ -96,15 +96,10 @@ You can use the file to:
 ## Options
 
 Flags are supplied as, in that order of precedence:
-  * agent arguments `-javaagent:auto-valhalla.jar=option1=value1,option2=value2`, or
-  * system properties `-Doption1=value1`, or
+  * system properties `-Dauto-valhalla.option=value`, or
   * environment variables.
 
-Within the agent-argument list, later options override earlier ones, and a
-`.config` file is expanded in place (see below).
-
-Canonical form uses the `auto-valhalla.` prefix; agent arguments may also
-use the unprefixed name (e.g. `includes-mode`).
+Canonical form uses the `auto-valhalla.` prefix.
 
 ### Selection
 
@@ -183,11 +178,8 @@ are not re-appended, and a missing file is treated as empty.
 | --- | --- | --- |
 | `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying any of the options above. Keys may omit the `auto-valhalla.` prefix. |
 
-When `.config` appears in the agent argument list, its entries are placed at
-that position in the stream:
-
-- if `.config` appears **first**, later agent arguments override it;
-- if agent arguments appear **first** and `.config` later, the file overrides them.
+When `auto-valhalla.config` is set, config file entries are applied after
+env vars but can be overridden by explicit system properties set alongside it.
 
 ### Examples
 
