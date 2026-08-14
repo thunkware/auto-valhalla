@@ -14,7 +14,7 @@ Background: Project Valhalla JEP 401 (https://openjdk.org/jeps/401).
 
 ### 1. Opt in with the annotation
 
-Add `auto-valhalla-annotation` dependency and annotate your plain identity
+Add `auto-valhalla-api` dependency and annotate your plain identity
 class or record:
 
 ```java
@@ -31,7 +31,7 @@ public final class Point {
 }
 
 @AutoValhalla
-public record Pair<T>(T first, T second) { }
+public record Currency(String code) { }
 ```
 
 Then download the agent and launch:
@@ -44,7 +44,7 @@ java --enable-preview \
 
 After transformation, your class or record behaves like a value object:
   * `Objects.hasIdentity(new Point(1, 2)) == false`
-  * `Objects.hasIdentity(new Pair(3, 4)) == false`
+  * `Objects.hasIdentity(new Currency("USD")) == false`
 
 Because `@AutoValhalla` annotation was compiled with Java 5, it is compatible with
 **JDK 1.5 and later**. You can apply the annotation in older codebases
@@ -54,7 +54,7 @@ To detect errors earlier at build time, run the verifier in a unit test:
 ```java
 @Test
 void test() {
-    AutoValhallaVerifier.verify(Point.class, Pair.class);
+    AutoValhallaVerifier.verify(Point.class, Currency.class);
 }
 ```
 

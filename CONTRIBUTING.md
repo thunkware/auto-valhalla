@@ -7,7 +7,7 @@ read [README.md](README.md) instead.
 
 | Module | Purpose |
 | --- | --- |
-| `auto-valhalla-annotation` | The `@AutoValhalla` annotation. Compiled with a **real JDK 5** to genuine Java 5 bytecode (major 49) so it is loadable everywhere. |
+| `auto-valhalla-api` | The `@AutoValhalla` annotation and `AutoValhallaVerifier`. Compiled with a **real JDK 5** to genuine Java 5 bytecode (major 49) so it is loadable everywhere. |
 | `auto-valhalla-agent5` | The JDK 5 shim (`AutoValhallaAgent5`, major version 49). Compiled with `JAVA5_HOME` (targeting Java 5) and unpacked into the agent jar. |
 | `auto-valhalla-agent` | The real agent (`AutoValhallaAgent`, `ValueClassTransformer`, `ValueClassRewriter`, `ConstructorRewriter`). Compiled **without** preview so it loads even when preview is off; embeds the annotation and the shim. |
 | `auto-valhalla-demo5` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files. |
