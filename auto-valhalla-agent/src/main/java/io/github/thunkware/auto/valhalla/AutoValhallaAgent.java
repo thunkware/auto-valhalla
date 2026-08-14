@@ -141,6 +141,7 @@ public final class AutoValhallaAgent {
         InternalLogger.info("Starting agent");
         Config cfg = parse();
         InternalLogger.setLevel(cfg.logLevel);
+        InternalLogger.setMode(cfg.logging);
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
@@ -226,6 +227,7 @@ public final class AutoValhallaAgent {
                 }
                 case Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL ->
                         cfg.synchronizationMonitorLogLevel = OnSuccess.parse(a[1], OnSuccess.INFO);
+                case Config.LOGGING -> cfg.logging = a[1].trim();
                 default -> { /* unreachable */ }
             }
         }
@@ -249,7 +251,8 @@ public final class AutoValhallaAgent {
                 + getLogString(Config.INCLUDES_ON_SUCCESS_APPEND_TO, cfg.includesOnSuccessAppendTo)
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_APPEND_TO, cfg.synchronizationMonitorAppendTo)
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL, cfg.synchronizationMonitorLogLevel)
-                + getLogString(Config.LOG_LEVEL, cfg.logLevel));
+                + getLogString(Config.LOG_LEVEL, cfg.logLevel)
+                + getLogString(Config.LOGGING, cfg.logging));
 
         // Now resolve file contents
         for (String p : cfg.includesFiles) {

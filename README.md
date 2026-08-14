@@ -171,6 +171,24 @@ are not re-appended, and a missing file is treated as empty.
 | Option | Description |
 | --- | --- |
 | `auto-valhalla.log-level` | Logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
+| `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below. |
+
+#### Logging modes
+
+`simple` is the default and prints messages to stderr with a timestamp prefix.
+
+`none` suppresses all agent logging.
+
+`application` redirects agent logs to the instrumented application's SLF4J
+logger (`io.github.thunkware.auto.valhalla`). The SLF4J API is looked up at
+runtime via the thread context classloader; if it is not available (SLF4J not
+on the classpath), the agent falls back to `simple`. This means agent startup
+messages — emitted before SLF4J is initialized — may still appear on stderr
+until the application's logging system is ready.
+
+Use `application` when you want agent messages to flow through the same
+logging framework as the rest of your application (including its log level
+filtering, appenders, and structured output).
 
 ### Config file
 

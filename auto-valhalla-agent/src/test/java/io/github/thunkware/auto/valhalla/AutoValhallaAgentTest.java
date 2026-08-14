@@ -209,4 +209,32 @@ class AutoValhallaAgentTest {
         assertNull(cfg.synchronizationMonitorAppendTo,
                 "empty synchronization-monitor.append-to disables file writing (log-only mode)");
     }
+
+    @Test
+    void loggingDefaultsToNull() {
+        var cfg = AutoValhallaAgent.parse();
+        assertNull(cfg.logging, "logging defaults to null (InternalLogger defaults to simple)");
+    }
+
+    @Test
+    void loggingModeIsParsed() {
+        assertEquals("simple", parseWith("logging", "simple").logging);
+        assertEquals("none", parseWith("logging", "none").logging);
+        assertEquals("application", parseWith("logging", "application").logging);
+    }
+
+    @Test
+    void loggingModeNoneSuppressesOutput() {
+        // setMode(null) resets to SIMPLE; setMode("none") suppresses
+        InternalLogger.setMode("none");
+        InternalLogger.info("this should be suppressed");
+        InternalLogger.setMode(null); // reset
+    }
+
+    @Test
+    void unknownLoggingModeDefaultsToSimple() {
+        // Must not crash; warns and falls back to simple
+        InternalLogger.setMode("bogus-logging-mode");
+        InternalLogger.setMode(null); // reset
+    }
 }

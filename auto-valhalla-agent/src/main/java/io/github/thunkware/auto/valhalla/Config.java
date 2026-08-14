@@ -30,6 +30,7 @@ class Config {
     String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
     OnSuccess synchronizationMonitorLogLevel = OnSuccess.INFO;
     String logLevel;
+    String logging;
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
      *  used by {@link AutoValhallaAgent#parse(String)} switch. */
@@ -50,6 +51,7 @@ class Config {
     static final String INCLUDES_ON_SUCCESS_APPEND_TO = "includes.on-success-append-to";
     static final String SYNCHRONIZATION_MONITOR_APPEND_TO = "synchronization-monitor.append-to";
     static final String SYNCHRONIZATION_MONITOR_LOG_LEVEL = "synchronization-monitor.log-level";
+    static final String LOGGING = "logging";
     static final String CONFIG = "config";
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), in
@@ -58,7 +60,7 @@ class Config {
     static final List<String> KNOWN = List.of(
             INCLUDES, INCLUDES_FILES, EXCLUDES, EXCLUDES_FILES,
             ANNOTATION_MODE, INCLUDES_MODE,
-            LOG_LEVEL,
+            LOG_LEVEL, LOGGING,
             ANNOTATION_ON_FAIL, ANNOTATION_ON_SUCCESS, ANNOTATION_ON_FAIL_APPEND_TO, ANNOTATION_ON_SUCCESS_APPEND_TO,
             INCLUDES_ON_FAIL, INCLUDES_ON_SUCCESS, INCLUDES_ON_FAIL_APPEND_TO, INCLUDES_ON_SUCCESS_APPEND_TO,
             SYNCHRONIZATION_MONITOR_APPEND_TO, SYNCHRONIZATION_MONITOR_LOG_LEVEL,
