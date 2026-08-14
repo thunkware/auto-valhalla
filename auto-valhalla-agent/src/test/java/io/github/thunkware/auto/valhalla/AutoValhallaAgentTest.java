@@ -51,25 +51,20 @@ class AutoValhallaAgentTest {
     }
 
     @Test
-    void onFailFlagsHaveDistinctDefaults() {
+    void onFailHasDistinctDefaults() {
         var cfg = AutoValhallaAgent.parse("includes=a.");
-        assertTrue(cfg.annotationOnFailThrow,
-                "annotation.on-fail-throw must default to true (loud for an explicit opt-in)");
-        assertFalse(cfg.includesOnFailThrow,
-                "includes.on-fail-throw must default to false (quiet for a broad sweep)");
-        assertFalse(cfg.annotationOnFailWarn, "annotation.on-fail-warn defaults to false");
-        assertFalse(cfg.includesOnFailWarn, "includes.on-fail-warn defaults to false");
+        assertEquals(OnFail.THROW, cfg.annotationOnFail,
+                "annotation.on-fail must default to throw (loud for an explicit opt-in)");
+        assertEquals(OnFail.DEBUG, cfg.includesOnFail,
+                "includes.on-fail must default to debug (quiet for a broad sweep)");
         assertNull(cfg.annotationOnFailAppendTo, "annotation.on-fail-append-to defaults to unset");
         assertNull(cfg.includesOnFailAppendTo, "includes.on-fail-append-to defaults to unset");
 
         var split = AutoValhallaAgent.parse(
-                "annotation.on-fail-throw=false,includes.on-fail-throw=true,"
-                + "annotation.on-fail-warn=true,includes.on-fail-warn=true,"
+                "annotation.on-fail=warning,includes.on-fail=error,"
                 + "annotation.on-fail-append-to=a.log,includes.on-fail-append-to=i.log");
-        assertFalse(split.annotationOnFailThrow);
-        assertTrue(split.includesOnFailThrow);
-        assertTrue(split.annotationOnFailWarn);
-        assertTrue(split.includesOnFailWarn);
+        assertEquals(OnFail.WARNING, split.annotationOnFail);
+        assertEquals(OnFail.ERROR, split.includesOnFail);
         assertEquals("a.log", split.annotationOnFailAppendTo);
         assertEquals("i.log", split.includesOnFailAppendTo);
     }

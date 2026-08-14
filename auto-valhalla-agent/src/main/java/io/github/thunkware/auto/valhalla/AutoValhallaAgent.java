@@ -50,19 +50,15 @@ import java.util.stream.Collectors;
  *   <li>{@code auto-valhalla.log-level} — logging level: {@code off}, {@code error},
  *       {@code warning} (default), {@code info}, {@code debug}. Controls verbosity
  *       of messages to stderr.</li>
- *   <li>{@code auto-valhalla.annotation.on-fail-throw=true} (default) — surface
- *       a loud {@link java.lang.LinkageError} if an <em>annotation-selected</em>
- *       class cannot be safely transformed instead of leaving it an identity
- *       class.</li>
- *   <li>{@code auto-valhalla.annotation.on-fail-warn=true} (default false) — log a
- *       {@code WARNING} instead of silently leaving the class as an identity class,
- *       without crashing the application. Ignored when {@code on-fail-throw} is also
- *       set.</li>
- *   <li>{@code auto-valhalla.includes.on-fail-throw=true} (default false) — the
- *       same, for <em>includes-selected</em> classes (off by default so a broad
- *       includes sweep cannot crash the application).</li>
- *   <li>{@code auto-valhalla.includes.on-fail-warn=true} (default false) — the
- *       same warn-without-throw behavior for <em>includes-selected</em> classes.</li>
+ *   <li>{@code auto-valhalla.annotation.on-fail=throw|error|warning|info|debug}
+ *       (default {@code throw}) — how to handle an <em>annotation-selected</em>
+ *       class that cannot be safely transformed. {@code throw} causes a loud
+ *       {@link java.lang.LinkageError}; the log levels leave the class as an
+ *       identity class and log at the given severity.</li>
+ *   <li>{@code auto-valhalla.includes.on-fail=throw|error|warning|info|debug}
+ *       (default {@code debug}) — the same, for <em>includes-selected</em> classes
+ *       ({@code debug} by default so a broad includes sweep does not flood
+ *       stderr).</li>
  *   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} /
  *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
  *       class name of each failing class (e.g. {@code com.example.Foo},
@@ -148,8 +144,8 @@ public final class AutoValhallaAgent {
                 + " excludes=" + cfg.excludes
                 + " annotation-mode=" + cfg.annotationMode
                 + " includes-mode=" + cfg.includesMode
-                + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow
-                + " includes.on-fail-throw=" + cfg.includesOnFailThrow);
+                + " annotation.on-fail=" + cfg.annotationOnFail
+                + " includes.on-fail=" + cfg.includesOnFail);
     }
 
     static Config parse(String agentArgs) {
@@ -227,14 +223,10 @@ public final class AutoValhallaAgent {
                 case Config.ANNOTATION_MODE -> cfg.annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
                 case Config.INCLUDES_MODE -> cfg.includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
                 case Config.LOG_LEVEL -> cfg.logLevel = a[1].trim();
-                case Config.ANNOTATION_ON_FAIL_THROW ->
-                        cfg.annotationOnFailThrow = Boolean.parseBoolean(a[1]);
-                case Config.ANNOTATION_ON_FAIL_WARN ->
-                        cfg.annotationOnFailWarn = Boolean.parseBoolean(a[1]);
-                case Config.INCLUDES_ON_FAIL_THROW ->
-                        cfg.includesOnFailThrow = Boolean.parseBoolean(a[1]);
-                case Config.INCLUDES_ON_FAIL_WARN ->
-                        cfg.includesOnFailWarn = Boolean.parseBoolean(a[1]);
+                case Config.ANNOTATION_ON_FAIL ->
+                        cfg.annotationOnFail = OnFail.parse(a[1], OnFail.THROW);
+                case Config.INCLUDES_ON_FAIL ->
+                        cfg.includesOnFail = OnFail.parse(a[1], OnFail.DEBUG);
                 case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
                     cfg.annotationOnFailAppendTo = t.isEmpty() ? null : t;
@@ -268,12 +260,10 @@ public final class AutoValhallaAgent {
                 + getLogString(Config.EXCLUDES_FILES, cfg.excludesFiles)
                 + getLogString(Config.ANNOTATION_MODE, cfg.annotationMode)
                 + getLogString(Config.INCLUDES_MODE, cfg.includesMode)
-                + getLogString(Config.ANNOTATION_ON_FAIL_THROW, cfg.annotationOnFailThrow)
-                + getLogString(Config.ANNOTATION_ON_FAIL_WARN, cfg.annotationOnFailWarn)
+                + getLogString(Config.ANNOTATION_ON_FAIL, cfg.annotationOnFail)
                 + getLogString(Config.ANNOTATION_ON_FAIL_APPEND_TO, cfg.annotationOnFailAppendTo)
                 + getLogString(Config.ANNOTATION_ON_SUCCESS_APPEND_TO, cfg.annotationOnSuccessAppendTo)
-                + getLogString(Config.INCLUDES_ON_FAIL_THROW, cfg.includesOnFailThrow)
-                + getLogString(Config.INCLUDES_ON_FAIL_WARN, cfg.includesOnFailWarn)
+                + getLogString(Config.INCLUDES_ON_FAIL, cfg.includesOnFail)
                 + getLogString(Config.INCLUDES_ON_FAIL_APPEND_TO, cfg.includesOnFailAppendTo)
                 + getLogString(Config.INCLUDES_ON_SUCCESS_APPEND_TO, cfg.includesOnSuccessAppendTo)
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_APPEND_TO, cfg.synchronizationMonitorAppendTo)

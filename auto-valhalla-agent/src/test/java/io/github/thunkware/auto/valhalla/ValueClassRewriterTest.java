@@ -522,7 +522,7 @@ class ValueClassRewriterTest {
         loudCfg.excludes = Set.of();
         loudCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         loudCfg.includesMode = Mode.INCLUDES_DEFAULT;
-        loudCfg.includesOnFailThrow = true;
+        loudCfg.includesOnFail = OnFail.THROW;
         ValueClassTransformer includesLoud = new ValueClassTransformer(loudCfg);
         byte[] out = includesLoud.transform(null, null, internal, null, null, mutable);
         assertNotNull(out, "includes.on-fail-throw=true surfaces the rejection");
@@ -541,7 +541,7 @@ class ValueClassRewriterTest {
         annoCfg.excludes = Set.of();
         annoCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         annoCfg.includesMode = Mode.INCLUDES_DEFAULT;
-        annoCfg.annotationOnFailThrow = true;
+        annoCfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer annoLoud = new ValueClassTransformer(annoCfg);
         byte[] mpOut = annoLoud.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
         assertNotNull(mpOut, "annotation.on-fail-throw defaults to true for annotated classes");
@@ -560,8 +560,8 @@ class ValueClassRewriterTest {
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
-        cfg.annotationOnFailThrow = true;
-        cfg.includesOnFailThrow = true;
+        cfg.annotationOnFail = OnFail.THROW;
+        cfg.includesOnFail = OnFail.THROW;
         ValueClassTransformer t = new ValueClassTransformer(cfg);
         assertNull(t.transform(null, null, "com/example/Unselected", null, null, garbage),
                 "an unparseable unselected class stays an identity class");
@@ -580,9 +580,9 @@ class ValueClassRewriterTest {
             bothCfg.excludes = Set.of();
             bothCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
             bothCfg.includesMode = Mode.INCLUDES_DEFAULT;
-            bothCfg.annotationOnFailThrow = true;
+            bothCfg.annotationOnFail = OnFail.THROW;
             bothCfg.annotationOnFailAppendTo = ann.getAbsolutePath();
-            bothCfg.includesOnFailThrow = true;
+            bothCfg.includesOnFail = OnFail.THROW;
             bothCfg.includesOnFailAppendTo = inc.getAbsolutePath();
             ValueClassTransformer both = new ValueClassTransformer(bothCfg);
             both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);

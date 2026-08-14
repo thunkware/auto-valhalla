@@ -36,7 +36,7 @@ class DemoFixturesTest {
         cfg.excludes = Set.of();
         cfg.annotationMode = yolo;
         cfg.includesMode = yolo;
-        cfg.annotationOnFailThrow = true;
+        cfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
 
         // Point is selected only by @AutoValhalla (it is in demo5.annotation,
@@ -93,7 +93,7 @@ class DemoFixturesTest {
         loudCfg.excludes = Set.of();
         loudCfg.annotationMode = yolo;
         loudCfg.includesMode = yolo;
-        loudCfg.annotationOnFailThrow = true;
+        loudCfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer loud = new ValueClassTransformer(loudCfg);
         byte[] loudOut = loud.transform(null, null, internal, null, null, original);
         assertNotNull(loudOut, "annotation.on-fail-throw=true surfaces the rejection");
@@ -107,7 +107,7 @@ class DemoFixturesTest {
         quietCfg.excludes = Set.of();
         quietCfg.annotationMode = yolo;
         quietCfg.includesMode = yolo;
-        quietCfg.annotationOnFailThrow = false;
+        quietCfg.annotationOnFail = OnFail.DEBUG;
         ValueClassTransformer quiet = new ValueClassTransformer(quietCfg);
         assertNull(quiet.transform(null, null, internal, null, null, original),
                 "without on-fail-throw the annotated mutable class is left as identity");
@@ -160,7 +160,7 @@ class DemoFixturesTest {
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
-        cfg.annotationOnFailThrow = true;
+        cfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
@@ -178,7 +178,7 @@ class DemoFixturesTest {
         cfg.excludes = Set.of();
         cfg.annotationMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED);
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
-        cfg.annotationOnFailThrow = true;
+        cfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
