@@ -163,6 +163,13 @@ public final class AutoValhallaAgent {
             }
         }
 
+        for (String p : unknownSysProps(System.getProperties().stringPropertyNames())) {
+            InternalLogger.warning("Unknown system property ignored: " + p);
+        }
+        for (String e : unknownEnvVars(System.getenv().keySet())) {
+            InternalLogger.warning("Unknown environment variable ignored: " + e);
+        }
+
         // Agent arguments (highest precedence), with .config expanded in place.
         // Split only on top-level commas; values (e.g. includes=A,B) may contain
         // commas, so a token is treated as the start of a new assignment only
@@ -180,9 +187,11 @@ public final class AutoValhallaAgent {
                     String canonical = canonicalKey(key);
                     if (canonical != null) {
                         emit(assigns, canonical, value);
+                    } else {
+                        InternalLogger.warning("Unknown agent argument ignored: " + key);
                     }
                 }
-                // bare tokens are ignored
+                // bare tokens (no '=') are ignored
             }
         }
 
@@ -405,6 +414,36 @@ public final class AutoValhallaAgent {
             return " " + label + "=" + combined;
         }
         return " " + label + "=" + value;
+    }
+
+    /** Returns entries in {@code propNames} that start with {@code auto-valhalla.}
+     *  but whose suffix is not a known option key. */
+    static List<String> unknownSysProps(Set<String> propNames) {
+        Set<String> known = new HashSet<>(Config.KNOWN);
+        String prefix = "auto-valhalla.";
+        List<String> result = new ArrayList<>();
+        for (String prop : propNames) {
+            if (prop.startsWith(prefix) && !known.contains(prop.substring(prefix.length()))) {
+                result.add(prop);
+            }
+        }
+        return result;
+    }
+
+    /** Returns entries in {@code envNames} that start with {@code AUTO_VALHALLA_}
+     *  but do not correspond to any known option. */
+    static List<String> unknownEnvVars(Set<String> envNames) {
+        Set<String> knownEnv = new HashSet<>();
+        for (String key : Config.KNOWN) {
+            knownEnv.add(envName("auto-valhalla." + key));
+        }
+        List<String> result = new ArrayList<>();
+        for (String env : envNames) {
+            if (env.startsWith("AUTO_VALHALLA_") && !knownEnv.contains(env)) {
+                result.add(env);
+            }
+        }
+        return result;
     }
 
     private static String envName(String prop) {

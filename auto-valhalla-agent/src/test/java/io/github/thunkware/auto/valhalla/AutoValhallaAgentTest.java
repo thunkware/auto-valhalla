@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.EnumSet;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class AutoValhallaAgentTest {
@@ -79,6 +80,44 @@ class AutoValhallaAgentTest {
         } finally {
             f.delete();
         }
+    }
+
+    @Test
+    void unknownSysPropsAreDetected() {
+        var unknown = AutoValhallaAgent.unknownSysProps(
+                Set.of("auto-valhalla.foo", "auto-valhalla.includes", "other.prop"));
+        assertEquals(1, unknown.size());
+        assertTrue(unknown.contains("auto-valhalla.foo"),
+                "unknown key under auto-valhalla. must be reported");
+    }
+
+    @Test
+    void knownSysPropsAreNotFlagged() {
+        var unknown = AutoValhallaAgent.unknownSysProps(
+                Set.of("auto-valhalla.includes", "auto-valhalla.log-level", "unrelated.prop"));
+        assertTrue(unknown.isEmpty(), "no unknown props expected for known keys");
+    }
+
+    @Test
+    void unknownEnvVarsAreDetected() {
+        var unknown = AutoValhallaAgent.unknownEnvVars(
+                Set.of("AUTO_VALHALLA_FOO", "AUTO_VALHALLA_INCLUDES", "OTHER_VAR"));
+        assertEquals(1, unknown.size());
+        assertTrue(unknown.contains("AUTO_VALHALLA_FOO"),
+                "unknown key under AUTO_VALHALLA_ must be reported");
+    }
+
+    @Test
+    void knownEnvVarsAreNotFlagged() {
+        var unknown = AutoValhallaAgent.unknownEnvVars(
+                Set.of("AUTO_VALHALLA_INCLUDES", "AUTO_VALHALLA_LOG_LEVEL", "UNRELATED"));
+        assertTrue(unknown.isEmpty(), "no unknown vars expected for known keys");
+    }
+
+    @Test
+    void unknownAgentArgIsIgnoredGracefully() {
+        var cfg = AutoValhallaAgent.parse("foo=bar,includes=a.");
+        assertTrue(cfg.includes.contains("a/"), "known arg still applied despite unknown arg");
     }
 
     @Test
