@@ -99,7 +99,7 @@ You can use the file to:
 | Option | Description |
 | --- | --- |
 | `auto-valhalla.synchronization-monitor.append-to` | File path. Default: `auto-valhalla.synchronization.txt`. |
-| `auto-valhalla.synchronization-monitor.log-level` | Log level: `info` (default), `debug`, or `off`. |
+| `auto-valhalla.synchronization-monitor.logging.level` | Log level: `info` (default), `debug`, or `off`. |
 
 ## Options
 
@@ -178,11 +178,11 @@ are not re-appended, and a missing file is treated as empty.
 
 | Option | Description |
 | --- | --- |
-| `auto-valhalla.log-level` | Root logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
-| `auto-valhalla.log-level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. Same values as `log-level`. |
+| `auto-valhalla.logging.level` | Root logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
+| `auto-valhalla.logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. Same values as `logging.level`. |
 | `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below. |
 
-Two-level log hierarchy: a per-logger override (if set) takes precedence over the root `auto-valhalla.log-level`.
+Two-level log hierarchy: a per-logger override (if set) takes precedence over the root `auto-valhalla.logging.level`.
 Named loggers available for fine-grained control:
 
 | Logger name | What it covers |
@@ -200,14 +200,14 @@ Named loggers available for fine-grained control:
 Example — silence the synchronization monitor while keeping everything else at `info`:
 
 ```
--Dauto-valhalla.log-level.auto-valhalla.synchronization-monitor=off
+-Dauto-valhalla.logging.level.auto-valhalla.synchronization-monitor=off
 ```
 
 Per-logger overrides may also be set in a [config file](#config-file):
 
 ```properties
-log-level.auto-valhalla.annotation.success=debug
-log-level.auto-valhalla.synchronization-monitor=off
+logging.level.auto-valhalla.annotation.success=debug
+logging.level.auto-valhalla.synchronization-monitor=off
 ```
 
 #### Logging modes

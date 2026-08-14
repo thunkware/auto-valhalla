@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
      *       selected by {@code includes} (default {@code yolo} =
      *       {@code mark-class-final,remove-synchronized,mark-fields-final}).</li>
- *   <li>{@code auto-valhalla.log-level} — logging level: {@code off}, {@code error},
+ *   <li>{@code auto-valhalla.logging.level} — logging level: {@code off}, {@code error},
  *       {@code warning}, {@code info} (default), {@code debug}. Controls verbosity
  *       of messages to stderr.</li>
  *   <li>{@code auto-valhalla.annotation.on-fail=throw|error|warning|info|debug}
@@ -174,7 +174,7 @@ public final class AutoValhallaAgent {
             }
         }
 
-        // Per-logger log-level overrides: -Dauto-valhalla.log-level.<name>=<level>
+        // Per-logger level overrides: -Dauto-valhalla.logging.level.<name>=<level>
         // These are not in Config.KNOWN (the suffix is a logger name, not a fixed key).
         String llSysPropPrefix = "auto-valhalla." + Config.LOG_LEVEL_PREFIX;
         for (String prop : System.getProperties().stringPropertyNames()) {
@@ -440,7 +440,7 @@ public final class AutoValhallaAgent {
         for (String key : Config.KNOWN) {
             knownEnv.add(envName("auto-valhalla." + key));
         }
-        // Per-logger overrides use AUTO_VALHALLA_LOG_LEVEL_<name>; accept all of them.
+        // Per-logger overrides use AUTO_VALHALLA_LOGGING_LEVEL_<name>; accept all of them.
         String envLLPrefix = envName("auto-valhalla." + Config.LOG_LEVEL_PREFIX);
         List<String> result = new ArrayList<>();
         for (String env : envNames) {
@@ -455,9 +455,9 @@ public final class AutoValhallaAgent {
     private static String envName(String prop) {
         String body;
         if (prop.startsWith("auto-valhalla.")) {
-            body = "AUTO_VALHALLA_" + prop.substring("auto-valhalla.".length()).replace('-', '_');
+            body = "AUTO_VALHALLA_" + prop.substring("auto-valhalla.".length()).replace('-', '_').replace('.', '_');
         } else if (prop.startsWith("autovalhalla.")) {
-            body = "AUTO_VALHALLA_" + prop.substring("autovalhalla.".length()).replace('-', '_');
+            body = "AUTO_VALHALLA_" + prop.substring("autovalhalla.".length()).replace('-', '_').replace('.', '_');
         } else {
             body = prop.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
         }

@@ -43,9 +43,9 @@ class Config {
     static final String EXCLUDES_FILES = "excludes-files";
     static final String ANNOTATION_MODE = "annotation-mode";
     static final String INCLUDES_MODE = "includes-mode";
-    static final String LOG_LEVEL = "log-level";
-    /** Prefix for per-logger level overrides: {@code log-level.<logger-name>=<level>}. */
-    static final String LOG_LEVEL_PREFIX = "log-level.";
+    static final String LOG_LEVEL = "logging.level";
+    /** Prefix for per-logger level overrides: {@code logging.level.<logger-name>=<level>}. */
+    static final String LOG_LEVEL_PREFIX = "logging.level.";
     static final String ANNOTATION_ON_FAIL = "annotation.on-fail";
     static final String ANNOTATION_ON_SUCCESS = "annotation.on-success";
     static final String ANNOTATION_ON_FAIL_APPEND_TO = "annotation.on-fail-append-to";
@@ -55,7 +55,7 @@ class Config {
     static final String INCLUDES_ON_FAIL_APPEND_TO = "includes.on-fail-append-to";
     static final String INCLUDES_ON_SUCCESS_APPEND_TO = "includes.on-success-append-to";
     static final String SYNCHRONIZATION_MONITOR_APPEND_TO = "synchronization-monitor.append-to";
-    static final String SYNCHRONIZATION_MONITOR_LOG_LEVEL = "synchronization-monitor.log-level";
+    static final String SYNCHRONIZATION_MONITOR_LOG_LEVEL = "synchronization-monitor.logging.level";
     static final String LOGGING = "logging";
     static final String CONFIG = "config";
 
