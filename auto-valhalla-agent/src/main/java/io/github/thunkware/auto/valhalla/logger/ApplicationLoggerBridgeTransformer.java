@@ -44,12 +44,13 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
 
     private final InternalLogger log = InternalLogger.getLogger(ApplicationLoggerBridgeTransformer.class);
 
-    private static final String SLF4J_LOGGER_FACTORY  = "org/slf4j/LoggerFactory";
-    private static final String SPRING_APPLICATION     = "org/springframework/boot/SpringApplication";
-    private static final String SPRING_LISTENER_1X     =
+    private static final String SLF4J_LOGGER_FACTORY   = "org/slf4j/LoggerFactory";
+    private static final String SPRING_APPLICATION      = "org/springframework/boot/SpringApplication";
+    private static final String SPRING_LISTENER_1X      =
             "org/springframework/boot/logging/LoggingApplicationListener";
-    private static final String SPRING_LISTENER_2X     =
+    private static final String SPRING_LISTENER_2X      =
             "org/springframework/boot/context/logging/LoggingApplicationListener";
+    private static final String SPRING_BOOT_LAUNCHER_PKG = "org/springframework/boot/loader/launch/";
 
     private static final ClassDesc FLAGS_CLASS =
             ClassDesc.of("io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags");
@@ -60,16 +61,30 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
         if (classNameJvm == null) return null;
+        if (classNameJvm.startsWith(SPRING_BOOT_LAUNCHER_PKG)) {
+            ApplicationLoggerFlags.onSpringBootLauncherSeen();
+            return null;
+        }
         return switch (classNameJvm) {
-            case SLF4J_LOGGER_FACTORY ->
-                transformClass(classfileBuffer, loader,
+            case SLF4J_LOGGER_FACTORY -> {
+                // Inject entry first (start buffering), then exit (flush via SLF4J).
+                byte[] withEntry = transformClass(classfileBuffer, loader,
+                        "getILoggerFactory", "onLoggerFactoryInitializing", false);
+                yield transformClass(
+                        withEntry != null ? withEntry : classfileBuffer, loader,
                         "getILoggerFactory", "onLoggerFactoryReady", true);
+            }
             case SPRING_APPLICATION ->
                 transformClass(classfileBuffer, loader,
                         "<clinit>", "setSpringBootApp", false);
-            case SPRING_LISTENER_1X, SPRING_LISTENER_2X ->
-                transformClass(classfileBuffer, loader,
+            case SPRING_LISTENER_1X, SPRING_LISTENER_2X -> {
+                // Inject entry first (start buffering), then exit (flush via SLF4J).
+                byte[] withEntry = transformClass(classfileBuffer, loader,
+                        "initialize", "onSpringLoggingInitializing", false);
+                yield transformClass(
+                        withEntry != null ? withEntry : classfileBuffer, loader,
                         "initialize", "onSpringLoggingReady", true);
+            }
             default -> null;
         };
     }

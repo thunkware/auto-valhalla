@@ -32,6 +32,18 @@ public final class ApplicationLoggerFlags {
     }
 
     /**
+     * Injected at the entry of {@code org.slf4j.LoggerFactory.getILoggerFactory()}.
+     * Starts buffering log output so messages emitted during SLF4J initialisation
+     * are not lost. Ignored if this is a Spring Boot app (handled by
+     * {@link #onSpringLoggingInitializing()} instead).
+     */
+    public static void onLoggerFactoryInitializing() {
+        if (bridgeLoggerFactory.get()) {
+            InternalLogger.startBuffering();
+        }
+    }
+
+    /**
      * Injected at the exit of {@code org.slf4j.LoggerFactory.getILoggerFactory()}.
      * Installs the SLF4J bridge if this is not a Spring Boot application (Spring
      * Boot switches to the {@link #onSpringLoggingReady()} path instead).
@@ -43,20 +55,49 @@ public final class ApplicationLoggerFlags {
     }
 
     /**
+     * Called when any class from {@code org.springframework.boot.loader.launch}
+     * is loaded. That package is the Spring Boot fat-jar launcher, so its presence
+     * means we are running inside a Spring Boot executable jar. Start buffering
+     * immediately — earlier than waiting for {@code SpringApplication.<clinit>} —
+     * so no agent messages are lost before {@code LoggingApplicationListener}
+     * finishes configuring the logging framework.
+     */
+    public static void onSpringBootLauncherSeen() {
+        bridgeLoggerFactory.set(false);
+        bridgeSpringBootLogging.set(true);
+        InternalLogger.startBuffering();
+    }
+
+    /**
      * Injected at the entry of {@code org.springframework.boot.SpringApplication}
      * static initializer. Disables the {@code LoggerFactory} path and switches to
      * waiting for Spring Boot's {@code LoggingApplicationListener} instead, because
      * SLF4J alone is ready before Spring Boot configures the backing logging library.
+     * Also starts buffering in case the launcher package was not on the classpath
+     * (e.g. exploded-jar / IDE run).
      */
     public static void setSpringBootApp() {
         bridgeLoggerFactory.set(false);
         bridgeSpringBootLogging.set(true);
+        InternalLogger.startBuffering();
+    }
+
+    /**
+     * Injected at the entry of {@code LoggingApplicationListener.initialize()}.
+     * Logging is buffered in memory from this point until
+     * {@link #onSpringLoggingReady()} flushes via SLF4J, so agent messages
+     * emitted during Logback / Log4j2 configuration are not lost.
+     */
+    public static void onSpringLoggingInitializing() {
+        if (bridgeSpringBootLogging.get()) {
+            InternalLogger.startBuffering();
+        }
     }
 
     /**
      * Injected at the exit of {@code LoggingApplicationListener.initialize()}.
-     * At this point the backing logging library (Logback / Log4j2) is configured
-     * and the SLF4J bridge can be installed safely.
+     * At this point the backing logging library (Logback / Log4j2) is configured;
+     * installs the SLF4J bridge and flushes any messages buffered during init.
      */
     public static void onSpringLoggingReady() {
         if (bridgeSpringBootLogging.compareAndSet(true, false)) {

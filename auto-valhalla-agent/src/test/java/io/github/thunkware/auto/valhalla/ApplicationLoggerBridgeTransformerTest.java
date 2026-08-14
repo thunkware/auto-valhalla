@@ -56,8 +56,10 @@ class ApplicationLoggerBridgeTransformerTest {
         byte[] out = transform("org/slf4j/LoggerFactory",
                 buildClass("org/slf4j/LoggerFactory", "getILoggerFactory"));
         assertNotNull(out, "LoggerFactory must be instrumented");
+        assertTrue(containsCallTo(out, "onLoggerFactoryInitializing"),
+                "output must call ApplicationLoggerFlags.onLoggerFactoryInitializing at entry");
         assertTrue(containsCallTo(out, "onLoggerFactoryReady"),
-                "output must call ApplicationLoggerFlags.onLoggerFactoryReady");
+                "output must call ApplicationLoggerFlags.onLoggerFactoryReady at exit");
         assertTrue(ClassFile.of().verify(out).isEmpty(), "output must pass bytecode verification");
     }
 
@@ -76,8 +78,10 @@ class ApplicationLoggerBridgeTransformerTest {
         String name = "org/springframework/boot/context/logging/LoggingApplicationListener";
         byte[] out = transform(name, buildClass(name, "initialize"));
         assertNotNull(out, "Spring Boot 2.x LoggingApplicationListener must be instrumented");
+        assertTrue(containsCallTo(out, "onSpringLoggingInitializing"),
+                "output must call ApplicationLoggerFlags.onSpringLoggingInitializing at entry");
         assertTrue(containsCallTo(out, "onSpringLoggingReady"),
-                "output must call ApplicationLoggerFlags.onSpringLoggingReady");
+                "output must call ApplicationLoggerFlags.onSpringLoggingReady at exit");
         assertTrue(ClassFile.of().verify(out).isEmpty(), "output must pass bytecode verification");
     }
 
@@ -86,8 +90,20 @@ class ApplicationLoggerBridgeTransformerTest {
         String name = "org/springframework/boot/logging/LoggingApplicationListener";
         byte[] out = transform(name, buildClass(name, "initialize"));
         assertNotNull(out, "Spring Boot 1.x LoggingApplicationListener must be instrumented");
+        assertTrue(containsCallTo(out, "onSpringLoggingInitializing"),
+                "output must call ApplicationLoggerFlags.onSpringLoggingInitializing at entry");
         assertTrue(containsCallTo(out, "onSpringLoggingReady"),
-                "output must call ApplicationLoggerFlags.onSpringLoggingReady");
+                "output must call ApplicationLoggerFlags.onSpringLoggingReady at exit");
+    }
+
+    @Test
+    void springBootLauncherPackageClassIsNotTransformedButDetected() {
+        // Classes in the launcher package trigger onSpringBootLauncherSeen() as a
+        // side effect but are not bytecode-transformed (return null).
+        byte[] original = buildClass(
+                "org/springframework/boot/loader/launch/LaunchedClassLoader", "someMethod");
+        assertNull(transform("org/springframework/boot/loader/launch/LaunchedClassLoader", original),
+                "launcher package class must not be bytecode-transformed");
     }
 
     @Test

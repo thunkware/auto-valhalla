@@ -6,6 +6,10 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Logging facade for the auto-valhalla agent. Example output:
@@ -34,8 +38,11 @@ public final class InternalLogger {
 
     private static volatile Level level = Level.INFO;
     private static volatile LoggingMode loggingMode = LoggingMode.SIMPLE;
-    private static final java.util.concurrent.ConcurrentHashMap<String, Level> loggerLevels =
-            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, Level> loggerLevels = new ConcurrentHashMap<>();
+    private static volatile boolean buffering = false;
+    private static final Queue<LogEntry> pendingLogs = new ConcurrentLinkedQueue<>();
+
+    private record LogEntry(String name, Level lv, String msg, Throwable t, ZonedDateTime timestamp) {}
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
 
@@ -92,6 +99,11 @@ public final class InternalLogger {
                     "Unknown log-level '" + levelString.trim() + "' for logger '"
                     + loggerName + "'; valid values are: off, fatal, error, warning, info, debug. Ignoring.");
         }
+    }
+
+    /** Starts buffering log output in memory. Flushed by {@link Slf4jBridge#reinstall()}. */
+    public static void startBuffering() {
+        buffering = true;
     }
 
     /**
@@ -191,13 +203,33 @@ public final class InternalLogger {
     private void log(Level lv, String msg, Throwable t) {
         Level effective = loggerLevels.getOrDefault(name, level);
         if (lv.rank > effective.rank) return;
+        if (buffering) {
+            pendingLogs.add(new LogEntry(name, lv, msg, t, ZonedDateTime.now()));
+            return;
+        }
+        logDirect(lv, msg, t);
+    }
+
+    private void logDirect(Level lv, String msg, Throwable t) {
+        logDirect(lv, msg, t, null);
+    }
+
+    private void logDirect(Level lv, String msg, Throwable t, ZonedDateTime timestamp) {
         switch (loggingMode) {
             case NONE -> {}
             case APPLICATION -> {
                 if (logViaSlf4j(lv, msg, t)) return;
-                logToStderr(lv, msg, t); // SLF4J not yet available; fall through to stderr
+                logToStderr(lv, msg, t, timestamp); // SLF4J not yet available; fall through to stderr
             }
-            default -> logToStderr(lv, msg, t);
+            default -> logToStderr(lv, msg, t, timestamp);
+        }
+    }
+
+    private static void flushBuffer() {
+        buffering = false;
+        LogEntry entry;
+        while ((entry = pendingLogs.poll()) != null) {
+            new InternalLogger(entry.name()).logDirect(entry.lv(), entry.msg(), entry.t(), entry.timestamp());
         }
     }
 
@@ -211,10 +243,10 @@ public final class InternalLogger {
         return Slf4jBridge.invoke(lv, slf4jLogger, msg, t);
     }
 
-    private void logToStderr(Level lv, String msg, Throwable t) {
-        String timestamp = ZonedDateTime.now().format(TIMESTAMP_FORMAT);
+    private void logToStderr(Level lv, String msg, Throwable t, ZonedDateTime timestamp) {
+        String ts = (timestamp != null ? timestamp : ZonedDateTime.now()).format(TIMESTAMP_FORMAT);
         String displayLevel = lv == Level.FATAL ? Level.WARNING.name() : lv.name();
-        System.err.println(timestamp + " " + displayLevel + " " + name + " - " + msg);
+        System.err.println(ts + " " + displayLevel + " " + name + " - " + msg);
         if (t != null) {
             t.printStackTrace(System.err);
         }
@@ -304,6 +336,7 @@ public final class InternalLogger {
             attempted = false;
             version++; // triggers lazy re-acquire in all InternalLogger instances
             init();    // reentrant: same thread holds the lock
+            InternalLogger.flushBuffer();
         }
 
         private static synchronized void init() {
