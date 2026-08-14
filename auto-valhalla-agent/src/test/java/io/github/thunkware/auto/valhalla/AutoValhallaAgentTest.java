@@ -1,7 +1,6 @@
 package io.github.thunkware.auto.valhalla;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,22 +65,14 @@ class AutoValhallaAgentTest {
     }
 
     @Test
-    void onFailHasDistinctDefaults() {
+    void onFailAppendToDefaultsToNull() {
         var cfg = AutoValhallaAgent.parse();
-        assertEquals(OnFail.THROW, cfg.annotationOnFail,
-                "annotation.on-fail must default to throw (loud for an explicit opt-in)");
-        assertEquals(OnFail.DEBUG, cfg.includesOnFail,
-                "includes.on-fail must default to debug (quiet for a broad sweep)");
         assertNull(cfg.annotationOnFailAppendTo, "annotation.on-fail-append-to defaults to unset");
         assertNull(cfg.includesOnFailAppendTo, "includes.on-fail-append-to defaults to unset");
 
         var split = parseWith(
-                "annotation.on-fail", "warning",
-                "includes.on-fail", "error",
                 "annotation.on-fail-append-to", "a.log",
                 "includes.on-fail-append-to", "i.log");
-        assertEquals(OnFail.WARNING, split.annotationOnFail);
-        assertEquals(OnFail.ERROR, split.includesOnFail);
         assertEquals("a.log", split.annotationOnFailAppendTo);
         assertEquals("i.log", split.includesOnFailAppendTo);
     }
@@ -153,42 +144,6 @@ class AutoValhallaAgentTest {
         // A bad log-level must not crash the agent — it should warn and fall back.
         InternalLogger.setLevel("bogus");
         InternalLogger.setLevel(null); // reset to info for other tests
-    }
-
-    @Test
-    void onSuccessDefaultsToInfo() {
-        var cfg = AutoValhallaAgent.parse();
-        assertEquals(OnSuccess.INFO, cfg.annotationOnSuccess,
-                "annotation.on-success must default to info");
-        assertEquals(OnSuccess.INFO, cfg.includesOnSuccess,
-                "includes.on-success must default to info");
-    }
-
-    @Test
-    void onSuccessIsParsed() {
-        var cfg = parseWith("annotation.on-success", "debug", "includes.on-success", "off");
-        assertEquals(OnSuccess.DEBUG, cfg.annotationOnSuccess);
-        assertEquals(OnSuccess.OFF, cfg.includesOnSuccess);
-    }
-
-    @Test
-    void onFailOffIsParsed() {
-        var cfg = parseWith("annotation.on-fail", "off", "includes.on-fail", "off");
-        assertEquals(OnFail.OFF, cfg.annotationOnFail);
-        assertEquals(OnFail.OFF, cfg.includesOnFail);
-    }
-
-    @Test
-    void synchronizationMonitorLogLevelDefaultsToInfo() {
-        var cfg = AutoValhallaAgent.parse();
-        assertEquals(OnSuccess.INFO, cfg.synchronizationMonitorLogLevel,
-                "synchronization-monitor.logging.level must default to info");
-    }
-
-    @Test
-    void synchronizationMonitorLogLevelIsParsed() {
-        var cfg = parseWith("synchronization-monitor.logging.level", "debug");
-        assertEquals(OnSuccess.DEBUG, cfg.synchronizationMonitorLogLevel);
     }
 
     @Test

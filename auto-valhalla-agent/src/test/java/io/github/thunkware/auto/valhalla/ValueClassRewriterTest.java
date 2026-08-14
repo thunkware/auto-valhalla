@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
@@ -17,6 +18,7 @@ import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,6 +28,14 @@ import org.junit.jupiter.api.Test;
  * bytecode that fails verification or drops the value.
  */
 class ValueClassRewriterTest {
+
+    @AfterEach
+    void resetLoggerLevels() {
+        InternalLogger.setLevel("auto-valhalla.annotation.rejected", null);
+        InternalLogger.setLevel("auto-valhalla.annotation.fail", null);
+        InternalLogger.setLevel("auto-valhalla.includes.rejected", null);
+        InternalLogger.setLevel("auto-valhalla.includes.fail", null);
+    }
 
     @Test
     void longAndDoubleFieldsBecomeValueClass() throws Exception {
@@ -499,13 +509,13 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void onFailThrowIsPerSelectionSource() throws Exception {
+    void rejectedClassBehaviorByLoggerLevel() throws Exception {
         byte[] mutable = readResource("/sample/Mutable.class");
         assertNotNull(mutable, "Mutable on classpath");
         String internal = "sample/Mutable";
 
         // A mutable field written by a setter fails the mark-fields-final gate.
-        // includes.on-fail-throw=false leaves it an identity class...
+        // includes.rejected defaults to DEBUG (quiet): leaves the class as identity.
         Config quietCfg = new Config();
         quietCfg.includes = Set.of("sample.Mutable");
         quietCfg.excludes = Set.of();
@@ -513,26 +523,25 @@ class ValueClassRewriterTest {
         quietCfg.includesMode = Mode.INCLUDES_DEFAULT;
         ValueClassTransformer includesQuiet = new ValueClassTransformer(quietCfg);
         assertNull(includesQuiet.transform(null, null, internal, null, null, mutable),
-                "includes.on-fail-throw=false leaves the class as identity");
+                "includes.rejected=debug leaves the class as identity");
 
-        // ...while includes.on-fail-throw=true surfaces the rejection loudly
+        // includes.rejected=fatal surfaces the rejection loudly
         // (an unloadable class file, never a usable value class).
+        InternalLogger.setLevel("auto-valhalla.includes.rejected", "fatal");
         Config loudCfg = new Config();
         loudCfg.includes = Set.of("sample.Mutable");
         loudCfg.excludes = Set.of();
         loudCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         loudCfg.includesMode = Mode.INCLUDES_DEFAULT;
-        loudCfg.includesOnFail = OnFail.THROW;
         ValueClassTransformer includesLoud = new ValueClassTransformer(loudCfg);
         byte[] out = includesLoud.transform(null, null, internal, null, null, mutable);
-        assertNotNull(out, "includes.on-fail-throw=true surfaces the rejection");
+        assertNotNull(out, "includes.rejected=fatal surfaces the rejection");
         assertFalse(DemoFixturesTest.isUsableValueClass(out),
                 "a loud rejection is not a usable value class");
 
-        // Annotation-selected classes default to loud: under the safe default
-        // annotation-mode, a non-final annotated class is selected-but-not-
-        // converted, which is a failure handled per the on-fail settings. The
-        // loud annotation default must not come back as either a silent
+        // Annotation-selected classes default to FATAL: under the safe default
+        // annotation-mode, a non-final annotated class is selected-but-not-converted,
+        // which is a failure. The default must not come back as either a silent
         // identity class or a usable value class.
         byte[] mp = readResource("/demo5/broken/MutablePoint.class");
         assertNotNull(mp, "MutablePoint on classpath");
@@ -541,10 +550,9 @@ class ValueClassRewriterTest {
         annoCfg.excludes = Set.of();
         annoCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         annoCfg.includesMode = Mode.INCLUDES_DEFAULT;
-        annoCfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer annoLoud = new ValueClassTransformer(annoCfg);
         byte[] mpOut = annoLoud.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
-        assertNotNull(mpOut, "annotation.on-fail-throw defaults to true for annotated classes");
+        assertNotNull(mpOut, "annotation.rejected=fatal (default) rejects annotated class");
         assertFalse(DemoFixturesTest.isUsableValueClass(mpOut),
                 "the annotation-default rejection is not a usable value class");
     }
@@ -552,16 +560,14 @@ class ValueClassRewriterTest {
     @Test
     void unselectedUnparseableClassIsNotLoud() throws Exception {
         // A class that is neither annotated nor included, whose classfile cannot
-        // be parsed, must not take the loud annotation.on-fail-throw default (it
-        // would crash the whole app for a class the agent never selected).
+        // be parsed, must not be rejected even with the loud annotation.rejected=fatal
+        // default — it would crash the whole app for a class the agent never selected.
         byte[] garbage = new byte[] { 0, 0, 0, 0 };
         Config cfg = new Config();
         cfg.includes = Set.of();
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
-        cfg.annotationOnFail = OnFail.THROW;
-        cfg.includesOnFail = OnFail.THROW;
         ValueClassTransformer t = new ValueClassTransformer(cfg);
         assertNull(t.transform(null, null, "com/example/Unselected", null, null, garbage),
                 "an unparseable unselected class stays an identity class");
@@ -580,9 +586,7 @@ class ValueClassRewriterTest {
             bothCfg.excludes = Set.of();
             bothCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
             bothCfg.includesMode = Mode.INCLUDES_DEFAULT;
-            bothCfg.annotationOnFail = OnFail.THROW;
             bothCfg.annotationOnFailAppendTo = ann.getAbsolutePath();
-            bothCfg.includesOnFail = OnFail.THROW;
             bothCfg.includesOnFailAppendTo = inc.getAbsolutePath();
             ValueClassTransformer both = new ValueClassTransformer(bothCfg);
             both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);

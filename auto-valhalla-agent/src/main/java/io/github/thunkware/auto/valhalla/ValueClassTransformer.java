@@ -70,9 +70,17 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // is on mode usage rather than path presence.
         if (cfg.annotationMode.contains(Mode.SYNCHRONIZATION_MONITOR)
                 || cfg.includesMode.contains(Mode.SYNCHRONIZATION_MONITOR)) {
-            SynchronizationMonitor.configure(cfg.synchronizationMonitorAppendTo,
-                    cfg.synchronizationMonitorLogLevel);
+            SynchronizationMonitor.configure(cfg.synchronizationMonitorAppendTo);
         }
+
+        // Set default logger levels (only if the user has not already configured them).
+        // annotation.rejected/fail default to FATAL (log + reject): annotation-selected
+        // classes are an explicit opt-in so a failure to convert is always surfaced loudly.
+        // includes.rejected/fail default to DEBUG: a broad sweep must not crash the app.
+        InternalLogger.setLevelIfAbsent("auto-valhalla.annotation.rejected", "fatal");
+        InternalLogger.setLevelIfAbsent("auto-valhalla.annotation.fail", "fatal");
+        InternalLogger.setLevelIfAbsent("auto-valhalla.includes.rejected", "debug");
+        InternalLogger.setLevelIfAbsent("auto-valhalla.includes.fail", "debug");
     }
 
     @Override
@@ -162,20 +170,18 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // Both selection sources can match the same class; in that case the
         // annotation (an explicit in-source opt-in) is the stronger statement,
         // so the class is treated as annotation-selected only: its mode set and
-        // failure settings, with no contribution from includes.
-        OnFail onFail = config.annotationOnFail;
-        OnSuccess onSuccess = config.annotationOnSuccess;
-        String onFailAppendTo = config.annotationOnFailAppendTo;
-        String onSuccessAppendTo = config.annotationOnSuccessAppendTo;
+        // append-to paths come from the annotation settings.
+        String onFailAppendTo;
+        String onSuccessAppendTo;
         EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
         if (annotated) {
             effective.addAll(config.annotationMode);
+            onFailAppendTo = config.annotationOnFailAppendTo;
+            onSuccessAppendTo = config.annotationOnSuccessAppendTo;
         } else {
-            onFail = config.includesOnFail;
-            onSuccess = config.includesOnSuccess;
+            effective.addAll(config.includesMode);
             onFailAppendTo = config.includesOnFailAppendTo;
             onSuccessAppendTo = config.includesOnSuccessAppendTo;
-            effective.addAll(config.includesMode);
         }
         // SYNCHRONIZATION_MONITOR cannot be used in combination with other modes
         if (effective.contains(Mode.SYNCHRONIZATION_MONITOR) && effective.size() > 1) {
@@ -183,7 +189,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     "mode=synchronization-monitor cannot be combined with other modes; "
                     + "got: " + effective);
         }
-        return new Selection(effective, onFail, onSuccess, onFailAppendTo, onSuccessAppendTo, annotated);
+        return new Selection(effective, onFailAppendTo, onSuccessAppendTo, annotated);
     }
 
     /**
@@ -209,7 +215,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     "is selected for value-class transformation but has a non-final field"
                     + " not written in every constructor (mode=mark-fields-final)", selection);
         }
-        byte[] out = ValueClassRewriter.transform(model, selection.onFail() == OnFail.THROW,
+        InternalLogger rejectedLog = selection.annotated() ? annotationRejectedLog : includesRejectedLog;
+        byte[] out = ValueClassRewriter.transform(model, rejectedLog.isFatal(),
                 ignoreSync, markClassFinal, loader);
         if (out == null) {
             return onRejected(className,
@@ -224,95 +231,63 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         appendTo(selection.onSuccessAppendTo(), className);
         String successMsg = "Transformed to value class: " + className.java();
-        switch (selection.onSuccess()) {
-            case DEBUG -> log.debug(successMsg);
-            case INFO  -> log.info(successMsg);
-            case OFF   -> {}
-        }
-        (selection.annotated() ? annotationSuccessLog : includesSuccessLog).info(successMsg);
+        InternalLogger succerLogger = selection.annotated() ? annotationSuccessLog : includesSuccessLog;
+        succerLogger.info(successMsg);
         return out;
     }
 
     /**
-     * The selection of a loaded class: the effective mode set and the failure
-     * settings of the selection source that applied. A class selected by both
-     * the annotation and includes is annotation-selected only.
+     * The selection of a loaded class: the effective mode set, the append-to file
+     * paths, and the selection source. A class selected by both the annotation and
+     * includes is annotation-selected only.
      */
     private record Selection(
             Set<Mode> effective,
-            OnFail onFail,
-            OnSuccess onSuccess,
             String onFailAppendTo,
             String onSuccessAppendTo,
             boolean annotated) {
         static Selection empty() {
-            return new Selection(
-                    Collections.emptySet(), OnFail.DEBUG, OnSuccess.INFO, null, null, false);
+            return new Selection(Collections.emptySet(), null, null, false);
         }
     }
 
     /** Handles an unexpected failure: rethrows a {@link LinkageError}, otherwise
-     *  reports and leaves the class as identity per the selection's {@link OnFail}. */
+     *  reports and leaves the class as identity (or rejects it when the fail logger
+     *  is set to {@code fatal}). */
     private byte[] onTransformError(ClassName className, Throwable t, Selection selection) {
         if (t instanceof LinkageError le) {
             // e.g. a superclass was rewritten into a final value class: this
-            // class cannot be loaded regardless of on-fail, so surface the
+            // class cannot be loaded regardless of level, so surface the
             // (superclass-naming) LinkageError rather than swallowing it.
             throw le;
         }
-        if (selection.onFail() == OnFail.THROW) {
+        InternalLogger failLog = selection.annotated() ? annotationFailLog : includesFailLog;
+        if (failLog.isFatal()) {
             throw new LinkageError("auto-valhalla: failed to transform " + className.java()
                     + " into a value class: " + t, t);
         }
         appendOnFail(className, selection.onFailAppendTo());
-        String msg = "Transform failed: " + className.java();
-        switch (selection.onFail()) {
-            case ERROR   -> log.error(msg, t);
-            case WARNING -> log.warning(msg);
-            case INFO    -> log.info(msg);
-            case DEBUG   -> log.debug(msg);
-            default      -> {}
-        }
-        (selection.annotated() ? annotationFailLog : includesFailLog).warning(msg);
+        failLog.logAtEffectiveLevel("Transform failed: " + className.java(), t);
         return null;
     }
 
     /** Handles a selected-but-untransformable class: records the name if configured,
-     *  then either causes a load failure ({@link OnFail#THROW}) or logs at the
-     *  configured level and leaves the class as an identity class. */
+     *  then either causes a load failure (when the rejected logger is at {@code fatal})
+     *  or logs at the configured level and leaves the class as an identity class. */
     private byte[] onRejected(ClassName className, String reason, Selection selection) {
         appendOnFail(className, selection.onFailAppendTo());
         String base = className.java() + ": " + reason;
         InternalLogger rejectedLog =
                 selection.annotated() ? annotationRejectedLog : includesRejectedLog;
-        byte[] result = switch (selection.onFail()) {
-            case THROW -> {
-                log.error(base + "; the JVM will reject it rather than"
-                        + " silently keep an identity class.");
-                // A ClassFileTransformer exception would be swallowed by the JVM, so
-                // hand back a class file that fails to load, surfacing the failure loudly.
-                yield brokenClass();
-            }
-            case ERROR -> {
-                log.error(base + ", leaving as identity class");
-                yield null;
-            }
-            case WARNING -> {
-                log.warning(base + ", leaving as identity class");
-                yield null;
-            }
-            case INFO -> {
-                log.info(base + ", leaving as identity class");
-                yield null;
-            }
-            case DEBUG -> {
-                log.debug(base + ", leaving as identity class");
-                yield null;
-            }
-            default -> null;
-        };
-        rejectedLog.warning(base + ", leaving as identity class");
-        return result;
+        if (rejectedLog.isFatal()) {
+            log.error(base + "; the JVM will reject it rather than silently keep an identity class.");
+            // A ClassFileTransformer exception would be swallowed by the JVM, so
+            // hand back a class file that fails to load, surfacing the failure loudly.
+            rejectedLog.warning(base + "; the JVM will reject it");
+            return brokenClass();
+        }
+        rejectedLog.logAtEffectiveLevel(base + ", leaving as identity class");
+        return null;
     }
 
     private void appendOnFail(ClassName className, String onFailAppendTo) {
@@ -369,8 +344,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     }
 
     /** An unloadable class file, used to force a {@link java.lang.ClassFormatError} when
-     *  {@code annotation/includes.on-fail-throw} is set and a selected class cannot be
-     *  transformed. */
+     *  the rejected logger is at {@code fatal} and a selected class cannot be transformed. */
     private static byte[] brokenClass() {
         return new byte[] { 0, 0, 0, 0 };
     }

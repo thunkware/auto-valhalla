@@ -50,15 +50,6 @@ import java.util.stream.Collectors;
  *   <li>{@code logging.level} — logging level: {@code off}, {@code error},
  *       {@code warning}, {@code info} (default), {@code debug}. Controls verbosity
  *       of messages to stderr.</li>
- *   <li>{@code auto-valhalla.annotation.on-fail=throw|error|warning|info|debug}
- *       (default {@code throw}) — how to handle an <em>annotation-selected</em>
- *       class that cannot be safely transformed. {@code throw} causes a loud
- *       {@link java.lang.LinkageError}; the log levels leave the class as an
- *       identity class and log at the given severity.</li>
- *   <li>{@code auto-valhalla.includes.on-fail=throw|error|warning|info|debug}
- *       (default {@code debug}) — the same, for <em>includes-selected</em> classes
- *       ({@code debug} by default so a broad includes sweep does not flood
- *       stderr).</li>
  *   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} /
  *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
  *       class name of each failing class (e.g. {@code com.example.Foo},
@@ -215,14 +206,6 @@ public final class AutoValhallaAgent {
                 case Config.ANNOTATION_MODE -> cfg.annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
                 case Config.INCLUDES_MODE -> cfg.includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
                 case Config.LOG_LEVEL -> cfg.logLevel = a[1].trim();
-                case Config.ANNOTATION_ON_FAIL ->
-                        cfg.annotationOnFail = OnFail.parse(a[1], OnFail.THROW);
-                case Config.ANNOTATION_ON_SUCCESS ->
-                        cfg.annotationOnSuccess = OnSuccess.parse(a[1], OnSuccess.INFO);
-                case Config.INCLUDES_ON_FAIL ->
-                        cfg.includesOnFail = OnFail.parse(a[1], OnFail.DEBUG);
-                case Config.INCLUDES_ON_SUCCESS ->
-                        cfg.includesOnSuccess = OnSuccess.parse(a[1], OnSuccess.INFO);
                 case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
                     cfg.annotationOnFailAppendTo = t.isEmpty() ? null : t;
@@ -243,8 +226,6 @@ public final class AutoValhallaAgent {
                     String t = a[1].trim();
                     cfg.synchronizationMonitorAppendTo = t.isEmpty() ? null : t;
                 }
-                case Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL ->
-                        cfg.synchronizationMonitorLogLevel = OnSuccess.parse(a[1], OnSuccess.INFO);
                 case Config.LOGGING -> cfg.logging = a[1].trim();
                 default -> {
                     if (a[0].startsWith(Config.LOG_LEVEL_PREFIX)) {
@@ -272,16 +253,11 @@ public final class AutoValhallaAgent {
                 + getLogString(Config.EXCLUDES_FILES, cfg.excludesFiles)
                 + getLogString(Config.ANNOTATION_MODE, cfg.annotationMode)
                 + getLogString(Config.INCLUDES_MODE, cfg.includesMode)
-                + getLogString(Config.ANNOTATION_ON_FAIL, cfg.annotationOnFail)
-                + getLogString(Config.ANNOTATION_ON_SUCCESS, cfg.annotationOnSuccess)
                 + getLogString(Config.ANNOTATION_ON_FAIL_APPEND_TO, cfg.annotationOnFailAppendTo)
                 + getLogString(Config.ANNOTATION_ON_SUCCESS_APPEND_TO, cfg.annotationOnSuccessAppendTo)
-                + getLogString(Config.INCLUDES_ON_FAIL, cfg.includesOnFail)
-                + getLogString(Config.INCLUDES_ON_SUCCESS, cfg.includesOnSuccess)
                 + getLogString(Config.INCLUDES_ON_FAIL_APPEND_TO, cfg.includesOnFailAppendTo)
                 + getLogString(Config.INCLUDES_ON_SUCCESS_APPEND_TO, cfg.includesOnSuccessAppendTo)
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_APPEND_TO, cfg.synchronizationMonitorAppendTo)
-                + getLogString(Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL, cfg.synchronizationMonitorLogLevel)
                 + getLogString(Config.LOG_LEVEL, cfg.logLevel)
                 + getLogString(Config.LOGGING, cfg.logging));
     }

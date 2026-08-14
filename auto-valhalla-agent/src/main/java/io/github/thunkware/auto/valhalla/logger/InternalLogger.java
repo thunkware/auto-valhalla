@@ -8,15 +8,18 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Logging facade for the auto-valhalla agent. Supports log levels: {@code OFF},
- * {@code FATAL}, {@code ERROR}, {@code WARNING}, {@code INFO}, {@code DEBUG}. Messages
- * are prefixed with an ISO 8601 timestamp (with millisecond precision and timezone
- * offset), the log level, and the logger name (the fully-qualified class name of
- * the class that created the logger).
+ * Logging facade for the auto-valhalla agent. Example output:
  *
- * <p>Obtain a logger per class via {@link #getLogger(Class)} and store it in an
- * instance field. The global log level is set once at startup via
- * {@link #setLevel(String)}. The logging mode is set via {@link #setMode(String)}.
+ * <pre>
+ * 2024-01-15T10:23:45.123+01:00 WARNING auto-valhalla.annotation.rejected - com.example.Point: not suitable
+ * </pre>
+ *
+ * <p>Supported levels: {@code OFF}, {@code FATAL}, {@code ERROR}, {@code WARNING},
+ * {@code INFO}, {@code DEBUG}. {@code FATAL} logs at {@code WARNING} and always throws.
+ *
+ * <p>Obtain a logger via {@link #getLogger(Class)} or {@link #getLogger(String)}. The
+ * global level is set via {@link #setLevel(String)}; per-logger overrides via
+ * {@link #setLevel(String, String)}. The logging mode is set via {@link #setMode(String)}.
  */
 public final class InternalLogger {
 
@@ -92,6 +95,17 @@ public final class InternalLogger {
     }
 
     /**
+     * Sets a per-logger level override only when no override is currently present.
+     * Used to install defaults that user config (applied before calling this) takes precedence over.
+     */
+    public static void setLevelIfAbsent(String loggerName, String levelString) {
+        if (loggerName == null || loggerName.isBlank()) return;
+        if (!loggerLevels.containsKey(loggerName)) {
+            setLevel(loggerName, levelString);
+        }
+    }
+
+    /**
      * Sets the logging mode from a string (case-insensitive):
      * {@code simple} (default), {@code none}, {@code application}.
      * Unknown values default to {@code simple}.
@@ -111,6 +125,24 @@ public final class InternalLogger {
                         + "simple, none, application. Defaulting to simple.");
             }
         }
+    }
+
+    /** Returns true when this logger's effective level is {@link Level#FATAL},
+     *  meaning failures should surface loudly (reject the class) rather than log-and-continue. */
+    public boolean isFatal() {
+        return loggerLevels.getOrDefault(name, level) == Level.FATAL;
+    }
+
+    /** Logs at this logger's effective level. Does nothing when effective level is {@code OFF} or {@code FATAL}. */
+    public void logAtEffectiveLevel(String msg) {
+        logAtEffectiveLevel(msg, null);
+    }
+
+    /** Logs at this logger's effective level, with a throwable. Does nothing when level is {@code OFF} or {@code FATAL}. */
+    public void logAtEffectiveLevel(String msg, Throwable t) {
+        Level eff = loggerLevels.getOrDefault(name, level);
+        if (eff == Level.OFF || eff == Level.FATAL) return;
+        log(eff, msg, t);
     }
 
     public static boolean isDebugEnabled() {

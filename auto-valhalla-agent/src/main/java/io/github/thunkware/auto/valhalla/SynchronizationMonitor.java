@@ -21,20 +21,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class SynchronizationMonitor {
 
-    private static final InternalLogger LOG = InternalLogger.getLogger(SynchronizationMonitor.class);
     private static final InternalLogger SYNC_LOG =
             InternalLogger.getLogger("auto-valhalla.synchronization-monitor");
     private static volatile BackgroundFileWriter writer;
-    private static volatile OnSuccess logLevel = OnSuccess.INFO;
     private static volatile boolean active = false;
     private static final Set<String> seen = ConcurrentHashMap.newKeySet();
 
     private SynchronizationMonitor() {}
 
-    /** Activates monitoring, sets the log level, and optionally enables
-     *  file recording to {@code path} (may be {@code null} or empty). */
-    public static void configure(String path, OnSuccess level) {
-        logLevel = level;
+    /** Activates monitoring and optionally enables file recording to {@code path}
+     *  (may be {@code null} or empty). Log verbosity is controlled via
+     *  {@code logging.level.auto-valhalla.synchronization-monitor}. */
+    public static void configure(String path) {
         active = true;
         if (path != null && !path.isEmpty()) {
             writer = BackgroundFileWriter.forFile(path);
@@ -57,13 +55,7 @@ public final class SynchronizationMonitor {
                 localWriter.record(name);
             }
             if (seen.add(name)) {
-                String msg = "Synchronized on: " + name;
-                switch (logLevel) {
-                    case DEBUG -> LOG.debug(msg);
-                    case INFO  -> LOG.info(msg);
-                    case OFF   -> {}
-                }
-                SYNC_LOG.info(msg);
+                SYNC_LOG.info("Synchronized on: " + name);
             }
         });
     }

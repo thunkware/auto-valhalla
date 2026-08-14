@@ -5,11 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,6 +24,14 @@ import org.junit.jupiter.api.Test;
  * while run-demo.sh still reported success.
  */
 class DemoFixturesTest {
+
+    @AfterEach
+    void resetLoggerLevels() {
+        InternalLogger.setLevel("auto-valhalla.annotation.rejected", null);
+        InternalLogger.setLevel("auto-valhalla.annotation.fail", null);
+        InternalLogger.setLevel("auto-valhalla.includes.rejected", null);
+        InternalLogger.setLevel("auto-valhalla.includes.fail", null);
+    }
 
     @Test
     void demoFixturesAreRewrittenByDemoConfig() throws Exception {
@@ -36,7 +46,6 @@ class DemoFixturesTest {
         cfg.excludes = Set.of();
         cfg.annotationMode = yolo;
         cfg.includesMode = yolo;
-        cfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
 
         // Point is selected only by @AutoValhalla (it is in demo5.annotation,
@@ -93,24 +102,24 @@ class DemoFixturesTest {
         loudCfg.excludes = Set.of();
         loudCfg.annotationMode = yolo;
         loudCfg.includesMode = yolo;
-        loudCfg.annotationOnFail = OnFail.THROW;
+        // annotation.rejected defaults to FATAL (loud rejection)
         ValueClassTransformer loud = new ValueClassTransformer(loudCfg);
         byte[] loudOut = loud.transform(null, null, internal, null, null, original);
-        assertNotNull(loudOut, "annotation.on-fail-throw=true surfaces the rejection");
+        assertNotNull(loudOut, "annotation.rejected=fatal (default) surfaces the rejection");
         assertFalse(isUsableValueClass(loudOut),
                 "an annotated mutable class must never come back as a usable value class");
 
-        // With throwing disabled for both sources it is instead left as an
+        // With annotation.rejected=debug it is instead left as an
         // identity class -- still never rewritten into a value class.
+        InternalLogger.setLevel("auto-valhalla.annotation.rejected", "debug");
         Config quietCfg = new Config();
         quietCfg.includes = Set.of();
         quietCfg.excludes = Set.of();
         quietCfg.annotationMode = yolo;
         quietCfg.includesMode = yolo;
-        quietCfg.annotationOnFail = OnFail.DEBUG;
         ValueClassTransformer quiet = new ValueClassTransformer(quietCfg);
         assertNull(quiet.transform(null, null, internal, null, null, original),
-                "without on-fail-throw the annotated mutable class is left as identity");
+                "annotation.rejected=debug leaves the annotated mutable class as identity");
     }
 
     @Test
@@ -160,7 +169,7 @@ class DemoFixturesTest {
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
-        cfg.annotationOnFail = OnFail.THROW;
+        // annotation.rejected defaults to FATAL (loud rejection)
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
@@ -178,7 +187,6 @@ class DemoFixturesTest {
         cfg.excludes = Set.of();
         cfg.annotationMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.REMOVE_SYNCHRONIZED);
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
-        cfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
@@ -188,38 +196,38 @@ class DemoFixturesTest {
     }
 
     @Test
-    void annotationOnFailOffLeavesClassAsIdentity() throws Exception {
+    void annotationRejectedOffLeavesClassAsIdentity() throws Exception {
         // Point is @AutoValhalla but not final. Under the default annotation-mode
-        // (safe), non-final classes are not converted. on-fail=off must leave the
+        // (safe), non-final classes are not converted. logging.level=off must leave the
         // class as an identity class (null) without throwing.
+        InternalLogger.setLevel("auto-valhalla.annotation.rejected", "off");
         Config cfg = new Config();
         cfg.includes = Set.of();
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
-        cfg.annotationOnFail = OnFail.OFF;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] out = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
         assertNull(out,
-                "annotation.on-fail=off must leave a non-convertible class as identity (null)");
+                "annotation.rejected=off must leave a non-convertible class as identity (null)");
     }
 
     @Test
-    void includesOnFailOffLeavesClassAsIdentity() throws Exception {
+    void includesRejectedNonFatalLeavesClassAsIdentity() throws Exception {
         // Square is not final. Under mode=safe (requires already-final) it cannot
-        // be converted. on-fail=off must leave it as identity (null) without throwing.
+        // be converted. The includes.rejected default (debug) must leave it as
+        // identity (null) without throwing.
         Config cfg = new Config();
         cfg.includes = Set.of("demo5.includes.");
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         cfg.includesMode = EnumSet.of(Mode.SAFE);
-        cfg.includesOnFail = OnFail.OFF;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] out = transformer.transform(null, null, "demo5/includes/Square", null, null,
                 readResource("/demo5/includes/Square.class"));
         assertNull(out,
-                "includes.on-fail=off must leave a non-convertible class as identity (null)");
+                "includes.rejected=debug (default) must leave a non-convertible class as identity (null)");
     }
 
     /** True if the bytes parse as a value class and pass verification. */

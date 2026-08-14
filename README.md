@@ -99,7 +99,6 @@ You can use the file to:
 | Option | Description |
 | --- | --- |
 | `auto-valhalla.synchronization-monitor.append-to` | File path. Default: `auto-valhalla.synchronization.txt`. |
-| `auto-valhalla.synchronization-monitor.logging.level` | Log level: `info` (default), `debug`, or `off`. |
 
 ## Options
 
@@ -128,7 +127,7 @@ treated as annotation-selected.
 The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_
 classes are selected based on very basic class information. Mode further narrows _which_ of those selected classes
 are actually converted, based on deeper class definition, and _how_ they are converted. If a class is selected but not convertible
-under the active mode, that is a failure; see [Failure handling](#failure-handling).
+under the active mode, that is a failure; see [Success and failure handling](#success-and-failure-handling).
 
 | Option | Description |
 | --- | --- |
@@ -150,17 +149,25 @@ Multiple modes are comma-separated. Mode names are case-insensitive and
 accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and
 `markClassFinal` are all the same).
 
-### Failure handling
+### Success and failure handling
 
-Controls what happens when a selected class cannot be converted, and how
-successful conversions are logged.
+Controlled via [per-logger level overrides](#diagnostics).
 
-| Option | Description |
-| --- | --- |
-| `auto-valhalla.annotation.on-fail` | `throw` (default) surfaces a throwable; `error`, `warning`, `info`, `debug`, `off` log at that level and leave the class as an identity class. |
-| `auto-valhalla.includes.on-fail` | Same, for includes-selected classes. Default: `debug`, so a broad sweep cannot crash the application. |
-| `auto-valhalla.annotation.on-success` | Log level for a successful conversion: `info` (default), `debug`, or `off`. |
-| `auto-valhalla.includes.on-success` | Same, for includes-selected classes. Default: `info`. |
+- **success** — class was successfully transformed to a value class.
+- **rejected** — class was selected but failed suitability checks (e.g. not final, mutable fields).
+- **fail** — class passed suitability checks but hit an unexpected error during transformation.
+
+| Logger name | Default level | Effect                                                                            |
+| --- | --- |-----------------------------------------------------------------------------------|
+| `auto-valhalla.annotation.success` | `info` | If annotation-selected classes are successfully transformed, treat as info.       |
+| `auto-valhalla.includes.success` | `info` | If includes-selected classes are successfully transformed, treat as info.         |
+| `auto-valhalla.annotation.rejected` | `fatal` | If annotation-selected classes are rejected, treat as fatal.                      |
+| `auto-valhalla.annotation.fail` | `fatal` | If annotation-selected classes hit an unexpected transform error, treat as fatal. |
+| `auto-valhalla.includes.rejected` | `debug` | If includes-selected classes are rejected, treat as debug.                        |
+| `auto-valhalla.includes.fail` | `debug` | If includes-selected classes hit an unexpected transform error, treat as debug.   |
+
+`fatal` causes a class load failure (the JVM rejects the class rather than silently keeping an identity class).
+Any other level (`error`, `warning`, `info`, `debug`, `off`) leaves the class as an identity class and logs at that level.
 
 ### Recording
 
@@ -185,17 +192,11 @@ are not re-appended, and a missing file is treated as empty.
 Two-level log hierarchy: a per-logger override (if set) takes precedence over the root `logging.level`.
 Named loggers available for fine-grained control:
 
-| Logger name | What it covers |
-| --- | --- |
-| `io.github.thunkware.auto.valhalla.AutoValhallaAgent` | Agent startup and configuration |
-| `io.github.thunkware.auto.valhalla.ValueClassTransformer` | Per-class transform decisions |
-| `auto-valhalla.annotation.success` | Classes successfully transformed via `@AutoValhalla` |
-| `auto-valhalla.includes.success` | Classes successfully transformed via `includes` |
-| `auto-valhalla.annotation.fail` | Unexpected transform errors for `@AutoValhalla`-selected classes |
-| `auto-valhalla.includes.fail` | Unexpected transform errors for `includes`-selected classes |
-| `auto-valhalla.annotation.rejected` | Classes rejected by suitability checks (annotation-selected) |
-| `auto-valhalla.includes.rejected` | Classes rejected by suitability checks (includes-selected) |
-| `auto-valhalla.synchronization-monitor` | Classes seen being `synchronized` on at runtime |
+| Logger name | Default | What it covers |
+| --- | --- | --- |
+| `io.github.thunkware.auto.valhalla.AutoValhallaAgent` | `info` | Agent startup and configuration |
+| `io.github.thunkware.auto.valhalla.ValueClassTransformer` | `info` | Per-class transform decisions |
+| `auto-valhalla.synchronization-monitor` | `info` | Classes seen being `synchronized` on at runtime |
 
 Example — silence the synchronization monitor while keeping everything else at `info`:
 
@@ -262,20 +263,20 @@ env vars but can be overridden by explicit system properties set alongside it.
 ```properties
 includes=com.example.
 excludes=com.example.dto.
-annotation.on-fail=throw
+logging.level.auto-valhalla.includes.rejected=fatal
 ```
 
 ### Feedback loop: `includes.on-fail-append-to` + `excludes-files`
 
 `includes.on-fail-append-to` and `excludes-files` are designed to work
-together. Run once with `includes.on-fail=debug` (the default) and
+together. Run once with the default `includes.rejected=debug` (quiet) and
 `includes.on-fail-append-to` pointing at a file; every class that could not
 be safely transformed is recorded there. Feed that file back as
 `excludes-files` on subsequent runs so those classes are skipped instead of
 surfacing errors:
 
 ```bash
-# first pass: record anything that fails
+# first pass: record anything that fails (includes.rejected defaults to debug)
 -Dauto-valhalla.includes=com.example. \
 -Dauto-valhalla.includes.on-fail-append-to=/var/tmp/auto-valhalla-failures.txt
 
@@ -306,20 +307,19 @@ correct environment variable name for a system property:
 2. Replace all `.` and `-` characters with `_`.
 
 For example, `auto-valhalla.includes` converts to `AUTO_VALHALLA_INCLUDES`,
-and `auto-valhalla.annotation.on-fail` converts to
-`AUTO_VALHALLA_ANNOTATION_ON_FAIL`.
+and `auto-valhalla.includes-mode` converts to `AUTO_VALHALLA_INCLUDES_MODE`.
 
 System properties take precedence over environment variables when both are
 set.
 
 ## Notes & limitations
 
-- If annotation-selected classes fail conversion, a `LinkageError` is thrown
-  by default. Use `annotation.on-fail` to change behavior (e.g.
-  `annotation.on-fail=warning` to log and continue).
+- If annotation-selected classes fail conversion, the class is rejected by default
+  (`annotation.rejected` and `annotation.fail` default to `fatal`). Use
+  `-Dlogging.level.auto-valhalla.annotation.rejected=warning` to log and continue instead.
 - If includes-selected classes fail conversion, the failure is logged at
-  `debug` by default. Use `includes.on-fail` to change behavior (e.g.
-  `includes.on-fail=throw` to fail loudly).
+  `debug` by default (`includes.rejected` and `includes.fail` default to `debug`). Use
+  `-Dlogging.level.auto-valhalla.includes.rejected=fatal` to fail loudly.
 - A converted class is `final`. If anything subclasses it, that subclass
   will fail class loading.
 - The agent rewrites identity records and final classes only. It never
