@@ -80,4 +80,26 @@ class AutoValhallaAgentTest {
             f.delete();
         }
     }
+
+    @Test
+    void includesFilesSupportsMultipleFiles() throws Exception {
+        File f1 = File.createTempFile("inc1", ".txt");
+        File f2 = File.createTempFile("inc2", ".txt");
+        Files.writeString(f1.toPath(), "com.A\n");
+        Files.writeString(f2.toPath(), "com.B\n");
+        try {
+            var bySemicolon = AutoValhallaAgent.parse(
+                    "includes-files=" + f1.getAbsolutePath() + ";" + f2.getAbsolutePath());
+            assertTrue(bySemicolon.includes.contains("com/A"), "first file loaded (semicolon)");
+            assertTrue(bySemicolon.includes.contains("com/B"), "second file loaded (semicolon)");
+
+            var byRepeat = AutoValhallaAgent.parse(
+                    "includes-files=" + f1.getAbsolutePath() + ",includes-files=" + f2.getAbsolutePath());
+            assertTrue(byRepeat.includes.contains("com/A"), "first file loaded (repeated option)");
+            assertTrue(byRepeat.includes.contains("com/B"), "second file loaded (repeated option)");
+        } finally {
+            f1.delete();
+            f2.delete();
+        }
+    }
 }

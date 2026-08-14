@@ -38,7 +38,8 @@ import java.util.Set;
  *       matching classes (takes precedence over includes and the annotation).</li>
  *   <li>{@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
  *       — path to a file with one pattern per line (blank lines and {@code #}
- *       comments ignored). CSV format is automatically detected and parsed.</li>
+ *       comments ignored). Multiple files may be separated by {@code ;} or
+ *       {@code ,}; each option may also be repeated and all files are merged.</li>
      *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
      *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
@@ -73,11 +74,11 @@ import java.util.Set;
  *       classes that are locked, which causes {@link java.lang.IdentityException}.
  *       The file is read at start-up so names already present are not re-appended.
  *       Default: {@code auto-valhalla.synchronization.txt}.</li>
- *   <li>Excludes default: patterns from {@code auto-valhalla.failures.txt} and
+ *   <li>Excludes default: when no {@code excludes} or {@code excludes-files} is
+ *       supplied, patterns from {@code auto-valhalla.failures.txt} and
  *       {@code auto-valhalla.synchronization.txt} are automatically excluded,
- *       allowing logged failures and problematic classes to be skipped in future runs.
- *       These defaults can be overridden with explicit {@code excludes} or
- *       {@code excludes-files} options.</li>
+ *       allowing logged failures and problematic classes to be skipped in future
+ *       runs. Supplying any explicit excludes disables these defaults entirely.</li>
  *   <li>{@code auto-valhalla.config=file} — read options from a Java properties
  *       file (keys may omit the {@code auto-valhalla.} prefix).</li>
  * </ul>
@@ -192,15 +193,30 @@ public final class AutoValhallaAgent {
         // default. includes sweep broadly: stay quiet by default.
         cfg.annotationOnFailThrow = true;
         cfg.synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
-        String includesFilesPath = null;
-        String excludesFilesPath = null;
+        List<String> includesFilePaths = new ArrayList<>();
+        List<String> excludesFilePaths = new ArrayList<>();
+        boolean userSuppliedExcludes = false;
 
         for (String[] a : assigns) {
             switch (a[0]) {
                 case Config.INCLUDES -> cfg.includes.addAll(parsePatternSet(a[1]));
-                case Config.EXCLUDES -> cfg.excludes.addAll(parsePatternSet(a[1]));
-                case Config.INCLUDES_FILES -> includesFilesPath = a[1].trim();
-                case Config.EXCLUDES_FILES -> excludesFilesPath = a[1].trim();
+                case Config.EXCLUDES -> {
+                    cfg.excludes.addAll(parsePatternSet(a[1]));
+                    userSuppliedExcludes = true;
+                }
+                case Config.INCLUDES_FILES -> {
+                    for (String p : a[1].split("[;,]")) {
+                        String t = p.trim();
+                        if (!t.isEmpty()) includesFilePaths.add(t);
+                    }
+                }
+                case Config.EXCLUDES_FILES -> {
+                    for (String p : a[1].split("[;,]")) {
+                        String t = p.trim();
+                        if (!t.isEmpty()) excludesFilePaths.add(t);
+                    }
+                    userSuppliedExcludes = true;
+                }
                 case Config.ANNOTATION_MODE -> cfg.annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
                 case Config.INCLUDES_MODE -> cfg.includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
                 case Config.LOG_LEVEL -> cfg.logLevel = a[1].trim();
@@ -234,8 +250,8 @@ public final class AutoValhallaAgent {
         // Log the configuration as provided (before resolving file contents)
         if (InternalLogger.isDebugEnabled()) {
             InternalLogger.debug("configuration:"
-                    + " includes=" + (cfg.includes.isEmpty() ? (includesFilesPath == null ? "[]" : "[from " + includesFilesPath + "]") : cfg.includes)
-                    + " excludes=" + (cfg.excludes.isEmpty() ? (excludesFilesPath == null ? "[]" : "[from " + excludesFilesPath + "]") : cfg.excludes)
+                    + " includes=" + (cfg.includes.isEmpty() ? (includesFilePaths.isEmpty() ? "[]" : "[from " + includesFilePaths + "]") : cfg.includes)
+                    + " excludes=" + (cfg.excludes.isEmpty() ? (excludesFilePaths.isEmpty() ? "[]" : "[from " + excludesFilePaths + "]") : cfg.excludes)
                     + " annotation-mode=" + cfg.annotationMode
                     + " includes-mode=" + cfg.includesMode
                     + " log-level=" + cfg.logLevel
@@ -244,17 +260,18 @@ public final class AutoValhallaAgent {
         }
 
         // Now resolve file contents
-        if (includesFilesPath != null) {
-            cfg.includes.addAll(readPatternFile(includesFilesPath));
+        for (String p : includesFilePaths) {
+            cfg.includes.addAll(readPatternFile(p));
         }
-        if (excludesFilesPath != null) {
-            cfg.excludes.addAll(readPatternFile(excludesFilesPath));
+        for (String p : excludesFilePaths) {
+            cfg.excludes.addAll(readPatternFile(p));
         }
 
-        // Default excludes: read failure and synchronization log files as patterns.
-        // Use quiet variant since these files may not exist on first run.
-        cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
-        cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
+        // Default excludes: only when the user has not supplied any excludes.
+        if (!userSuppliedExcludes) {
+            cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
+            cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
+        }
 
         return cfg;
     }
@@ -330,29 +347,14 @@ public final class AutoValhallaAgent {
         Set<String> set = new HashSet<>();
         try (BufferedReader br = Files.newBufferedReader(Path.of(path.trim()))) {
             String line;
-            boolean isCsv = false;
             while ((line = br.readLine()) != null) {
                 String t = line.trim();
                 if (t.isEmpty() || t.startsWith("#")) {
                     continue;
                 }
-                // Detect CSV on first non-comment line: contains comma not inside quotes
-                if (set.isEmpty() && !isCsv) {
-                    isCsv = looksLikeCsv(t);
-                }
-                // Parse accordingly
-                if (isCsv) {
-                    for (String field : parseCsvLine(t)) {
-                        String n = normalizePattern(field);
-                        if (n != null) {
-                            set.add(n);
-                        }
-                    }
-                } else {
-                    String n = normalizePattern(t);
-                    if (n != null) {
-                        set.add(n);
-                    }
+                String n = normalizePattern(t);
+                if (n != null) {
+                    set.add(n);
                 }
             }
         } catch (IOException e) {
@@ -365,73 +367,20 @@ public final class AutoValhallaAgent {
         Set<String> set = new HashSet<>();
         try (BufferedReader br = Files.newBufferedReader(Path.of(path.trim()))) {
             String line;
-            boolean isCsv = false;
             while ((line = br.readLine()) != null) {
                 String t = line.trim();
                 if (t.isEmpty() || t.startsWith("#")) {
                     continue;
                 }
-                if (set.isEmpty() && !isCsv) {
-                    isCsv = looksLikeCsv(t);
-                }
-                if (isCsv) {
-                    for (String field : parseCsvLine(t)) {
-                        String n = normalizePattern(field);
-                        if (n != null) {
-                            set.add(n);
-                        }
-                    }
-                } else {
-                    String n = normalizePattern(t);
-                    if (n != null) {
-                        set.add(n);
-                    }
+                String n = normalizePattern(t);
+                if (n != null) {
+                    set.add(n);
                 }
             }
         } catch (IOException ignored) {
             // file may not exist on first run; silently ignore
         }
         return set;
-    }
-
-    private static boolean looksLikeCsv(String line) {
-        int commas = 0;
-        boolean inQuotes = false;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (c == '"' && (i == 0 || line.charAt(i - 1) != '\\')) {
-                inQuotes = !inQuotes;
-            } else if (c == ',' && !inQuotes) {
-                commas++;
-            }
-        }
-        return commas > 0;
-    }
-
-    private static List<String> parseCsvLine(String line) {
-        List<String> fields = new ArrayList<>();
-        StringBuilder field = new StringBuilder();
-        boolean inQuotes = false;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (c == '"') {
-                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                    field.append('"');
-                    i++;
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (c == ',' && !inQuotes) {
-                fields.add(field.toString().trim());
-                field.setLength(0);
-            } else {
-                field.append(c);
-            }
-        }
-        if (!field.isEmpty() || !line.isEmpty()) {
-            fields.add(field.toString().trim());
-        }
-        return fields;
     }
 
     static List<String> splitAgentArgs(String agentArgs) {
