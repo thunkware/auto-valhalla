@@ -121,8 +121,13 @@ public final class InternalLogger {
      * {@link LoggingMode#APPLICATION} mode via reflection from the thread's
      * context classloader. If SLF4J is not available, {@link #log} returns
      * {@code false} and the caller falls back to stderr.
+     *
+     * <p>{@link #reinstall()} is called by {@link ApplicationLoggerFlags} once
+     * the application's logging framework is confirmed ready (via bytecode
+     * instrumentation of SLF4J / Spring Boot classes), so early startup messages
+     * do not permanently lock in a NOP or substitute logger.
      */
-    private static final class Slf4jBridge {
+    static final class Slf4jBridge {
 
         private static volatile boolean attempted;
         private static volatile Object logger;
@@ -157,6 +162,22 @@ public final class InternalLogger {
             } catch (Exception e) {
                 return false;
             }
+        }
+
+        /**
+         * Resets all cached SLF4J state and immediately re-initializes from the
+         * current thread context classloader. Called when bytecode instrumentation
+         * detects that the application's logging framework is ready.
+         */
+        static synchronized void reinstall() {
+            logger = null;
+            warnMethod = null;
+            errorMethod = null;
+            errorWithCauseMethod = null;
+            infoMethod = null;
+            debugMethod = null;
+            attempted = false;
+            init(); // reentrant: same thread holds the lock
         }
 
         private static synchronized void init() {

@@ -180,11 +180,19 @@ are not re-appended, and a missing file is treated as empty.
 `none` suppresses all agent logging.
 
 `application` redirects agent logs to the instrumented application's SLF4J
-logger (`io.github.thunkware.auto.valhalla`). The SLF4J API is looked up at
-runtime via the thread context classloader; if it is not available (SLF4J not
-on the classpath), the agent falls back to `simple`. This means agent startup
-messages — emitted before SLF4J is initialized — may still appear on stderr
-until the application's logging system is ready.
+logger (`io.github.thunkware.auto.valhalla`). The agent instruments two points
+in the application's class loading to detect when the logging system is ready:
+
+- **Non-Spring apps**: the bridge is installed once
+  `org.slf4j.LoggerFactory.getILoggerFactory()` returns, which signals that
+  SLF4J is initialized.
+- **Spring Boot apps**: `SpringApplication`'s static initializer is detected
+  first, which switches the trigger to
+  `LoggingApplicationListener.initialize()` — the point at which Logback or
+  Log4j2 is actually configured.
+
+If SLF4J is not on the classpath the agent falls back to `simple` mode. Agent
+startup messages emitted before the logging system is ready still go to stderr.
 
 Use `application` when you want agent messages to flow through the same
 logging framework as the rest of your application (including its log level

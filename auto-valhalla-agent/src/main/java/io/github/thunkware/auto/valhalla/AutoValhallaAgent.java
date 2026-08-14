@@ -142,6 +142,10 @@ public final class AutoValhallaAgent {
         Config cfg = parse();
         InternalLogger.setLevel(cfg.logLevel);
         InternalLogger.setMode(cfg.logging);
+        if ("application".equalsIgnoreCase(cfg.logging)) {
+            ApplicationLoggerFlags.enableApplicationMode();
+            inst.addTransformer(new ApplicationLoggerBridgeTransformer(), false);
+        }
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
