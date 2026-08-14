@@ -46,7 +46,7 @@ After transformation, your class or record behaves like a value object:
 
 Because `@AutoValhalla` annotation was compiled with Java 5, it is
 compatible **JDK 1.5 and later**. You can apply the annotation in older codebases
-without raising their JDK compile version.
+without raising their compile version to JDK28.
 
 ### 2. Select by package or class with `includes`
 
@@ -71,7 +71,7 @@ java --enable-preview \
     -Dauto-valhalla.includes='*' \
     -Dauto-valhalla.includes.on-success-append-to=success.txt \
     -Dauto-valhalla.includes.on-fail-append-to=failures.txt \
-    -Dauto-valhalla.excludes-file=failures.txt \
+    -Dauto-valhalla.excludes-files=failures.txt \
     -javaagent:auto-valhalla.jar \
     -jar myapp.jar
 ```
@@ -84,63 +84,112 @@ becomes value equality and `System.identityHashCode`, `synchronized`,
 Just because a class can be converted does not mean your application will behave correctly on
 all execution paths.
 
+## Synchronization monitor
+
+Before converting classes, it would be helpful to know if they are used in `synchronized` blocks. Converting those classes
+to value classes would cause `IdentityException` at every synchronization site.
+
+To find which classes are synchronized on, run the application with the agent in `synchronization-monitor` mode:
+
+```bash
+java --enable-preview \
+    -Dauto-valhalla.includes='*' \
+    -Dauto-valhalla.includes-mode=synchronization-monitor \
+    -javaagent:auto-valhalla.jar \
+    -jar myapp.jar
+```
+
+After a representative run, `synchronized-on.txt` contains the class names of objects that were synchronized on. Feed that file back as `excludes-files` in a conversion run to avoid converting those classes.
+
+`synchronization-monitor` cannot be combined with any other mode. It is a discovery tool, not a conversion mode.
+
+| Option | Env var | Description |
+| --- | --- | --- |
+| `auto-valhalla.synchronization-monitor.append-to` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_APPEND_TO` | Optional. Path to a file; records class names synchronized on at runtime. Default: `auto-valhalla.synchronization.txt`. |
+| `auto-valhalla.synchronization-monitor.log-level` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_LOG_LEVEL` | Log level for each class instrumented: `info` (default) or `debug`. |
+
 ## Options
 
 Flags are supplied as, in that order of precedence:
   * agent arguments `-javaagent:auto-valhalla.jar=option1=value1,option2=value2`, or
   * system properties `-Doption1=value1`, or
-  * environment variables. 
+  * environment variables.
 
 Within the agent-argument list, later options override earlier ones, and a `.config` file is expanded in place (see below).
 
-| Option | Env var | Description                                                                                                                                                                                          |
-| --- | --- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `auto-valhalla.includes` | `AUTO_VALHALLA_INCLUDES` | Comma-separated classes/packages to convert. `*` matches everything; `foo.` is a package prefix; `foo.Bar` an exact class name                                                                       |
-| `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but for exclusion (overrides `includes` and the annotation).                                                                                                                    |
-| `auto-valhalla.includes-file` | `AUTO_VALHALLA_INCLUDES_FILE` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored.                                                                                                                  |
-| `auto-valhalla.excludes-file` | `AUTO_VALHALLA_EXCLUDES_FILE` | As above, for excludes.                                                                                                                                                                              |
-| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Modes narrowing annotation-selected classes. Defaults to `safe`. See the mode table below.                                                                                                           |
-| `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Modes narrowing includes-selected classes. Defaults to `yolo`. See the mode table below.                                                                                                             |
-| `auto-valhalla.debug` | `AUTO_VALHALLA_DEBUG` | `true` for verbose logging of selection decisions.                                                                                                                                                   |
-| `auto-valhalla.annotation.on-success-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS_APPEND_TO` | Path to a file; Appends class name of each annotation-selected class that is successfully converted.                                                                                                 |
-| `auto-valhalla.includes.on-success-append-to` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
-| `auto-valhalla.annotation.on-fail-throw` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_THROW` | `true` (default) to surface a loud `LinkageError` (a `ClassFormatError` at load) when an *annotation-selected* class cannot be safely transformed, instead of silently keeping it an identity class. |
-| `auto-valhalla.includes.on-fail-throw` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_THROW` | Same, for *includes-selected* classes. Defaults to `false` so a broad includes sweep cannot crash the application.                                                                                   |
-| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Path to a file; Appends class name of each annotation-selected class that fails to transform.                                                                                                        |
-| `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes.                                                                                                                                                                 |
-| `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying the options above (keys may omit the `auto-valhalla.` prefix).                                                                                              |
+Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the unprefixed name (e.g. `includes-mode`).
 
-For every `*-append-to` option the target file is read once at start-up so names
-already present are not appended again, and a missing file is simply treated as
-empty (no error).
+### Selection
 
-Canonical form uses the `auto-valhalla.` prefix; agent arguments may also use the
-unprefixed name (e.g. `includes-mode`).
+Classes are selected for conversion by the `@AutoValhalla` annotation, by `includes` patterns, or both. `excludes` patterns are checked first and override both. A class selected by both the annotation and `includes` is treated as annotation-selected.
 
-#### `mode` values
+| Option | Env var | Description |
+| --- | --- | --- |
+| `auto-valhalla.includes` | `AUTO_VALHALLA_INCLUDES` | Comma-separated classes/packages to convert. `*` matches everything; `foo.` is a package prefix; `foo.Bar` an exact class name. |
+| `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
+| `auto-valhalla.includes-files` | `AUTO_VALHALLA_INCLUDES_FILES` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
+| `auto-valhalla.excludes-files` | `AUTO_VALHALLA_EXCLUDES_FILES` | As above, for excludes. |
 
-The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_ classes should be selected. Mode further decides
-_which_ or _how_ those selected classes should be converted. If a class is selected but not converted, that's considered
-a failure; see `on-fail-*` flags for failure handling.
+### Mode
 
-| Mode | Effect                                                                                                                                                                                                                                 |
-| --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `safe` | Keep only candidates classes that can be safely converted.                                                                                                                                 |
-| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `ACC_SYNCHRONIZED` is stripped so they can become value classes.                                                                                                            |
-| `mark-class-final` | Also convert non-final candidates. They are made `final`, so only opt in when nothing subclasses them (otherwise subclasses fail with `IncompatibleClassChangeError`).                                                                 |
-| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected, since a value class cannot have a mutable field. |
-| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final` (the default).                                                                                                                                                  |
+The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_ classes are selected. Mode further narrows _which_ of those selected classes are actually converted and _how_. If a class is selected but not convertible under the active mode, that is a failure; see [Failure handling](#failure-handling).
 
-Mode names are case-insensitive and may use `-`, `_` or camelCase. e.g. `mark-class-final`, `mark_class_final`, and 
-`markClassFinal` are all the same.
+| Option | Env var | Description |
+| --- | --- | --- |
+| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Mode(s) applied to annotation-selected classes. Default: `safe`. |
+| `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Mode(s) applied to includes-selected classes. Default: `yolo`. |
 
-### `.config` precedence
+#### Mode values
 
-When `.config` agent argument is expanded, its entries are placed at that position in the agent argument
-stream. Therefore:
+| Mode | Effect |
+| --- | --- |
+| `safe` | Convert only classes that are already `final`. Non-final candidates are not converted. |
+| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `ACC_SYNCHRONIZED` is stripped. |
+| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (subclasses fail with `IncompatibleClassChangeError`). |
+| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected. |
+| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`. |
+| `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. Optionally also records them to a file via `synchronization-monitor.append-to`. **Cannot be combined with other modes.** |
+
+Multiple modes are comma-separated. Mode names are case-insensitive and accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and `markClassFinal` are all the same).
+
+### Failure handling
+
+Controls what happens when a selected class cannot be converted, and how successful conversions are logged.
+
+| Option | Env var | Description |
+| --- | --- | --- |
+| `auto-valhalla.annotation.on-fail` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL` | `throw` (default) surfaces a `LinkageError`; `error`, `warning`, `info`, `debug` log at that level and leave the class as an identity class. |
+| `auto-valhalla.includes.on-fail` | `AUTO_VALHALLA_INCLUDES_ON_FAIL` | Same, for includes-selected classes. Default: `debug`, so a broad sweep cannot crash the application. |
+| `auto-valhalla.annotation.on-success` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS` | Log level for a successful conversion: `info` (default) or `debug`. |
+| `auto-valhalla.includes.on-success` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS` | Same, for includes-selected classes. Default: `info`. |
+
+### Recording
+
+Each `*-append-to` file is read once at start-up so names already present are not re-appended, and a missing file is treated as empty.
+
+| Option | Env var | Description |
+| --- | --- | --- |
+| `auto-valhalla.annotation.on-success-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS_APPEND_TO` | Appends the class name of each annotation-selected class that is successfully converted. |
+| `auto-valhalla.includes.on-success-append-to` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS_APPEND_TO` | Same, for includes-selected classes. |
+| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Appends the class name of each annotation-selected class that fails to convert. |
+| `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes. |
+
+### Diagnostics
+
+| Option | Env var | Description |
+| --- | --- | --- |
+| `auto-valhalla.log-level` | `AUTO_VALHALLA_LOG_LEVEL` | Logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
+
+### Config file
+
+| Option | Env var | Description |
+| --- | --- | --- |
+| `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying any of the options above. Keys may omit the `auto-valhalla.` prefix. |
+
+When `.config` appears in the agent argument list, its entries are placed at that position in the stream:
 
 - if `.config` appears **first**, later agent arguments override it;
-- if agent argument options appear **first** and `.config` later, the file overrides them.
+- if agent arguments appear **first** and `.config` later, the file overrides them.
 
 ### Examples
 
@@ -160,15 +209,15 @@ stream. Therefore:
 ```properties
 includes=com.example.
 excludes=com.example.dto.
-annotation.on-fail-throw=true
+annotation.on-fail=throw
 ```
 
-### Feedback loop: `.includes.on-fail-append-to` + `.excludes-file`
+### Feedback loop: `.includes.on-fail-append-to` + `.excludes-files`
 
-`includes.on-fail-append-to` and `.excludes-file` are designed to work together. Run once
-with `includes.on-fail-throw` disabled (the default) and `includes.on-fail-append-to`
+`includes.on-fail-append-to` and `.excludes-files` are designed to work together. Run once
+with `includes.on-fail=debug` (the default) and `includes.on-fail-append-to`
 pointing at a file; every class that could not be safely transformed is recorded
-there. Feed that file back as `.excludes-file` on subsequent runs so those classes
+there. Feed that file back as `.excludes-files` on subsequent runs so those classes
 are skipped instead of surfacing errors:
 
 ```bash
@@ -178,12 +227,12 @@ are skipped instead of surfacing errors:
 
 # later passes: skip the classes that failed before
 -Dauto-valhalla.includes=com.example. \
--Dauto-valhalla.excludes-file=/var/tmp/auto-valhalla-failures.txt
+-Dauto-valhalla.excludes-files=/var/tmp/auto-valhalla-failures.txt
 ```
 
 The companion `includes.on-success-append-to` records the classes that *were*
 converted, which is handy for turning a broad `includes` sweep into an explicit
-`includes-file` list:
+`includes-files` list:
 
 ```bash
 # record what a broad sweep actually converted
@@ -194,10 +243,10 @@ converted, which is handy for turning a broad `includes` sweep into an explicit
 
 ## Notes & limitations
 
-- If annotation-selected classes fail conversion, an exception is thrown by default. Use `annotation.on-fail-throw`
-  to change behavior.
-- If includes-selected classes fail conversion, the classes are left as identity classes. Use `includes.on-fail-throw`
-  to change behavior.
+- If annotation-selected classes fail conversion, a `LinkageError` is thrown by default. Use `annotation.on-fail`
+  to change behavior (e.g. `annotation.on-fail=warning` to log and continue).
+- If includes-selected classes fail conversion, the failure is logged at `debug` by default. Use `includes.on-fail`
+  to change behavior (e.g. `includes.on-fail=throw` to fail loudly).
 - A converted class is `final`. If anything subclasses it, that subclass will fail class loading.
 - The agent rewrites identity records and final classes only. It never transforms
   JDK/system classes or its own support classes. Non-final classes are converted

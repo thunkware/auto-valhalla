@@ -54,7 +54,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // Configure SynchronizationMonitor with the path so it can record
         // classes being synchronized on.
         if (cfg.synchronizationMonitorAppendTo != null) {
-            SynchronizationMonitor.configure(cfg.synchronizationMonitorAppendTo);
+            SynchronizationMonitor.configure(cfg.synchronizationMonitorAppendTo,
+                    cfg.synchronizationMonitorLogLevel);
         }
     }
 
@@ -104,8 +105,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         byte[] monitored = SynchronizationInstrumenter.instrument(model, loader);
         if (monitored != null) {
-            InternalLogger.debug(className.java()
-                    + ": instrumented for synchronization monitoring");
+            InternalLogger.debug(className.java() + ": instrumented for synchronization monitoring");
             return monitored;
         }
         return onFail(className,
@@ -143,6 +143,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // so the class is treated as annotation-selected only: its mode set and
         // failure settings, with no contribution from includes.
         OnFail onFail = config.annotationOnFail;
+        OnSuccess onSuccess = config.annotationOnSuccess;
         String onFailAppendTo = config.annotationOnFailAppendTo;
         String onSuccessAppendTo = config.annotationOnSuccessAppendTo;
         EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
@@ -150,6 +151,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             effective.addAll(config.annotationMode);
         } else {
             onFail = config.includesOnFail;
+            onSuccess = config.includesOnSuccess;
             onFailAppendTo = config.includesOnFailAppendTo;
             onSuccessAppendTo = config.includesOnSuccessAppendTo;
             effective.addAll(config.includesMode);
@@ -160,7 +162,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     "mode=synchronization-monitor cannot be combined with other modes; "
                     + "got: " + effective);
         }
-        return new Selection(effective, onFail, onFailAppendTo, onSuccessAppendTo);
+        return new Selection(effective, onFail, onSuccess, onFailAppendTo, onSuccessAppendTo);
     }
 
     /**
@@ -200,7 +202,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             transformedToFinal.add(className.jvm());
         }
         appendTo(selection.onSuccessAppendTo(), className);
-        InternalLogger.debug(className.java() + ": transformed to value class (" + out.length + " bytes)");
+        String successMsg = "Transformed to value class: " + className.java();
+        if (selection.onSuccess() == OnSuccess.DEBUG) {
+            InternalLogger.debug(successMsg);
+        } else {
+            InternalLogger.info(successMsg);
+        }
         return out;
     }
 
@@ -209,10 +216,10 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * settings of the selection source that applied. A class selected by both
      * the annotation and includes is annotation-selected only.
      */
-    private record Selection(Set<Mode> effective, OnFail onFail,
+    private record Selection(Set<Mode> effective, OnFail onFail, OnSuccess onSuccess,
             String onFailAppendTo, String onSuccessAppendTo) {
         static Selection empty() {
-            return new Selection(Collections.emptySet(), OnFail.DEBUG, null, null);
+            return new Selection(Collections.emptySet(), OnFail.DEBUG, OnSuccess.INFO, null, null);
         }
     }
 

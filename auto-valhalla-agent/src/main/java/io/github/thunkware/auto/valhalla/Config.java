@@ -20,12 +20,15 @@ class Config {
     // annotation-selected classes are an explicit opt-in: fail loudly by default.
     // includes sweep broadly: stay quiet by default.
     OnFail annotationOnFail = OnFail.THROW;
+    OnSuccess annotationOnSuccess = OnSuccess.INFO;
     String annotationOnFailAppendTo;
     String annotationOnSuccessAppendTo;
     OnFail includesOnFail = OnFail.DEBUG;
+    OnSuccess includesOnSuccess = OnSuccess.INFO;
     String includesOnFailAppendTo;
     String includesOnSuccessAppendTo;
     String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
+    OnSuccess synchronizationMonitorLogLevel = OnSuccess.INFO;
     String logLevel;
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
@@ -38,12 +41,15 @@ class Config {
     static final String INCLUDES_MODE = "includes-mode";
     static final String LOG_LEVEL = "log-level";
     static final String ANNOTATION_ON_FAIL = "annotation.on-fail";
+    static final String ANNOTATION_ON_SUCCESS = "annotation.on-success";
     static final String ANNOTATION_ON_FAIL_APPEND_TO = "annotation.on-fail-append-to";
     static final String ANNOTATION_ON_SUCCESS_APPEND_TO = "annotation.on-success-append-to";
     static final String INCLUDES_ON_FAIL = "includes.on-fail";
+    static final String INCLUDES_ON_SUCCESS = "includes.on-success";
     static final String INCLUDES_ON_FAIL_APPEND_TO = "includes.on-fail-append-to";
     static final String INCLUDES_ON_SUCCESS_APPEND_TO = "includes.on-success-append-to";
     static final String SYNCHRONIZATION_MONITOR_APPEND_TO = "synchronization-monitor.append-to";
+    static final String SYNCHRONIZATION_MONITOR_LOG_LEVEL = "synchronization-monitor.log-level";
     static final String CONFIG = "config";
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), in
@@ -53,8 +59,8 @@ class Config {
             INCLUDES, INCLUDES_FILES, EXCLUDES, EXCLUDES_FILES,
             ANNOTATION_MODE, INCLUDES_MODE,
             LOG_LEVEL,
-            ANNOTATION_ON_FAIL, ANNOTATION_ON_FAIL_APPEND_TO, ANNOTATION_ON_SUCCESS_APPEND_TO,
-            INCLUDES_ON_FAIL, INCLUDES_ON_FAIL_APPEND_TO, INCLUDES_ON_SUCCESS_APPEND_TO,
-            SYNCHRONIZATION_MONITOR_APPEND_TO,
+            ANNOTATION_ON_FAIL, ANNOTATION_ON_SUCCESS, ANNOTATION_ON_FAIL_APPEND_TO, ANNOTATION_ON_SUCCESS_APPEND_TO,
+            INCLUDES_ON_FAIL, INCLUDES_ON_SUCCESS, INCLUDES_ON_FAIL_APPEND_TO, INCLUDES_ON_SUCCESS_APPEND_TO,
+            SYNCHRONIZATION_MONITOR_APPEND_TO, SYNCHRONIZATION_MONITOR_LOG_LEVEL,
             CONFIG);
 }

@@ -3,10 +3,11 @@ package io.github.thunkware.auto.valhalla;
 /**
  * Monitors synchronization attempts in instrumented classes. Called before each
  * {@code monitorenter} instruction when {@code Mode.SYNCHRONIZATION_MONITOR} is
- * enabled and {@code auto-valhalla.synchronization-monitor.append-to} is configured.
+ * enabled.
  *
- * <p>Records the name of every class being synchronized on using
- * {@link BackgroundFileWriter} for non-blocking, background-flushed I/O.
+ * <p>Logs every synchronization attempt at the configured level. Optionally
+ * records each first-seen class name to a file via {@link BackgroundFileWriter}
+ * when {@code synchronization-monitor.append-to} is configured.
  *
  * <p>This class must be loadable from the instrumented application classes (it
  * lives in the agent's own package, which is never transformed) and must never
@@ -15,25 +16,41 @@ package io.github.thunkware.auto.valhalla;
 public final class SynchronizationMonitor {
 
     private static volatile BackgroundFileWriter writer;
+    private static volatile OnSuccess logLevel = OnSuccess.INFO;
+    private static volatile boolean active = false;
 
     private SynchronizationMonitor() {}
 
-    /** Enables recording to {@code path}. The file is read once so names already
-     *  present are not appended again. */
-    public static void configure(String path) {
-        if (path == null || path.isEmpty()) {
-            return;
+    /** Activates monitoring, sets the log level, and optionally enables
+     *  file recording to {@code path} (may be {@code null} or empty). */
+    public static void configure(String path, OnSuccess level) {
+        logLevel = level;
+        active = true;
+        if (path != null && !path.isEmpty()) {
+            writer = BackgroundFileWriter.forFile(path);
         }
-        writer = BackgroundFileWriter.forFile(path);
     }
 
     /** Called immediately before each {@code monitorenter} with the object being
-     *  locked. Records the class name for inspection. */
+     *  locked. Logs the event at the configured level; also appends the class
+     *  name to the file (deduplicated) if one is configured. */
     public static void check(Object o) {
-        if (o == null || writer == null) {
+        if (o == null || !active) {
             return;
         }
         // the monitor must never affect the synchronized block
-        Failable.runQuietly(() -> writer.record(o.getClass().getName()));
+        Failable.runQuietly(() -> {
+            String name = o.getClass().getName();
+            BackgroundFileWriter localWriter = writer;
+            if (localWriter != null) {
+                localWriter.record(name);
+            }
+            String msg = "Synchronized on: " + name;
+            if (logLevel == OnSuccess.DEBUG) {
+                InternalLogger.debug(msg);
+            } else {
+                InternalLogger.info(msg);
+            }
+        });
     }
 }

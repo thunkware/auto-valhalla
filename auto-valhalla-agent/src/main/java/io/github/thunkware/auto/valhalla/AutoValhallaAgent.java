@@ -137,15 +137,6 @@ public final class AutoValhallaAgent {
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
-
-        InternalLogger.debug("attached"
-                + (attach ? " (dynamically)" : "")
-                + "; includes=" + cfg.includes
-                + " excludes=" + cfg.excludes
-                + " annotation-mode=" + cfg.annotationMode
-                + " includes-mode=" + cfg.includesMode
-                + " annotation.on-fail=" + cfg.annotationOnFail
-                + " includes.on-fail=" + cfg.includesOnFail);
     }
 
     static Config parse(String agentArgs) {
@@ -225,8 +216,12 @@ public final class AutoValhallaAgent {
                 case Config.LOG_LEVEL -> cfg.logLevel = a[1].trim();
                 case Config.ANNOTATION_ON_FAIL ->
                         cfg.annotationOnFail = OnFail.parse(a[1], OnFail.THROW);
+                case Config.ANNOTATION_ON_SUCCESS ->
+                        cfg.annotationOnSuccess = OnSuccess.parse(a[1], OnSuccess.INFO);
                 case Config.INCLUDES_ON_FAIL ->
                         cfg.includesOnFail = OnFail.parse(a[1], OnFail.DEBUG);
+                case Config.INCLUDES_ON_SUCCESS ->
+                        cfg.includesOnSuccess = OnSuccess.parse(a[1], OnSuccess.INFO);
                 case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
                     cfg.annotationOnFailAppendTo = t.isEmpty() ? null : t;
@@ -247,6 +242,8 @@ public final class AutoValhallaAgent {
                     String t = a[1].trim();
                     cfg.synchronizationMonitorAppendTo = t.isEmpty() ? null : t;
                 }
+                case Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL ->
+                        cfg.synchronizationMonitorLogLevel = OnSuccess.parse(a[1], OnSuccess.INFO);
                 default -> { /* unreachable */ }
             }
         }
@@ -261,12 +258,15 @@ public final class AutoValhallaAgent {
                 + getLogString(Config.ANNOTATION_MODE, cfg.annotationMode)
                 + getLogString(Config.INCLUDES_MODE, cfg.includesMode)
                 + getLogString(Config.ANNOTATION_ON_FAIL, cfg.annotationOnFail)
+                + getLogString(Config.ANNOTATION_ON_SUCCESS, cfg.annotationOnSuccess)
                 + getLogString(Config.ANNOTATION_ON_FAIL_APPEND_TO, cfg.annotationOnFailAppendTo)
                 + getLogString(Config.ANNOTATION_ON_SUCCESS_APPEND_TO, cfg.annotationOnSuccessAppendTo)
                 + getLogString(Config.INCLUDES_ON_FAIL, cfg.includesOnFail)
+                + getLogString(Config.INCLUDES_ON_SUCCESS, cfg.includesOnSuccess)
                 + getLogString(Config.INCLUDES_ON_FAIL_APPEND_TO, cfg.includesOnFailAppendTo)
                 + getLogString(Config.INCLUDES_ON_SUCCESS_APPEND_TO, cfg.includesOnSuccessAppendTo)
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_APPEND_TO, cfg.synchronizationMonitorAppendTo)
+                + getLogString(Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL, cfg.synchronizationMonitorLogLevel)
                 + getLogString(Config.LOG_LEVEL, cfg.logLevel));
 
         // Now resolve file contents
@@ -406,6 +406,7 @@ public final class AutoValhallaAgent {
 
     /** Returns {@code " label=value"}, or {@code ""} when value is null or an
      *  empty collection. Collections are formatted as {@code a,b,c} (no brackets). */
+    @SuppressWarnings("rawtypes")
     private static String getLogString(String label, Object value) {
         if (value == null) return "";
         if (value instanceof Collection<?> c) {
@@ -414,6 +415,9 @@ public final class AutoValhallaAgent {
                     .map(Object::toString)
                     .collect(Collectors.joining(","));
             return " " + label + "=" + combined;
+        }
+        if (value instanceof Enum) {
+            value = ((Enum) value).name().toLowerCase(Locale.ENGLISH);
         }
         return " " + label + "=" + value;
     }

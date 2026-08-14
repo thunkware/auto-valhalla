@@ -18,9 +18,9 @@ import java.util.Set;
  * combined with other modes; doing so throws {@link IllegalArgumentException}.
  */
 public enum Mode {
-    /** Narrow selection to final classes with final fields ({@code safe}).
+    /** Narrow selection to classes that are <em>already final</em> ({@code safe}).
      *  Non-final candidates are not converted; whether that is a silent skip or
-     *  a loud failure depends on the configured {@code on-fail-throw} setting. */
+     *  a loud failure depends on the configured {@code on-fail} setting. */
     SAFE("safe"),
 
     /** Shorthand for the default modes
