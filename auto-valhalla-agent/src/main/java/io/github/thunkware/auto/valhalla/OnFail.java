@@ -20,6 +20,8 @@ import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 enum OnFail {
     THROW, ERROR, WARNING, INFO, DEBUG, OFF;
 
+    private static final InternalLogger LOG = InternalLogger.getLogger(OnFail.class);
+
     static OnFail parse(String s, OnFail defaultValue) {
         if (s == null || s.isBlank()) {
             return defaultValue;
@@ -32,7 +34,7 @@ enum OnFail {
             case "debug"           -> DEBUG;
             case "off"             -> OFF;
             default -> {
-                InternalLogger.warning("Unknown on-fail value '" + s.trim()
+                LOG.warning("Unknown on-fail value '" + s.trim()
                         + "'; using " + defaultValue.name().toLowerCase());
                 yield defaultValue;
             }

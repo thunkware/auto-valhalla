@@ -15,6 +15,8 @@ import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 public enum OnSuccess {
     INFO, DEBUG, OFF;
 
+    private static final InternalLogger LOG = InternalLogger.getLogger(OnSuccess.class);
+
     static OnSuccess parse(String s, OnSuccess defaultValue) {
         if (s == null || s.isBlank()) {
             return defaultValue;
@@ -24,7 +26,7 @@ public enum OnSuccess {
             case "debug" -> DEBUG;
             case "off"   -> OFF;
             default -> {
-                InternalLogger.warning("Unknown on-success value '" + s.trim()
+                LOG.warning("Unknown on-success value '" + s.trim()
                         + "'; using " + defaultValue.name().toLowerCase());
                 yield defaultValue;
             }

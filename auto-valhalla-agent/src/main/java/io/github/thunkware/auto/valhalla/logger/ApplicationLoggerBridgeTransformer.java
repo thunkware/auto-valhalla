@@ -42,6 +42,8 @@ import java.util.List;
  */
 public final class ApplicationLoggerBridgeTransformer implements ClassFileTransformer {
 
+    private final InternalLogger log = InternalLogger.getLogger(ApplicationLoggerBridgeTransformer.class);
+
     private static final String SLF4J_LOGGER_FACTORY  = "org/slf4j/LoggerFactory";
     private static final String SPRING_APPLICATION     = "org/springframework/boot/SpringApplication";
     private static final String SPRING_LISTENER_1X     =
@@ -81,7 +83,7 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
      *               every return instruction (method exit); {@code false} → inject
      *               before the first code instruction (method entry).
      */
-    private static byte[] transformClass(byte[] classfileBuffer, ClassLoader loader,
+    private byte[] transformClass(byte[] classfileBuffer, ClassLoader loader,
             String methodName, String flagsMethod, boolean atExit) {
         try {
             ClassFile cf = ClassFiles.of(loader);
@@ -101,14 +103,14 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
             byte[] out = cf.transformClass(model, classTransform);
             List<java.lang.VerifyError> errors = cf.verify(out);
             if (!errors.isEmpty()) {
-                InternalLogger.debug("application-logger bridge: verify failed for "
+                log.debug("application-logger bridge: verify failed for "
                         + methodName + " in " + model.thisClass().asInternalName()
                         + ": " + errors.get(0).getMessage());
                 return null;
             }
             return out;
         } catch (Exception e) {
-            InternalLogger.debug("application-logger bridge: failed to instrument "
+            log.debug("application-logger bridge: failed to instrument "
                     + methodName + ": " + e);
             return null;
         }

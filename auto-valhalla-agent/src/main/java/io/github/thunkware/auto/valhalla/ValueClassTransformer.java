@@ -36,6 +36,7 @@ import java.util.stream.Stream;
  */
 public final class ValueClassTransformer implements ClassFileTransformer {
 
+    private final InternalLogger log = InternalLogger.getLogger(ValueClassTransformer.class);
     private final Config config;
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
@@ -99,7 +100,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         } catch (IllegalArgumentException e) {
             // Configuration error (e.g. incompatible modes) — always log at warning
             // so it is visible regardless of the class's on-fail setting.
-            InternalLogger.warning(className.java() + ": configuration error — " + e.getMessage());
+            log.warning(className.java() + ": configuration error — " + e.getMessage());
             return null;
         } catch (Throwable t) {
             return onTransformError(className, t, selection);
@@ -113,7 +114,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         byte[] monitored = SynchronizationInstrumenter.instrument(model, loader);
         if (monitored != null) {
-            InternalLogger.debug(className.java() + ": instrumented for synchronization monitoring");
+            log.debug(className.java() + ": instrumented for synchronization monitoring");
             return monitored;
         }
         return onFail(className,
@@ -212,8 +213,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         appendTo(selection.onSuccessAppendTo(), className);
         String successMsg = "Transformed to value class: " + className.java();
         switch (selection.onSuccess()) {
-            case DEBUG -> InternalLogger.debug(successMsg);
-            case INFO  -> InternalLogger.info(successMsg);
+            case DEBUG -> log.debug(successMsg);
+            case INFO  -> log.info(successMsg);
             case OFF   -> {}
         }
         return out;
@@ -247,10 +248,10 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         appendOnFail(className, selection.onFailAppendTo());
         String msg = "Transform failed: " + className.java();
         switch (selection.onFail()) {
-            case ERROR   -> InternalLogger.error(msg, t);
-            case WARNING -> InternalLogger.warning(msg);
-            case INFO    -> InternalLogger.info(msg);
-            case DEBUG   -> InternalLogger.debug(msg);
+            case ERROR   -> log.error(msg, t);
+            case WARNING -> log.warning(msg);
+            case INFO    -> log.info(msg);
+            case DEBUG   -> log.debug(msg);
             default      -> {}
         }
         return null;
@@ -264,26 +265,26 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         String base = className.java() + ": " + reason;
         return switch (selection.onFail()) {
             case THROW -> {
-                InternalLogger.error(base + "; the JVM will reject it rather than"
+                log.error(base + "; the JVM will reject it rather than"
                         + " silently keep an identity class.");
                 // A ClassFileTransformer exception would be swallowed by the JVM, so
                 // hand back a class file that fails to load, surfacing the failure loudly.
                 yield brokenClass();
             }
             case ERROR -> {
-                InternalLogger.error(base + ", leaving as identity class");
+                log.error(base + ", leaving as identity class");
                 yield null;
             }
             case WARNING -> {
-                InternalLogger.warning(base + ", leaving as identity class");
+                log.warning(base + ", leaving as identity class");
                 yield null;
             }
             case INFO -> {
-                InternalLogger.info(base + ", leaving as identity class");
+                log.info(base + ", leaving as identity class");
                 yield null;
             }
             case DEBUG -> {
-                InternalLogger.debug(base + ", leaving as identity class");
+                log.debug(base + ", leaving as identity class");
                 yield null;
             }
             default -> null;

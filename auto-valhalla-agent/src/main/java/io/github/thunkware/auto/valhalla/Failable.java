@@ -4,6 +4,8 @@ import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import java.util.concurrent.Callable;
 
 class Failable {
+
+    private static final InternalLogger LOG = InternalLogger.getLogger(Failable.class);
     interface ThrowingRunnable {
         void run() throws Throwable;
     }
@@ -12,7 +14,7 @@ class Failable {
         try {
             runnable.run();
         } catch (Throwable e) {
-            InternalLogger.debug(e.toString());
+            LOG.debug(e.toString());
         }
     }
 
@@ -21,7 +23,7 @@ class Failable {
         try {
             return callable.call();
         } catch (Throwable e) {
-            InternalLogger.debug(e.toString());
+            LOG.debug(e.toString());
             return null;
         }
     }

@@ -228,7 +228,7 @@ class AutoValhallaAgentTest {
     void loggingModeNoneSuppressesOutput() {
         // setMode(null) resets to SIMPLE; setMode("none") suppresses
         InternalLogger.setMode("none");
-        InternalLogger.info("this should be suppressed");
+        InternalLogger.getLogger(AutoValhallaAgentTest.class).info("this should be suppressed");
         InternalLogger.setMode(null); // reset
     }
 

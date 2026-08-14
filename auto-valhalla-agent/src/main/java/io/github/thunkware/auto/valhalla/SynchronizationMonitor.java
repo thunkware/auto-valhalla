@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class SynchronizationMonitor {
 
+    private static final InternalLogger LOG = InternalLogger.getLogger(SynchronizationMonitor.class);
     private static volatile BackgroundFileWriter writer;
     private static volatile OnSuccess logLevel = OnSuccess.INFO;
     private static volatile boolean active = false;
@@ -56,8 +57,8 @@ public final class SynchronizationMonitor {
             if (seen.add(name)) {
                 String msg = "Synchronized on: " + name;
                 switch (logLevel) {
-                    case DEBUG -> InternalLogger.debug(msg);
-                    case INFO  -> InternalLogger.info(msg);
+                    case DEBUG -> LOG.debug(msg);
+                    case INFO  -> LOG.info(msg);
                     case OFF   -> {}
                 }
             }

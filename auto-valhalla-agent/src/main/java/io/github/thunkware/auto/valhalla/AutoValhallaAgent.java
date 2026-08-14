@@ -104,6 +104,8 @@ import java.util.stream.Collectors;
  */
 public final class AutoValhallaAgent {
 
+    private static final InternalLogger LOG = InternalLogger.getLogger(AutoValhallaAgent.class);
+
     private AutoValhallaAgent() {}
 
     /**
@@ -118,7 +120,7 @@ public final class AutoValhallaAgent {
 
     public static void premain(String agentArgs, Instrumentation inst) {
         if (agentArgs != null && !agentArgs.isBlank()) {
-            InternalLogger.warning("Agent arguments are no longer supported. "
+            LOG.warning("Agent arguments are no longer supported. "
                     + "Use system properties (-Dauto-valhalla.key=value) or environment "
                     + "variables instead. Ignoring: " + agentArgs);
         }
@@ -127,7 +129,7 @@ public final class AutoValhallaAgent {
 
     public static void agentmain(String agentArgs, Instrumentation inst) {
         if (agentArgs != null && !agentArgs.isBlank()) {
-            InternalLogger.warning("Agent arguments are no longer supported. "
+            LOG.warning("Agent arguments are no longer supported. "
                     + "Use system properties (-Dauto-valhalla.key=value) or environment "
                     + "variables instead. Ignoring: " + agentArgs);
         }
@@ -136,12 +138,12 @@ public final class AutoValhallaAgent {
 
     private static void install(Instrumentation inst) {
         if (!VALHALLA_AVAILABLE) {
-            InternalLogger.warning("Project Valhalla / value classes "
+            LOG.warning("Project Valhalla / value classes "
                     + "are not available in this JVM (pass --enable-preview on JDK 28+). "
                     + "The agent is disabled and classes are left as identity classes.");
             return;
         }
-        InternalLogger.info("Starting agent");
+        LOG.info("Starting agent");
         Config cfg = parse();
         InternalLogger.setLevel(cfg.logLevel);
         InternalLogger.setMode(cfg.logging);
@@ -244,7 +246,7 @@ public final class AutoValhallaAgent {
 
     private static void logConfig(Config cfg) {
         // null and empty values are omitted.
-        InternalLogger.info("Configuration:"
+        LOG.info("Configuration:"
                 + getLogString(Config.INCLUDES, cfg.includes)
                 + getLogString(Config.INCLUDES_FILES, cfg.includesFiles)
                 + getLogString(Config.EXCLUDES, cfg.excludes)
@@ -283,10 +285,10 @@ public final class AutoValhallaAgent {
 
     private static void checkUnkownConfig() {
         for (String p : unknownSysProps(System.getProperties().stringPropertyNames())) {
-            InternalLogger.warning("Unknown system property ignored: " + p);
+            LOG.warning("Unknown system property ignored: " + p);
         }
         for (String e : unknownEnvVars(System.getenv().keySet())) {
-            InternalLogger.warning("Unknown environment variable ignored: " + e);
+            LOG.warning("Unknown environment variable ignored: " + e);
         }
     }
 
@@ -297,7 +299,7 @@ public final class AutoValhallaAgent {
             try (BufferedReader br = Files.newBufferedReader(Path.of(value.trim()))) {
                 props.load(br);
             } catch (IOException e) {
-                InternalLogger.error("cannot read config file " + value + ": " + e);
+                LOG.error("cannot read config file " + value + ": " + e);
                 return;
             }
             for (String rawKey : props.stringPropertyNames()) {
@@ -369,7 +371,7 @@ public final class AutoValhallaAgent {
             }
         } catch (IOException e) {
             if (!quiet) {
-                InternalLogger.error("cannot read pattern file " + path + ": " + e);
+                LOG.error("cannot read pattern file " + path + ": " + e);
             }
         }
         return set;

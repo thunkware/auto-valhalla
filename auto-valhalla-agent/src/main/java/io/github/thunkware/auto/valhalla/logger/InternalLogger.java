@@ -8,10 +8,12 @@ import java.time.format.DateTimeFormatter;
  * Logging facade for the auto-valhalla agent. Supports log levels: {@code OFF},
  * {@code ERROR}, {@code WARNING}, {@code INFO}, {@code DEBUG}. Messages are
  * prefixed with an ISO 8601 timestamp (with millisecond precision and timezone
- * offset), {@code [auto-valhalla]}, and the log level.
+ * offset), the log level, and the logger name (the fully-qualified class name of
+ * the class that created the logger).
  *
- * <p>The global log level is set once at startup via {@link #setLevel(String)}.
- * The logging mode is set via {@link #setMode(String)}.
+ * <p>Obtain a logger per class via {@link #getLogger(Class)} and store it in an
+ * instance field. The global log level is set once at startup via
+ * {@link #setLevel(String)}. The logging mode is set via {@link #setMode(String)}.
  */
 public final class InternalLogger {
 
@@ -29,7 +31,17 @@ public final class InternalLogger {
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
 
-    private InternalLogger() {}
+    private final String name;
+    private volatile Object slf4jLogger;
+    private volatile int slf4jVersion = -1;
+
+    private InternalLogger(String name) {
+        this.name = name;
+    }
+
+    public static InternalLogger getLogger(Class<?> cls) {
+        return new InternalLogger(cls.getName());
+    }
 
     /**
      * Sets the global log level from a string (case-insensitive):
@@ -45,7 +57,7 @@ public final class InternalLogger {
             level = Level.valueOf(s.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             level = Level.INFO;
-            warning("Unknown log-level '" + s.trim() + "'; valid values are: "
+            getLogger(InternalLogger.class).warning("Unknown log-level '" + s.trim() + "'; valid values are: "
                     + "off, error, warning, info, debug. Defaulting to info.");
         }
     }
@@ -66,7 +78,7 @@ public final class InternalLogger {
             case "application" -> loggingMode = LoggingMode.APPLICATION;
             default -> {
                 loggingMode = LoggingMode.SIMPLE;
-                warning("Unknown logging mode '" + s.trim() + "'; valid values are: "
+                getLogger(InternalLogger.class).warning("Unknown logging mode '" + s.trim() + "'; valid values are: "
                         + "simple, none, application. Defaulting to simple.");
             }
         }
@@ -76,41 +88,51 @@ public final class InternalLogger {
         return level.rank >= Level.DEBUG.rank;
     }
 
-    public static void debug(String msg) {
+    public void debug(String msg) {
         log(Level.DEBUG, msg, null);
     }
 
-    public static void info(String msg) {
+    public void info(String msg) {
         log(Level.INFO, msg, null);
     }
 
-    public static void warning(String msg) {
+    public void warning(String msg) {
         log(Level.WARNING, msg, null);
     }
 
-    public static void error(String msg) {
+    public void error(String msg) {
         log(Level.ERROR, msg, null);
     }
 
-    public static void error(String msg, Throwable t) {
+    public void error(String msg, Throwable t) {
         log(Level.ERROR, msg, t);
     }
 
-    private static void log(Level lv, String msg, Throwable t) {
+    private void log(Level lv, String msg, Throwable t) {
         if (lv.rank > level.rank) return;
         switch (loggingMode) {
             case NONE -> {}
             case APPLICATION -> {
-                if (Slf4jBridge.log(lv, msg, t)) return;
+                if (logViaSlf4j(lv, msg, t)) return;
                 logToStderr(lv, msg, t); // SLF4J not yet available; fall through to stderr
             }
             default -> logToStderr(lv, msg, t);
         }
     }
 
-    private static void logToStderr(Level lv, String msg, Throwable t) {
+    private boolean logViaSlf4j(Level lv, String msg, Throwable t) {
+        int v = Slf4jBridge.version;
+        if (slf4jVersion != v) {
+            slf4jLogger = Slf4jBridge.getLoggerInstance(name);
+            slf4jVersion = v;
+        }
+        if (slf4jLogger == null) return false;
+        return Slf4jBridge.invoke(lv, slf4jLogger, msg, t);
+    }
+
+    private void logToStderr(Level lv, String msg, Throwable t) {
         String timestamp = ZonedDateTime.now().format(TIMESTAMP_FORMAT);
-        System.err.println(timestamp + " [auto-valhalla] [" + lv + "] " + msg);
+        System.err.println(timestamp + " " + lv + " " + name + " - " + msg);
         if (t != null) {
             t.printStackTrace(System.err);
         }
@@ -119,27 +141,39 @@ public final class InternalLogger {
     /**
      * Lazily discovered SLF4J bridge. Resolved on the first log call in
      * {@link LoggingMode#APPLICATION} mode via reflection from the thread's
-     * context classloader. If SLF4J is not available, {@link #log} returns
+     * context classloader. If SLF4J is not available, {@link #logViaSlf4j} returns
      * {@code false} and the caller falls back to stderr.
      *
      * <p>{@link #reinstall()} is called by {@link ApplicationLoggerFlags} once
      * the application's logging framework is confirmed ready (via bytecode
      * instrumentation of SLF4J / Spring Boot classes), so early startup messages
-     * do not permanently lock in a NOP or substitute logger.
+     * do not permanently lock in a NOP or substitute logger. On reinstall, the
+     * global {@link #version} counter is incremented, causing each
+     * {@link InternalLogger} instance to lazily re-acquire its SLF4J logger on the
+     * next log call.
      */
     static final class Slf4jBridge {
 
+        static volatile int version = 0;
         private static volatile boolean attempted;
-        private static volatile Object logger;
+        private static volatile Method getLoggerMethod;
         private static volatile Method warnMethod;
         private static volatile Method errorMethod;
         private static volatile Method errorWithCauseMethod;
         private static volatile Method infoMethod;
         private static volatile Method debugMethod;
 
-        static boolean log(Level lv, String msg, Throwable t) {
+        static Object getLoggerInstance(String name) {
             if (!attempted) init();
-            if (logger == null) return false;
+            if (getLoggerMethod == null) return null;
+            try {
+                return getLoggerMethod.invoke(null, name);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        static boolean invoke(Level lv, Object logger, String msg, Throwable t) {
             try {
                 Method m;
                 Object[] args;
@@ -170,14 +204,15 @@ public final class InternalLogger {
          * detects that the application's logging framework is ready.
          */
         static synchronized void reinstall() {
-            logger = null;
+            getLoggerMethod = null;
             warnMethod = null;
             errorMethod = null;
             errorWithCauseMethod = null;
             infoMethod = null;
             debugMethod = null;
             attempted = false;
-            init(); // reentrant: same thread holds the lock
+            version++; // triggers lazy re-acquire in all InternalLogger instances
+            init();    // reentrant: same thread holds the lock
         }
 
         private static synchronized void init() {
@@ -187,14 +222,12 @@ public final class InternalLogger {
                 if (cl == null) cl = ClassLoader.getSystemClassLoader();
                 Class<?> factory = Class.forName("org.slf4j.LoggerFactory", true, cl);
                 Class<?> loggerIface = Class.forName("org.slf4j.Logger", true, cl);
-                Object instance = factory.getMethod("getLogger", String.class)
-                        .invoke(null, "io.github.thunkware.auto.valhalla");
+                getLoggerMethod = factory.getMethod("getLogger", String.class);
                 warnMethod = loggerIface.getMethod("warn", String.class);
                 errorMethod = loggerIface.getMethod("error", String.class);
                 errorWithCauseMethod = loggerIface.getMethod("error", String.class, Throwable.class);
                 infoMethod = loggerIface.getMethod("info", String.class);
                 debugMethod = loggerIface.getMethod("debug", String.class);
-                logger = instance; // assign last: signals successful init
             } catch (Exception e) {
                 // SLF4J not available; caller falls back to stderr
             } finally {
