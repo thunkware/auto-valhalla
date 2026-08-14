@@ -88,16 +88,16 @@ You can use the file to:
   - more confidently apply `@AutoValhalla` annotation to classes, or
   - feed back as `excludes-files` in a later run to avoid converting those classes.
 
-| Option | Env var | Description                                                                               |
-| --- | --- |-------------------------------------------------------------------------------------------|
-| `auto-valhalla.synchronization-monitor.append-to` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_APPEND_TO` | File path. Default: `auto-valhalla.synchronization.txt`.                                  |
-| `auto-valhalla.synchronization-monitor.log-level` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_LOG_LEVEL` | Log level: `info` (default), `debug`, or `off`. |
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.synchronization-monitor.append-to` | File path. Default: `auto-valhalla.synchronization.txt`. |
+| `auto-valhalla.synchronization-monitor.log-level` | Log level: `info` (default), `debug`, or `off`. |
 
 ## Options
 
-Flags are supplied as, in that order of precedence:
-  * system properties `-Dauto-valhalla.option=value`, or
-  * environment variables.
+Flags are supplied via system properties (`-Dauto-valhalla.option=value`).
+All options can also be set as environment variables — see
+[Configuring with Environment Variables](#configuring-with-environment-variables).
 
 Canonical form uses the `auto-valhalla.` prefix.
 
@@ -108,12 +108,12 @@ Classes are selected for conversion by the `@AutoValhalla` annotation, by
 override both. A class selected by both the annotation and `includes` is
 treated as annotation-selected.
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.includes` | `AUTO_VALHALLA_INCLUDES` | Comma-separated classes/packages to convert. `*` matches everything; `foo.` is a package prefix; `foo.Bar` an exact class name. |
-| `auto-valhalla.excludes` | `AUTO_VALHALLA_EXCLUDES` | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
-| `auto-valhalla.includes-files` | `AUTO_VALHALLA_INCLUDES_FILES` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
-| `auto-valhalla.excludes-files` | `AUTO_VALHALLA_EXCLUDES_FILES` | As above, for excludes. |
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.includes` | Comma-separated classes/packages to convert. `*` matches everything; `foo.` is a package prefix; `foo.Bar` an exact class name. |
+| `auto-valhalla.excludes` | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
+| `auto-valhalla.includes-files` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
+| `auto-valhalla.excludes-files` | As above, for excludes. |
 
 ### Mode
 
@@ -122,20 +122,20 @@ classes are selected based on very basic class information. Mode further narrows
 are actually converted, based on deeper class definition, and _how_ they are converted. If a class is selected but not convertible
 under the active mode, that is a failure; see [Failure handling](#failure-handling).
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.annotation-mode` | `AUTO_VALHALLA_ANNOTATION_MODE` | Mode(s) applied to annotation-selected classes. Default: `safe`. |
-| `auto-valhalla.includes-mode` | `AUTO_VALHALLA_INCLUDES_MODE` | Mode(s) applied to includes-selected classes. Default: `yolo`. |
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.annotation-mode` | Mode(s) applied to annotation-selected classes. Default: `safe`. |
+| `auto-valhalla.includes-mode` | Mode(s) applied to includes-selected classes. Default: `yolo`. |
 
 #### Mode values
 
-| Mode | Effect                                                                                                                                                                                                                           |
-| --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `safe` | Convert only classes that are already `final`. Non-final candidates are not converted.                                                                                                                                           |
-| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed.                                                                                                                                   |
-| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                                                                           |
-| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected.                                            |
-| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`.                                                                                                                         |
+| Mode | Effect |
+| --- | --- |
+| `safe` | Convert only classes that are already `final`. Non-final candidates are not converted. |
+| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed. |
+| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load). |
+| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected. |
+| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`. |
 | `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. Optionally also records them to a file via `synchronization-monitor.append-to`. **Cannot be combined with other modes.** |
 
 Multiple modes are comma-separated. Mode names are case-insensitive and
@@ -147,36 +147,36 @@ accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and
 Controls what happens when a selected class cannot be converted, and how
 successful conversions are logged.
 
-| Option | Env var | Description                                                                                                                                                                                 |
-| --- | --- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `auto-valhalla.annotation.on-fail` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL` | `throw` (default) surfaces a throwable; `error`, `warning`, `info`, `debug`, `off` log at that level and leave the class as an identity class |
-| `auto-valhalla.includes.on-fail` | `AUTO_VALHALLA_INCLUDES_ON_FAIL` | Same, for includes-selected classes. Default: `debug`, so a broad sweep cannot crash the application.                                                                                       |
-| `auto-valhalla.annotation.on-success` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS` | Log level for a successful conversion: `info` (default), `debug`, or `off`.                                                                                                                 |
-| `auto-valhalla.includes.on-success` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS` | Same, for includes-selected classes. Default: `info`.                                                                                                                                       |
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.annotation.on-fail` | `throw` (default) surfaces a throwable; `error`, `warning`, `info`, `debug`, `off` log at that level and leave the class as an identity class. |
+| `auto-valhalla.includes.on-fail` | Same, for includes-selected classes. Default: `debug`, so a broad sweep cannot crash the application. |
+| `auto-valhalla.annotation.on-success` | Log level for a successful conversion: `info` (default), `debug`, or `off`. |
+| `auto-valhalla.includes.on-success` | Same, for includes-selected classes. Default: `info`. |
 
 ### Recording
 
 Each `*-append-to` file is read once at start-up so names already present
 are not re-appended, and a missing file is treated as empty.
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.annotation.on-success-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS_APPEND_TO` | Appends the class name of each annotation-selected class that is successfully converted. |
-| `auto-valhalla.includes.on-success-append-to` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS_APPEND_TO` | Same, for includes-selected classes. |
-| `auto-valhalla.annotation.on-fail-append-to` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL_APPEND_TO` | Appends the class name of each annotation-selected class that fails to convert. |
-| `auto-valhalla.includes.on-fail-append-to` | `AUTO_VALHALLA_INCLUDES_ON_FAIL_APPEND_TO` | Same, for includes-selected classes. |
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.annotation.on-success-append-to` | Appends the class name of each annotation-selected class that is successfully converted. |
+| `auto-valhalla.includes.on-success-append-to` | Same, for includes-selected classes. |
+| `auto-valhalla.annotation.on-fail-append-to` | Appends the class name of each annotation-selected class that fails to convert. |
+| `auto-valhalla.includes.on-fail-append-to` | Same, for includes-selected classes. |
 
 ### Diagnostics
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.log-level` | `AUTO_VALHALLA_LOG_LEVEL` | Logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.log-level` | Logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
 
 ### Config file
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.config` | `AUTO_VALHALLA_CONFIG` | Path to a Java properties file supplying any of the options above. Keys may omit the `auto-valhalla.` prefix. |
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.config` | Path to a Java properties file supplying any of the options above. Keys may omit the `auto-valhalla.` prefix. |
 
 When `auto-valhalla.config` is set, config file entries are applied after
 env vars but can be overridden by explicit system properties set alongside it.
@@ -232,6 +232,23 @@ explicit `includes-files` list:
 -Dauto-valhalla.includes.on-success-append-to=/var/tmp/auto-valhalla-converted.txt
 ```
 
+## Configuring with Environment Variables
+
+In certain environments, configuring settings through environment variables
+is often preferred. Any setting that can be configured using a system
+property can also be set using an environment variable. To determine the
+correct environment variable name for a system property:
+
+1. Convert the system property name to uppercase.
+2. Replace all `.` and `-` characters with `_`.
+
+For example, `auto-valhalla.includes` converts to `AUTO_VALHALLA_INCLUDES`,
+and `auto-valhalla.annotation.on-fail` converts to
+`AUTO_VALHALLA_ANNOTATION_ON_FAIL`.
+
+System properties take precedence over environment variables when both are
+set.
+
 ## Notes & limitations
 
 - If annotation-selected classes fail conversion, a `LinkageError` is thrown
@@ -266,6 +283,6 @@ explicit `includes-files` list:
 
 ## Note on AI assistance
 
-This project was vibe-coded with an AI coding agent. Humans designed, directed, reviewed, and
-edited the work. The agent authored the bulk of the implementation, build
-configuration, and documentation.
+This project was vibe-coded with an AI coding agent. Humans designed,
+directed, reviewed, and edited the work. The agent authored the bulk of the
+implementation, build configuration, and documentation.
