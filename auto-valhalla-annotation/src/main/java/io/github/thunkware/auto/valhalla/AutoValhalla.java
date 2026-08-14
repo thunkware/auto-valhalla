@@ -7,22 +7,24 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a class to be automatically transformed into a JEP 401 value class at
- * load time by the {@code auto-valhalla} agent.
+ * Marks a class to be automatically transformed into a value class (as defined
+ * by <a href="https://openjdk.org/jeps/401">JEP 401</a>) at load time by the
+ * {@code auto-valhalla} agent.
  *
  * <p>By default ({@code annotation-mode=safe}), the class must satisfy all of
  * the following conditions:
  * <ul>
- *   <li>Is {@code final} (not abstract, not an interface, enum, or annotation).</li>
- *   <li>Extends {@code java.lang.Object} or {@code java.lang.Record} directly
- *       — not another identity class.</li>
+ *   <li>Is {@code final} (abstract classes are not yet supported).</li>
+ *   <li>Extends only {@code java.lang.Object} or {@code java.lang.Record}
+ *       — not another class.</li>
  *   <li>Has at least one instance field.</li>
+ *   <li>All non-{@code static}, non-{@code final} instance fields are
+ *       {@code private}.</li>
  *   <li>Has no {@code synchronized} instance methods.</li>
  *   <li>Has no {@code synchronized} blocks ({@code monitorenter} bytecode) in
- *       any method.</li>
- *   <li>All non-static, non-{@code final} instance fields are {@code private}
- *       (so they can be safely marked {@code final} by the agent without
- *       breaking sibling writers).</li>
+ *       any of its methods (more conservative than checking for
+ *       {@code synchronized(this)} specifically — any locked object causes
+ *       rejection).</li>
  * </ul>
  *
  * <p>If any condition is not met, transformation fails according to
