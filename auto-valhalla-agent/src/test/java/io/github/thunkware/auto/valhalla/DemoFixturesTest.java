@@ -34,7 +34,7 @@ class DemoFixturesTest {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of("demo16.includes.", "demo5.includes."), Set.of(),
                 yolo, yolo,
-                false, true, null, false, null);
+                true, null, false, null);
 
         // Point is selected only by @AutoValhalla (it is in demo5.annotation,
         // outside the demo5.includes. prefix). annotation-mode=yolo marks its
@@ -88,7 +88,7 @@ class DemoFixturesTest {
         ValueClassTransformer loud = new ValueClassTransformer(
                 Set.of(), Set.of(),
                 yolo, yolo,
-                false, true, null, false, null);
+                true, null, false, null);
         byte[] loudOut = loud.transform(null, null, internal, null, null, original);
         assertNotNull(loudOut, "annotation.on-fail-throw=true surfaces the rejection");
         assertFalse(isUsableValueClass(loudOut),
@@ -99,7 +99,7 @@ class DemoFixturesTest {
         ValueClassTransformer quiet = new ValueClassTransformer(
                 Set.of(), Set.of(),
                 yolo, yolo,
-                false, false, null, false, null);
+                false, null, false, null);
         assertNull(quiet.transform(null, null, internal, null, null, original),
                 "without on-fail-throw the annotated mutable class is left as identity");
     }
@@ -132,7 +132,7 @@ class DemoFixturesTest {
                 Set.of("demo5.broken.SyncPoint"), Set.of(),
                 Mode.ANNOTATION_DEFAULT,
                 EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL),
-                false, false, null, false, null);
+                false, null, false, null);
         assertNull(strict.transform(null, null, internal, null, null, original),
                 "a synchronized immutable class is left as identity without ignore-synchronized");
     }
@@ -148,7 +148,7 @@ class DemoFixturesTest {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 Set.of(), Set.of(),
                 Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, true, null, false, null);
+                true, null, false, null);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
         assertNotNull(point, "default annotation-mode (safe) rejects non-final demo5.annotation.Point loudly");
@@ -164,7 +164,7 @@ class DemoFixturesTest {
                 Set.of(), Set.of(),
                 EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
                 Mode.INCLUDES_DEFAULT,
-                false, true, null, false, null);
+                true, null, false, null);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
         assertNotNull(point, "@AutoValhalla + mark-class-final must convert demo5.annotation.Point");
