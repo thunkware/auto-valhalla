@@ -51,9 +51,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 .filter(Objects::nonNull)
                 .forEach(BackgroundFileWriter::forFile);
 
-        // Configure SynchronizationMonitor with the path so it can record
-        // classes being synchronized on.
-        if (cfg.synchronizationMonitorAppendTo != null) {
+        // Activate SynchronizationMonitor when the mode is configured.
+        // configure() accepts a null path (log-only, no file), so the condition
+        // is on mode usage rather than path presence.
+        if (cfg.annotationMode.contains(Mode.SYNCHRONIZATION_MONITOR)
+                || cfg.includesMode.contains(Mode.SYNCHRONIZATION_MONITOR)) {
             SynchronizationMonitor.configure(cfg.synchronizationMonitorAppendTo,
                     cfg.synchronizationMonitorLogLevel);
         }

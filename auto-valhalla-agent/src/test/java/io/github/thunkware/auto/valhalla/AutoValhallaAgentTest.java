@@ -121,6 +121,63 @@ class AutoValhallaAgentTest {
     }
 
     @Test
+    void onSuccessDefaultsToInfo() {
+        var cfg = AutoValhallaAgent.parse("includes=a.");
+        assertEquals(OnSuccess.INFO, cfg.annotationOnSuccess,
+                "annotation.on-success must default to info");
+        assertEquals(OnSuccess.INFO, cfg.includesOnSuccess,
+                "includes.on-success must default to info");
+    }
+
+    @Test
+    void onSuccessIsParsed() {
+        var cfg = AutoValhallaAgent.parse(
+                "annotation.on-success=debug,includes.on-success=off");
+        assertEquals(OnSuccess.DEBUG, cfg.annotationOnSuccess);
+        assertEquals(OnSuccess.OFF, cfg.includesOnSuccess);
+    }
+
+    @Test
+    void onFailOffIsParsed() {
+        var cfg = AutoValhallaAgent.parse("annotation.on-fail=off,includes.on-fail=off");
+        assertEquals(OnFail.OFF, cfg.annotationOnFail);
+        assertEquals(OnFail.OFF, cfg.includesOnFail);
+    }
+
+    @Test
+    void synchronizationMonitorLogLevelDefaultsToInfo() {
+        var cfg = AutoValhallaAgent.parse("");
+        assertEquals(OnSuccess.INFO, cfg.synchronizationMonitorLogLevel,
+                "synchronization-monitor.log-level must default to info");
+    }
+
+    @Test
+    void synchronizationMonitorLogLevelIsParsed() {
+        var cfg = AutoValhallaAgent.parse("synchronization-monitor.log-level=debug");
+        assertEquals(OnSuccess.DEBUG, cfg.synchronizationMonitorLogLevel);
+    }
+
+    @Test
+    void synchronizationMonitorAppendToHasDefaultValue() {
+        var cfg = AutoValhallaAgent.parse("");
+        assertEquals("auto-valhalla.synchronization.txt", cfg.synchronizationMonitorAppendTo,
+                "synchronization-monitor.append-to defaults to auto-valhalla.synchronization.txt");
+    }
+
+    @Test
+    void synchronizationMonitorAppendToIsParsed() {
+        var cfg = AutoValhallaAgent.parse("synchronization-monitor.append-to=custom.txt");
+        assertEquals("custom.txt", cfg.synchronizationMonitorAppendTo);
+    }
+
+    @Test
+    void synchronizationMonitorAppendToEmptyClearsDefault() {
+        var cfg = AutoValhallaAgent.parse("synchronization-monitor.append-to=");
+        assertNull(cfg.synchronizationMonitorAppendTo,
+                "empty synchronization-monitor.append-to disables file writing (log-only mode)");
+    }
+
+    @Test
     void includesFilesSupportsMultipleFiles() throws Exception {
         File f1 = File.createTempFile("inc1", ".txt");
         File f2 = File.createTempFile("inc2", ".txt");

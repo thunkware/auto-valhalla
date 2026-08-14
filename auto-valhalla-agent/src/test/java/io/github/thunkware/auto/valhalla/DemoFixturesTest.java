@@ -187,6 +187,41 @@ class DemoFixturesTest {
                 "annotation-rewritten demo5.annotation.Point must verify");
     }
 
+    @Test
+    void annotationOnFailOffLeavesClassAsIdentity() throws Exception {
+        // Point is @AutoValhalla but not final. Under the default annotation-mode
+        // (safe), non-final classes are not converted. on-fail=off must leave the
+        // class as an identity class (null) without throwing.
+        Config cfg = new Config();
+        cfg.includes = Set.of();
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        cfg.annotationOnFail = OnFail.OFF;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
+        byte[] out = transformer.transform(null, null, "demo5/annotation/Point", null, null,
+                readResource("/demo5/annotation/Point.class"));
+        assertNull(out,
+                "annotation.on-fail=off must leave a non-convertible class as identity (null)");
+    }
+
+    @Test
+    void includesOnFailOffLeavesClassAsIdentity() throws Exception {
+        // Square is not final. Under mode=safe (requires already-final) it cannot
+        // be converted. on-fail=off must leave it as identity (null) without throwing.
+        Config cfg = new Config();
+        cfg.includes = Set.of("demo5.includes.");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = EnumSet.of(Mode.SAFE);
+        cfg.includesOnFail = OnFail.OFF;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
+        byte[] out = transformer.transform(null, null, "demo5/includes/Square", null, null,
+                readResource("/demo5/includes/Square.class"));
+        assertNull(out,
+                "includes.on-fail=off must leave a non-convertible class as identity (null)");
+    }
+
     /** True if the bytes parse as a value class and pass verification. */
     static boolean isUsableValueClass(byte[] bytes) {
         try {
