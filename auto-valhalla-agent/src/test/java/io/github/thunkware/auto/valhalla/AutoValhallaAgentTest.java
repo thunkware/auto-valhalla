@@ -111,7 +111,7 @@ class AutoValhallaAgentTest {
     @Test
     void knownSysPropsAreNotFlagged() {
         var unknown = AutoValhallaAgent.unknownSysProps(
-                Set.of("auto-valhalla.includes", "auto-valhalla.logging.level", "unrelated.prop"));
+                Set.of("auto-valhalla.includes", "unrelated.prop"));
         assertTrue(unknown.isEmpty(), "no unknown props expected for known keys");
     }
 
@@ -127,7 +127,7 @@ class AutoValhallaAgentTest {
     @Test
     void knownEnvVarsAreNotFlagged() {
         var unknown = AutoValhallaAgent.unknownEnvVars(
-                Set.of("AUTO_VALHALLA_INCLUDES", "AUTO_VALHALLA_LOGGING_LEVEL", "UNRELATED"));
+                Set.of("AUTO_VALHALLA_INCLUDES", "AUTO_VALHALLA_LOGGING", "UNRELATED"));
         assertTrue(unknown.isEmpty(), "no unknown vars expected for known keys");
     }
 

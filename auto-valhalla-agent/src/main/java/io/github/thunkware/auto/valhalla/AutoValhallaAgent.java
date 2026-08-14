@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
      *       selected by {@code includes} (default {@code yolo} =
      *       {@code mark-class-final,remove-synchronized,mark-fields-final}).</li>
- *   <li>{@code auto-valhalla.logging.level} — logging level: {@code off}, {@code error},
+ *   <li>{@code logging.level} — logging level: {@code off}, {@code error},
  *       {@code warning}, {@code info} (default), {@code debug}. Controls verbosity
  *       of messages to stderr.</li>
  *   <li>{@code auto-valhalla.annotation.on-fail=throw|error|warning|info|debug}
@@ -164,7 +164,8 @@ public final class AutoValhallaAgent {
 
         // System properties take precedence over environment variables.
         for (String key : Config.KNOWN) {
-            String full = "auto-valhalla." + key;
+            // logging.level uses no auto-valhalla. prefix (bare -Dlogging.level=…).
+            String full = key.equals(Config.LOG_LEVEL) ? key : "auto-valhalla." + key;
             String v = System.getProperty(full);
             if (v == null) {
                 v = System.getenv(envName(full));
@@ -174,12 +175,11 @@ public final class AutoValhallaAgent {
             }
         }
 
-        // Per-logger level overrides: -Dauto-valhalla.logging.level.<name>=<level>
+        // Per-logger level overrides: -Dlogging.level.<name>=<level>
         // These are not in Config.KNOWN (the suffix is a logger name, not a fixed key).
-        String llSysPropPrefix = "auto-valhalla." + Config.LOG_LEVEL_PREFIX;
         for (String prop : System.getProperties().stringPropertyNames()) {
-            if (prop.startsWith(llSysPropPrefix)) {
-                String loggerName = prop.substring(llSysPropPrefix.length());
+            if (prop.startsWith(Config.LOG_LEVEL_PREFIX)) {
+                String loggerName = prop.substring(Config.LOG_LEVEL_PREFIX.length());
                 if (!loggerName.isEmpty()) {
                     String v = System.getProperty(prop);
                     if (v != null) assigns.add(new String[]{Config.LOG_LEVEL_PREFIX + loggerName, v});
@@ -420,12 +420,14 @@ public final class AutoValhallaAgent {
      *  but whose suffix is not a known option key. */
     static List<String> unknownSysProps(Set<String> propNames) {
         Set<String> known = new HashSet<>(Config.KNOWN);
+        // logging.level has no auto-valhalla. prefix; treat it as unknown under auto-valhalla.*
+        known.remove(Config.LOG_LEVEL);
         String prefix = "auto-valhalla.";
         List<String> result = new ArrayList<>();
         for (String prop : propNames) {
             if (prop.startsWith(prefix)) {
                 String suffix = prop.substring(prefix.length());
-                if (!known.contains(suffix) && !suffix.startsWith(Config.LOG_LEVEL_PREFIX)) {
+                if (!known.contains(suffix)) {
                     result.add(prop);
                 }
             }
@@ -440,12 +442,12 @@ public final class AutoValhallaAgent {
         for (String key : Config.KNOWN) {
             knownEnv.add(envName("auto-valhalla." + key));
         }
-        // Per-logger overrides use AUTO_VALHALLA_LOGGING_LEVEL_<name>; accept all of them.
-        String envLLPrefix = envName("auto-valhalla." + Config.LOG_LEVEL_PREFIX);
+        // logging.level has no auto-valhalla. prefix; its env var is LOGGING_LEVEL, not
+        // AUTO_VALHALLA_LOGGING_LEVEL, so remove the latter from the accepted set.
+        knownEnv.remove(envName("auto-valhalla." + Config.LOG_LEVEL));
         List<String> result = new ArrayList<>();
         for (String env : envNames) {
-            if (env.startsWith("AUTO_VALHALLA_") && !knownEnv.contains(env)
-                    && !env.startsWith(envLLPrefix)) {
+            if (env.startsWith("AUTO_VALHALLA_") && !knownEnv.contains(env)) {
                 result.add(env);
             }
         }

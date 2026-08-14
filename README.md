@@ -178,11 +178,11 @@ are not re-appended, and a missing file is treated as empty.
 
 | Option | Description |
 | --- | --- |
-| `auto-valhalla.logging.level` | Root logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
-| `auto-valhalla.logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. Same values as `logging.level`. |
+| `logging.level` | Root logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
+| `logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. Same values as `logging.level`. |
 | `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below. |
 
-Two-level log hierarchy: a per-logger override (if set) takes precedence over the root `auto-valhalla.logging.level`.
+Two-level log hierarchy: a per-logger override (if set) takes precedence over the root `logging.level`.
 Named loggers available for fine-grained control:
 
 | Logger name | What it covers |
@@ -200,7 +200,7 @@ Named loggers available for fine-grained control:
 Example — silence the synchronization monitor while keeping everything else at `info`:
 
 ```
--Dauto-valhalla.logging.level.auto-valhalla.synchronization-monitor=off
+-Dlogging.level.auto-valhalla.synchronization-monitor=off
 ```
 
 Per-logger overrides may also be set in a [config file](#config-file):
