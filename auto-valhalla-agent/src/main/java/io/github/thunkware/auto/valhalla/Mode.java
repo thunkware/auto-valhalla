@@ -24,13 +24,13 @@ public enum Mode {
     SAFE("safe"),
 
     /** Shorthand for the default modes
-     *  ({@code mark-class-final,ignore-synchronized,mark-fields-final}). Never
+     *  ({@code mark-class-final,remove-synchronized,mark-fields-final}). Never
      *  appears in a parsed set: {@link #parse(String)} expands it. */
     YOLO("yolo"),
 
     /** Allow candidates with synchronized instance methods: their
      *  {@code ACC_SYNCHRONIZED} is stripped so they can become value classes. */
-    IGNORE_SYNCHRONIZED("ignore-synchronized"),
+    REMOVE_SYNCHRONIZED("remove-synchronized"),
 
     /** Allow non-final (non-abstract) candidates to be converted by marking the
      *  class {@code final}, so only opt in when no subclass exists (or you accept
@@ -67,9 +67,9 @@ public enum Mode {
 
     /** The default set for {@code includes-mode} (classes selected by
      *  {@code includes}) — and the {@code yolo} expansion:
-     *  {@code mark-class-final,ignore-synchronized,mark-fields-final}. */
+     *  {@code mark-class-final,remove-synchronized,mark-fields-final}. */
     public static final Set<Mode> INCLUDES_DEFAULT =
-            Collections.unmodifiableSet(EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED,
+            Collections.unmodifiableSet(EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.REMOVE_SYNCHRONIZED,
                     Mode.MARK_FIELDS_FINAL));
 
     Mode(String flag) {
@@ -108,8 +108,8 @@ public enum Mode {
                 case "safe" -> set.add(Mode.SAFE);
                 case "yolo" -> set.add(Mode.YOLO);
                 case "markclassfinal" -> set.add(Mode.MARK_CLASS_FINAL);
-                case "ignoresynchronized" ->
-                        set.add(Mode.IGNORE_SYNCHRONIZED);
+                case "removesynchronized" ->
+                        set.add(Mode.REMOVE_SYNCHRONIZED);
                 case "markfieldsfinal" -> set.add(Mode.MARK_FIELDS_FINAL);
                 case "synchronizationmonitor" -> set.add(Mode.SYNCHRONIZATION_MONITOR);
                 default -> unknownTokens.add(tok);
@@ -118,7 +118,7 @@ public enum Mode {
         if (!unknownTokens.isEmpty()) {
             throw new IllegalArgumentException("Unknown mode tokens: " + unknownTokens
                     + "; valid modes are: safe, yolo, mark-class-final, "
-                    + "ignore-synchronized, mark-fields-final, synchronization-monitor");
+                    + "remove-synchronized, mark-fields-final, synchronization-monitor");
         }
         if (set.contains(Mode.YOLO)) {
             set.remove(Mode.YOLO);

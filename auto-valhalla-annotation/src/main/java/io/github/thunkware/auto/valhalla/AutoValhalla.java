@@ -7,11 +7,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a class to be automatically transformed into a value class (as defined
- * by <a href="https://openjdk.org/jeps/401">JEP 401</a>) at load time by the
- * {@code auto-valhalla} agent.
+ * Marks a class to be automatically transformed into a <i>value class</i> at load time by the
+ * {@code auto-valhalla} agent. See <a href="https://openjdk.org/jeps/401">JEP-401</a> of Project Valhalla
  *
- * <p>By default ({@code annotation-mode=safe}), the class must satisfy all of
+ * <p>In default ({@code annotation-mode=safe}), the class must satisfy all of
  * the following conditions:
  * <ul>
  *   <li>Is {@code final} (abstract classes are not yet supported).</li>
@@ -29,8 +28,14 @@ import java.lang.annotation.Target;
  *
  * <p>If any condition is not met, transformation fails according to
  * {@code annotation.on-fail} (default: throw a {@code LinkageError}).
- * Other modes — such as {@code mark-class-final} or {@code ignore-synchronized}
+ * Other modes — such as {@code mark-class-final} or {@code remove-synchronized}
  * — relax individual conditions; see the agent documentation for details.
+ *
+ * <p>Use {@link AutoValhallaVerifier} to check these conditions at development
+ * time, before deploying the agent:
+ * <pre>
+ * AutoValhallaVerifier.verify(Foo.class, Bar.class);
+ * </pre>
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

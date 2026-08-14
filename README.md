@@ -132,10 +132,10 @@ under the active mode, that is a failure; see [Failure handling](#failure-handli
 | Mode | Effect |
 | --- | --- |
 | `safe` | Convert only classes that are already `final`. Non-final candidates are not converted. |
-| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed. |
+| `remove-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed. |
 | `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load). |
 | `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected. |
-| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`. |
+| `yolo` | Shorthand for `remove-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`. |
 | `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. Optionally also records them to a file via `synchronization-monitor.append-to`. **Cannot be combined with other modes.** |
 
 Multiple modes are comma-separated. Mode names are case-insensitive and

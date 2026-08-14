@@ -5,7 +5,7 @@ package sample;
  * field initialized in the constructor) but uses a {@code synchronized} block
  * (bytecode {@code monitorenter}). A value object has no identity, so the JVM
  * throws {@code java.lang.IdentityException} when synchronizing on one; the agent
- * must reject such a class even under {@code mode=ignore-synchronized} (which
+ * must reject such a class even under {@code mode=remove-synchronized} (which
  * only strips {@code ACC_SYNCHRONIZED}, not {@code monitorenter}).
  */
 public final class SyncBlock {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds the project and runs every verification the agent relies on:
-#   1. full Maven package build (JDK 28)
+# Builds the project, runs all tests, and runs every verification the agent relies on:
+#   1. full Maven build + tests (annotation tests on JDK 8, agent tests on JDK 28)
 #   2. agent jar class-file version audit (shim = 49, real agent = 72,
 #      annotation = 49, exactly one AutoValhallaAgent)
 #   3. JDK 5 safety: the agent must warn and return on an ancient JVM
@@ -45,10 +45,10 @@ major_of() {
   rm -rf "$tmp"
 }
 
-echo "== 1. build =="
-mvn -q -DskipTests install >/tmp/avv-build.log 2>&1
+echo "== 1. build + tests =="
+mvn -q install >/tmp/avv-build.log 2>&1
 RC=$?
-check "$RC" "mvn install (JDK 28)"
+check "$RC" "mvn install (annotation=JDK8, agent=JDK28)"
 [ "$RC" -eq 0 ] || { echo "FATAL: mvn install failed (see /tmp/avv-build.log); aborting."; exit 1; }
 
 AGENT_JAR=$(ls auto-valhalla-agent/target/auto-valhalla-agent-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)

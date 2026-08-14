@@ -67,8 +67,8 @@ public final class ValueClassRewriter {
      *         must remain an identity class
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
-            boolean ignoreSynchronized, ClassLoader loader) {
-        return transform(model, keepIfInvalid, ignoreSynchronized, false, loader);
+            boolean removeSynchronized, ClassLoader loader) {
+        return transform(model, keepIfInvalid, removeSynchronized, false, loader);
     }
 
     /**
@@ -82,8 +82,8 @@ public final class ValueClassRewriter {
      * classes are left as identity classes.
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
-            boolean ignoreSynchronized, boolean markClassFinal, ClassLoader loader) {
-        if (!isSuitable(model, ignoreSynchronized, markClassFinal)) {
+            boolean removeSynchronized, boolean markClassFinal, ClassLoader loader) {
+        if (!isSuitable(model, removeSynchronized, markClassFinal)) {
             return null;
         }
         if (alreadyValue(model)) {
@@ -136,7 +136,7 @@ public final class ValueClassRewriter {
             }
         });
         ClassTransform ctors = ConstructorRewriter.transformConstructors(model, ctorFailed);
-        ClassTransform methods = ignoreSynchronized ? stripSynchronized() : ClassTransform.ACCEPT_ALL;
+        ClassTransform methods = removeSynchronized ? stripSynchronized() : ClassTransform.ACCEPT_ALL;
 
         ClassFile cf = ClassFiles.of(loader);
         byte[] out;
@@ -193,7 +193,7 @@ public final class ValueClassRewriter {
      *       class;</li>
      *   <li>no non-static (instance) method carries {@code ACC_SYNCHRONIZED} — a
      *       value class cannot declare a synchronized instance method (unless
-     *       {@code ignoreSynchronized} is set, in which case it is stripped);</li>
+     *       {@code removeSynchronized} is set, in which case it is stripped);</li>
      *   <li>the class is final (made final below).</li>
      * </ul>
      */
@@ -202,7 +202,7 @@ public final class ValueClassRewriter {
     }
 
     /**
-     * Like {@link #isSuitable(ClassModel)} but, when {@code ignoreSynchronized} is
+     * Like {@link #isSuitable(ClassModel)} but, when {@code removeSynchronized} is
      * true, a class with synchronized instance methods is still considered
      * suitable (the caller is expected to strip them via
      * {@link #transform(ClassModel, boolean, boolean, boolean)}); and when
@@ -210,17 +210,17 @@ public final class ValueClassRewriter {
      * is still considered suitable (it will be marked final, breaking any
      * subclasses).
      */
-    public static boolean isSuitable(ClassModel model, boolean ignoreSynchronized) {
-        return isSuitable(model, ignoreSynchronized, false);
+    public static boolean isSuitable(ClassModel model, boolean removeSynchronized) {
+        return isSuitable(model, removeSynchronized, false);
     }
 
     /**
      * The full structural check. See {@link #isSuitable(ClassModel, boolean)} for
      * the meaning of the flags.
      */
-    public static boolean isSuitable(ClassModel model, boolean ignoreSynchronized,
+    public static boolean isSuitable(ClassModel model, boolean removeSynchronized,
             boolean markClassFinal) {
-        return suitabilityProblems(model, ignoreSynchronized, markClassFinal).isEmpty();
+        return suitabilityProblems(model, removeSynchronized, markClassFinal).isEmpty();
     }
 
     /**
@@ -231,7 +231,7 @@ public final class ValueClassRewriter {
      * for what the {@code ignore*} flags mean).
      */
     public static List<String> suitabilityProblems(ClassModel model,
-            boolean ignoreSynchronized, boolean markClassFinal) {
+            boolean removeSynchronized, boolean markClassFinal) {
         List<String> problems = new ArrayList<>();
         AccessFlags flags = model.flags();
         if (flags.has(AccessFlag.INTERFACE)) {
@@ -271,7 +271,7 @@ public final class ValueClassRewriter {
                     + " mark-class-final to convert it by marking it final, which"
                     + " breaks any existing subclasses)");
         }
-        if (!ignoreSynchronized) {
+        if (!removeSynchronized) {
             String sync = model.methods().stream()
                     .filter(m -> m.flags().has(AccessFlag.SYNCHRONIZED)
                             && !m.flags().has(AccessFlag.STATIC))
@@ -280,14 +280,14 @@ public final class ValueClassRewriter {
             if (!sync.isEmpty()) {
                 problems.add("it declares synchronized instance method(s) " + sync
                         + "; a value class cannot have a synchronized instance"
-                        + " method (use ignore-synchronized to strip it)");
+                        + " method (use remove-synchronized to strip it)");
             }
         }
         // A synchronized block (monitorenter) is never safe in a value class: a
         // value object has no identity, so synchronizing on it throws
         // IdentityException at runtime. Unlike ACC_SYNCHRONIZED, monitorenter
         // cannot be stripped, so this is rejected regardless of
-        // ignore-synchronized.
+        // remove-synchronized.
         String syncBlocks = model.methods().stream()
                 .filter(m -> m.code().map(code -> code.elementList().stream()
                         .anyMatch(e -> e instanceof Instruction i

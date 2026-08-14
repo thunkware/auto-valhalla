@@ -8,7 +8,7 @@ import demo5.includes.Square;
  * immutable: every field is {@code final} and written only in the constructor,
  * but {@link #sum()} and {@link #dot(SyncPoint)} are synchronized instance
  * methods, and a value class cannot declare one (synchronization requires
- * identity). Under modes without {@code ignore-synchronized} the agent must
+ * identity). Under modes without {@code remove-synchronized} the agent must
  * therefore reject it rather than emit a value class that would not load.
  *
  * <p>Lives in the {@code demo5.broken} subpackage to keep the deliberately

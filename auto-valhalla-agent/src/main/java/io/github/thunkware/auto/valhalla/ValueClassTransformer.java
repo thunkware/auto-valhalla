@@ -182,7 +182,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private byte[] rewrite(ClassName className, ClassModel model, Selection selection,
             ClassLoader loader) {
         Set<Mode> effective = selection.effective();
-        boolean ignoreSync = effective.contains(Mode.IGNORE_SYNCHRONIZED);
+        boolean ignoreSync = effective.contains(Mode.REMOVE_SYNCHRONIZED);
         boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
         List<String> problems = ValueClassRewriter.suitabilityProblems(
                 model, ignoreSync, markClassFinal);

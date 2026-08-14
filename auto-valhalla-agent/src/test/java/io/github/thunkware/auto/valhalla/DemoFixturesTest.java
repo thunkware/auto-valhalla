@@ -30,7 +30,7 @@ class DemoFixturesTest {
         // annotation-mode=yolo, includes-mode=yolo, and the default failure
         // handling (annotation throws, includes stay quiet).
         Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,
-                Mode.IGNORE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
+                Mode.REMOVE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
         Config cfg = new Config();
         cfg.includes = Set.of("demo16.includes.", "demo5.includes.");
         cfg.excludes = Set.of();
@@ -87,7 +87,7 @@ class DemoFixturesTest {
         // rejection returns an unloadable class file -- never a usable value
         // class.
         Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,
-                Mode.IGNORE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
+                Mode.REMOVE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
         Config loudCfg = new Config();
         loudCfg.includes = Set.of();
         loudCfg.excludes = Set.of();
@@ -114,12 +114,12 @@ class DemoFixturesTest {
     }
 
     @Test
-    void immutableButSynchronizedFixtureIsRejectedWithoutIgnoreSynchronized()
+    void immutableButSynchronizedFixtureIsRejectedWithoutRemoveSynchronized()
             throws Exception {
         // SyncPoint is immutable (all fields final, written only in the
         // constructor) yet has synchronized instance methods, which a value class
         // cannot declare. It lives in demo5.broken precisely because it is never
-        // a value-class candidate without ignore-synchronized.
+        // a value-class candidate without remove-synchronized.
         String internal = "demo5/broken/SyncPoint";
         byte[] original = readResource("/demo5/broken/SyncPoint.class");
         assertNotNull(original, "demo5.broken.SyncPoint must be on the test classpath");
@@ -135,7 +135,7 @@ class DemoFixturesTest {
                 "the synchronized problem must name the methods: " + problems);
 
         // A strict config (mark-class-final + mark-fields-final, no
-        // ignore-synchronized) selects it but must leave it as an identity class,
+        // remove-synchronized) selects it but must leave it as an identity class,
         // never an unusable value class.
         Config cfg = new Config();
         cfg.includes = Set.of("demo5.broken.SyncPoint");
@@ -144,7 +144,7 @@ class DemoFixturesTest {
         cfg.includesMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL);
         ValueClassTransformer strict = new ValueClassTransformer(cfg);
         assertNull(strict.transform(null, null, internal, null, null, original),
-                "a synchronized immutable class is left as identity without ignore-synchronized");
+                "a synchronized immutable class is left as identity without remove-synchronized");
     }
 
     @Test
@@ -176,7 +176,7 @@ class DemoFixturesTest {
         Config cfg = new Config();
         cfg.includes = Set.of();
         cfg.excludes = Set.of();
-        cfg.annotationMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED);
+        cfg.annotationMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.REMOVE_SYNCHRONIZED);
         cfg.includesMode = Mode.INCLUDES_DEFAULT;
         cfg.annotationOnFail = OnFail.THROW;
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);

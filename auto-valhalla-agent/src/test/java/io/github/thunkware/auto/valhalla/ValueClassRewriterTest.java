@@ -67,7 +67,7 @@ class ValueClassRewriterTest {
         var model = cf.parse(original);
         assertFalse(ValueClassRewriter.isSuitable(model, false, false),
                 "class with a synchronized instance method is not value-class suitable"
-                        + " without ignore-synchronized");
+                        + " without remove-synchronized");
 
         // mode=safe (no ignore modes) must not rewrite a selected class with a
         // synchronized instance method: it must remain a valid identity class,
@@ -83,31 +83,31 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void ignoredSynchronizedStripsModifierAndProducesValueClass() throws Exception {
+    void removeSynchronizedStripsModifierAndProducesValueClass() throws Exception {
         String internal = "sample/Sync";
         byte[] original = readResource("/sample/Sync.class");
         assertNotNull(original, "sample class must be on the test classpath");
 
         ClassFile cf = ClassFile.of();
         var model = cf.parse(original);
-        // mode=safe (or ignore-synchronized alone) only converts already-final
+        // mode=safe (or remove-synchronized alone) only converts already-final
         // classes, so a non-final class with synchronized methods is rejected...
         assertFalse(ValueClassRewriter.isSuitable(model, false, false),
                 "rejected without mark-class-final");
         // ...but the equivalent of annotation/includes (mark-class-final +
-        // ignore-synchronized) makes it suitable and rewrites it successfully.
+        // remove-synchronized) makes it suitable and rewrites it successfully.
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
-                "suitable with mark-class-final + ignore-synchronized");
+                "suitable with mark-class-final + remove-synchronized");
 
         Config cfg = new Config();
         cfg.includes = Set.of("sample.Sync");
         cfg.excludes = Set.of();
         cfg.annotationMode = EnumSet.noneOf(Mode.class);
-        cfg.includesMode = EnumSet.of(Mode.IGNORE_SYNCHRONIZED, Mode.MARK_CLASS_FINAL);
+        cfg.includesMode = EnumSet.of(Mode.REMOVE_SYNCHRONIZED, Mode.MARK_CLASS_FINAL);
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "synchronized non-final class should be rewritten with"
-                + " mark-class-final + ignore-synchronized");
+                + " mark-class-final + remove-synchronized");
 
         var outModel = cf.parse(out);
         assertTrue(ValueClassRewriter.alreadyValue(outModel),
@@ -304,19 +304,19 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void synchronizedBlockIsRejectedEvenWithIgnoreSynchronized() throws Exception {
+    void synchronizedBlockIsRejectedEvenWithRemoveSynchronized() throws Exception {
         byte[] syncBlock = readResource("/sample/SyncBlock.class");
         assertNotNull(syncBlock, "SyncBlock on classpath");
         ClassFile cf = ClassFile.of();
 
         // monitorenter cannot be stripped, so the class is rejected even when
-        // ignore-synchronized is set (which only strips ACC_SYNCHRONIZED).
+        // remove-synchronized is set (which only strips ACC_SYNCHRONIZED).
         assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock), false, true)
                         .stream().anyMatch(p -> p.contains("synchronized block")),
                 "a synchronized block must be reported as not suitable");
         assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock), true, true)
                         .stream().anyMatch(p -> p.contains("synchronized block")),
-                "ignore-synchronized must not make a synchronized block suitable");
+                "remove-synchronized must not make a synchronized block suitable");
     }
 
     @Test
@@ -417,15 +417,15 @@ class ValueClassRewriterTest {
                 Mode.parse("mark-class-final"));
         assertEquals(EnumSet.of(Mode.MARK_CLASS_FINAL),
                 Mode.parse("markClassFinal"));
-        assertEquals(EnumSet.of(Mode.IGNORE_SYNCHRONIZED),
-                Mode.parse("IGNORE-SYNCHRONIZED"));
+        assertEquals(EnumSet.of(Mode.REMOVE_SYNCHRONIZED),
+                Mode.parse("REMOVE-SYNCHRONIZED"));
         assertEquals(EnumSet.of(Mode.SAFE,
-                        Mode.IGNORE_SYNCHRONIZED),
-                Mode.parse("safe,ignore-synchronized"));
+                        Mode.REMOVE_SYNCHRONIZED),
+                Mode.parse("safe,remove-synchronized"));
         assertEquals(EnumSet.of(Mode.SAFE,
                         Mode.MARK_CLASS_FINAL,
-                        Mode.IGNORE_SYNCHRONIZED),
-                Mode.parse("Safe,Mark-Class-Final,IGNORE_SYNCHRONIZED"));
+                        Mode.REMOVE_SYNCHRONIZED),
+                Mode.parse("Safe,Mark-Class-Final,REMOVE_SYNCHRONIZED"));
         // the default includes-mode set and the yolo expansion
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse(null));
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("  "));
@@ -443,7 +443,7 @@ class ValueClassRewriterTest {
         assertThrows(IllegalArgumentException.class, () -> Mode.parse("unknown-token"));
         assertThrows(IllegalArgumentException.class, () -> Mode.parse("safe,typo"));
         assertThrows(IllegalArgumentException.class,
-                () -> Mode.parse("ignoresync")); // typo for ignore-synchronized
+                () -> Mode.parse("ignoresync")); // typo for remove-synchronized
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> Mode.parse("safe,xyz,abc"));
         assertTrue(ex.getMessage().contains("xyz"), "error should mention unknown token");
@@ -479,7 +479,7 @@ class ValueClassRewriterTest {
         String syncMsg = syncProblems.get(0);
         assertTrue(syncMsg.contains("synchronized instance method(s) get, instance"),
                 "the synchronized problem must name the methods: " + syncMsg);
-        assertTrue(syncMsg.contains("use ignore-synchronized to strip it"), syncMsg);
+        assertTrue(syncMsg.contains("use remove-synchronized to strip it"), syncMsg);
         assertFalse(syncMsg.contains("final"), "sync-only message must not mention final: " + syncMsg);
         assertFalse(syncMsg.contains("extends") || syncMsg.contains("superclass"),
                 "sync-only message must not mention the superclass: " + syncMsg);
@@ -489,7 +489,7 @@ class ValueClassRewriterTest {
                 .noneMatch(p -> p.contains("not final")),
                 "mark-class-final clears the final problem");
         assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sync), true, true).isEmpty(),
-                "ignore-synchronized + mark-class-final clears all problems");
+                "remove-synchronized + mark-class-final clears all problems");
     }
 
     @Test

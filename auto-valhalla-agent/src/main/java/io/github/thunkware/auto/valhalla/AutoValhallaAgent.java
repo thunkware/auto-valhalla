@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
      *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
      *       selected by {@code includes} (default {@code yolo} =
-     *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
+     *       {@code mark-class-final,remove-synchronized,mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.log-level} — logging level: {@code off}, {@code error},
  *       {@code warning}, {@code info} (default), {@code debug}. Controls verbosity
  *       of messages to stderr.</li>
@@ -122,7 +122,7 @@ public final class AutoValhallaAgent {
                     + "Use system properties (-Dauto-valhalla.key=value) or environment "
                     + "variables instead. Ignoring: " + agentArgs);
         }
-        install(inst, false);
+        install(inst);
     }
 
     public static void agentmain(String agentArgs, Instrumentation inst) {
@@ -131,10 +131,10 @@ public final class AutoValhallaAgent {
                     + "Use system properties (-Dauto-valhalla.key=value) or environment "
                     + "variables instead. Ignoring: " + agentArgs);
         }
-        install(inst, true);
+        install(inst);
     }
 
-    private static void install(Instrumentation inst, boolean attach) {
+    private static void install(Instrumentation inst) {
         if (!VALHALLA_AVAILABLE) {
             InternalLogger.warning("Project Valhalla / value classes "
                     + "are not available in this JVM (pass --enable-preview on JDK 28+). "
@@ -171,12 +171,7 @@ public final class AutoValhallaAgent {
             }
         }
 
-        for (String p : unknownSysProps(System.getProperties().stringPropertyNames())) {
-            InternalLogger.warning("Unknown system property ignored: " + p);
-        }
-        for (String e : unknownEnvVars(System.getenv().keySet())) {
-            InternalLogger.warning("Unknown environment variable ignored: " + e);
-        }
+        checkUnkownConfig();
 
         Config cfg = new Config();
         boolean userSuppliedExcludes = false;
@@ -240,6 +235,14 @@ public final class AutoValhallaAgent {
         }
 
         // Log the configuration as provided (before resolving file contents);
+        logConfig(cfg);
+
+        resolveFiles(cfg, userSuppliedExcludes);
+
+        return cfg;
+    }
+
+    private static void logConfig(Config cfg) {
         // null and empty values are omitted.
         InternalLogger.info("Configuration:"
                 + getLogString(Config.INCLUDES, cfg.includes)
@@ -260,7 +263,9 @@ public final class AutoValhallaAgent {
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL, cfg.synchronizationMonitorLogLevel)
                 + getLogString(Config.LOG_LEVEL, cfg.logLevel)
                 + getLogString(Config.LOGGING, cfg.logging));
+    }
 
+    private static void resolveFiles(Config cfg, boolean userSuppliedExcludes) {
         // Now resolve file contents
         for (String p : cfg.includesFiles) {
             cfg.includes.addAll(readPatternFile(p, false));
@@ -274,8 +279,15 @@ public final class AutoValhallaAgent {
             cfg.excludes.addAll(readPatternFile("auto-valhalla.failures.txt", true));
             cfg.excludes.addAll(readPatternFile("auto-valhalla.synchronization.txt", true));
         }
+    }
 
-        return cfg;
+    private static void checkUnkownConfig() {
+        for (String p : unknownSysProps(System.getProperties().stringPropertyNames())) {
+            InternalLogger.warning("Unknown system property ignored: " + p);
+        }
+        for (String e : unknownEnvVars(System.getenv().keySet())) {
+            InternalLogger.warning("Unknown environment variable ignored: " + e);
+        }
     }
 
     private static void emit(List<String[]> assigns, String key, String value) {

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
  * Integration coverage for {@link ConstructorRewriter}: ordinary constructors that
  * the hand-rolled stack model must not under-run (and therefore silently drop as
  * identity classes). Each fixture is selected the way annotation/includes are
- * (mark-class-final + ignore-synchronized) and must rewrite and verify.
+ * (mark-class-final + remove-synchronized) and must rewrite and verify.
  */
 class ConstructorPatternsTest {
 
@@ -28,7 +28,7 @@ class ConstructorPatternsTest {
         ClassFile cf = ClassFile.of();
         var model = cf.parse(original);
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
-                internal + " must be suitable (mark-class-final + ignore-synchronized)");
+                internal + " must be suitable (mark-class-final + remove-synchronized)");
         byte[] out = ValueClassRewriter.transform(model, false, true, true, null);
         assertNotNull(out, internal + " must be rewritten into a value class");
         var outModel = cf.parse(out);

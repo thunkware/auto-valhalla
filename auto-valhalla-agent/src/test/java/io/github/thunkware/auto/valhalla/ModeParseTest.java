@@ -46,8 +46,8 @@ class ModeParseTest {
     }
 
     @Test
-    void ignoreSynchronizedParsed() {
-        assertEquals(EnumSet.of(Mode.IGNORE_SYNCHRONIZED), Mode.parse("ignore-synchronized"));
+    void removeSynchronizedParsed() {
+        assertEquals(EnumSet.of(Mode.REMOVE_SYNCHRONIZED), Mode.parse("remove-synchronized"));
     }
 
     @Test
@@ -63,9 +63,9 @@ class ModeParseTest {
 
     @Test
     void multipleModesCommaSeparated() {
-        Set<Mode> modes = Mode.parse("mark-class-final,ignore-synchronized");
+        Set<Mode> modes = Mode.parse("mark-class-final,remove-synchronized");
         assertTrue(modes.contains(Mode.MARK_CLASS_FINAL));
-        assertTrue(modes.contains(Mode.IGNORE_SYNCHRONIZED));
+        assertTrue(modes.contains(Mode.REMOVE_SYNCHRONIZED));
         assertEquals(2, modes.size());
     }
 
@@ -85,7 +85,7 @@ class ModeParseTest {
         assertEquals("safe",                   Mode.SAFE.toString());
         assertEquals("yolo",                   Mode.YOLO.toString());
         assertEquals("mark_class_final",       Mode.MARK_CLASS_FINAL.toString());
-        assertEquals("ignore_synchronized",    Mode.IGNORE_SYNCHRONIZED.toString());
+        assertEquals("remove_synchronized",    Mode.REMOVE_SYNCHRONIZED.toString());
         assertEquals("mark_fields_final",      Mode.MARK_FIELDS_FINAL.toString());
         assertEquals("synchronization_monitor", Mode.SYNCHRONIZATION_MONITOR.toString());
     }

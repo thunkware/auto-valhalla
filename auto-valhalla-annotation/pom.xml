@@ -18,23 +18,41 @@
   </description>
 
   <properties>
-    <!-- Compile with a real JDK 5 so the class file is genuine Java 5 bytecode, loadable on any JDK 5+. -->
     <java5.home>${env.JAVA5_HOME}</java5.home>
+    <!-- Fallback release for the skip-jdk5 path (modern compiler, no JDK 5 available).
+         When JAVA5_HOME is set, both AutoValhalla and AutoValhallaVerifier are compiled
+         by JDK 5 javac and produce genuine class-file 49 bytecode instead. -->
+    <maven.compiler.release>8</maven.compiler.release>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
   </properties>
 
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
   <build>
     <plugins>
-      <!-- JDK 5's javac -version exits non-zero, so the modern compiler plugin
-           cannot drive it; invoke the real JDK 5 javac directly. -->
+      <!-- All classes are compiled by JDK 5 javac
+           (see exec below); exclude them here so the modern compiler only handles
+           test sources (which stay at the release=8 fallback). -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <skip>true</skip>
+          <excludes>
+            <exclude>**/*.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
+      <!-- Compile both main sources with JDK 5 javac to produce genuine class-file 49.
+           JDK 5's javac -version exits non-zero, so the maven-compiler-plugin
+           cannot drive it; invoke javac directly instead. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
@@ -56,11 +74,59 @@
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/AutoValhalla.java</argument>
+                <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaVerifier.java</argument>
               </arguments>
             </configuration>
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.6</version>
+      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- When JAVA5_HOME is absent (local dev without the old JDK), skip the
+         exec step and let the modern compiler handle AutoValhalla.java too. -->
+    <profile>
+      <id>skip-jdk5</id>
+      <activation>
+        <property>
+          <name>!env.JAVA5_HOME</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- Drop the AutoValhalla.java exclusion so the modern compiler handles it. -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.13.0</version>
+            <configuration combine.self="override"/>
+          </plugin>
+          <!-- Disable the JDK 5 javac step. -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <executions>
+              <execution>
+                <id>compile-jdk5</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
