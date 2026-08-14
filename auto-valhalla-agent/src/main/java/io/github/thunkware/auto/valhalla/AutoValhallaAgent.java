@@ -146,6 +146,7 @@ public final class AutoValhallaAgent {
         LOG.info("Starting agent");
         Config cfg = parse();
         InternalLogger.setLevel(cfg.logLevel);
+        cfg.loggerLevels.forEach(InternalLogger::setLevel);
         InternalLogger.setMode(cfg.logging);
         if ("application".equalsIgnoreCase(cfg.logging)) {
             ApplicationLoggerFlags.enableApplicationMode();
@@ -170,6 +171,19 @@ public final class AutoValhallaAgent {
             }
             if (v != null) {
                 emit(assigns, key, v);
+            }
+        }
+
+        // Per-logger log-level overrides: -Dauto-valhalla.log-level.<name>=<level>
+        // These are not in Config.KNOWN (the suffix is a logger name, not a fixed key).
+        String llSysPropPrefix = "auto-valhalla." + Config.LOG_LEVEL_PREFIX;
+        for (String prop : System.getProperties().stringPropertyNames()) {
+            if (prop.startsWith(llSysPropPrefix)) {
+                String loggerName = prop.substring(llSysPropPrefix.length());
+                if (!loggerName.isEmpty()) {
+                    String v = System.getProperty(prop);
+                    if (v != null) assigns.add(new String[]{Config.LOG_LEVEL_PREFIX + loggerName, v});
+                }
             }
         }
 
@@ -232,7 +246,12 @@ public final class AutoValhallaAgent {
                 case Config.SYNCHRONIZATION_MONITOR_LOG_LEVEL ->
                         cfg.synchronizationMonitorLogLevel = OnSuccess.parse(a[1], OnSuccess.INFO);
                 case Config.LOGGING -> cfg.logging = a[1].trim();
-                default -> { /* unreachable */ }
+                default -> {
+                    if (a[0].startsWith(Config.LOG_LEVEL_PREFIX)) {
+                        String loggerName = a[0].substring(Config.LOG_LEVEL_PREFIX.length());
+                        cfg.loggerLevels.put(loggerName, a[1].trim());
+                    }
+                }
             }
         }
 
@@ -307,7 +326,9 @@ public final class AutoValhallaAgent {
                 if (s.startsWith("auto-valhalla.")) {
                     s = s.substring("auto-valhalla.".length());
                 }
-                if (!Config.KNOWN.contains(s) || s.equals(Config.CONFIG)) {
+                boolean isKnown = Config.KNOWN.contains(s) && !s.equals(Config.CONFIG);
+                boolean isLogLevelOverride = s.startsWith(Config.LOG_LEVEL_PREFIX);
+                if (!isKnown && !isLogLevelOverride) {
                     continue;
                 }
                 emit(assigns, s, props.getProperty(rawKey));
@@ -402,8 +423,11 @@ public final class AutoValhallaAgent {
         String prefix = "auto-valhalla.";
         List<String> result = new ArrayList<>();
         for (String prop : propNames) {
-            if (prop.startsWith(prefix) && !known.contains(prop.substring(prefix.length()))) {
-                result.add(prop);
+            if (prop.startsWith(prefix)) {
+                String suffix = prop.substring(prefix.length());
+                if (!known.contains(suffix) && !suffix.startsWith(Config.LOG_LEVEL_PREFIX)) {
+                    result.add(prop);
+                }
             }
         }
         return result;
@@ -416,9 +440,12 @@ public final class AutoValhallaAgent {
         for (String key : Config.KNOWN) {
             knownEnv.add(envName("auto-valhalla." + key));
         }
+        // Per-logger overrides use AUTO_VALHALLA_LOG_LEVEL_<name>; accept all of them.
+        String envLLPrefix = envName("auto-valhalla." + Config.LOG_LEVEL_PREFIX);
         List<String> result = new ArrayList<>();
         for (String env : envNames) {
-            if (env.startsWith("AUTO_VALHALLA_") && !knownEnv.contains(env)) {
+            if (env.startsWith("AUTO_VALHALLA_") && !knownEnv.contains(env)
+                    && !env.startsWith(envLLPrefix)) {
                 result.add(env);
             }
         }

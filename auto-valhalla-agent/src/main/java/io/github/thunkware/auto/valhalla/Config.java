@@ -2,8 +2,10 @@ package io.github.thunkware.auto.valhalla;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Parsed agent configuration: include/exclude patterns, the {@link Mode} sets
@@ -30,6 +32,7 @@ class Config {
     String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
     OnSuccess synchronizationMonitorLogLevel = OnSuccess.INFO;
     String logLevel;
+    Map<String, String> loggerLevels = new LinkedHashMap<>();
     String logging;
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
@@ -41,6 +44,8 @@ class Config {
     static final String ANNOTATION_MODE = "annotation-mode";
     static final String INCLUDES_MODE = "includes-mode";
     static final String LOG_LEVEL = "log-level";
+    /** Prefix for per-logger level overrides: {@code log-level.<logger-name>=<level>}. */
+    static final String LOG_LEVEL_PREFIX = "log-level.";
     static final String ANNOTATION_ON_FAIL = "annotation.on-fail";
     static final String ANNOTATION_ON_SUCCESS = "annotation.on-success";
     static final String ANNOTATION_ON_FAIL_APPEND_TO = "annotation.on-fail-append-to";

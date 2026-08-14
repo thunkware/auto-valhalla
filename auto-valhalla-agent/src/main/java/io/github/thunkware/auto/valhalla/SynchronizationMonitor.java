@@ -23,7 +23,7 @@ public final class SynchronizationMonitor {
 
     private static final InternalLogger LOG = InternalLogger.getLogger(SynchronizationMonitor.class);
     private static final InternalLogger SYNC_LOG =
-            InternalLogger.getLogger("auto-valhalla.synchronization-monitor.log-level");
+            InternalLogger.getLogger("auto-valhalla.synchronization-monitor");
     private static volatile BackgroundFileWriter writer;
     private static volatile OnSuccess logLevel = OnSuccess.INFO;
     private static volatile boolean active = false;

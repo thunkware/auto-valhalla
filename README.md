@@ -178,8 +178,37 @@ are not re-appended, and a missing file is treated as empty.
 
 | Option | Description |
 | --- | --- |
-| `auto-valhalla.log-level` | Logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
+| `auto-valhalla.log-level` | Root logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
+| `auto-valhalla.log-level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. Same values as `log-level`. |
 | `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below. |
+
+Two-level log hierarchy: a per-logger override (if set) takes precedence over the root `auto-valhalla.log-level`.
+Named loggers available for fine-grained control:
+
+| Logger name | What it covers |
+| --- | --- |
+| `io.github.thunkware.auto.valhalla.AutoValhallaAgent` | Agent startup and configuration |
+| `io.github.thunkware.auto.valhalla.ValueClassTransformer` | Per-class transform decisions |
+| `auto-valhalla.annotation.success` | Classes successfully transformed via `@AutoValhalla` |
+| `auto-valhalla.includes.success` | Classes successfully transformed via `includes` |
+| `auto-valhalla.annotation.fail` | Unexpected transform errors for `@AutoValhalla`-selected classes |
+| `auto-valhalla.includes.fail` | Unexpected transform errors for `includes`-selected classes |
+| `auto-valhalla.annotation.rejected` | Classes rejected by suitability checks (annotation-selected) |
+| `auto-valhalla.includes.rejected` | Classes rejected by suitability checks (includes-selected) |
+| `auto-valhalla.synchronization-monitor` | Classes seen being `synchronized` on at runtime |
+
+Example — silence the synchronization monitor while keeping everything else at `info`:
+
+```
+-Dauto-valhalla.log-level.auto-valhalla.synchronization-monitor=off
+```
+
+Per-logger overrides may also be set in a [config file](#config-file):
+
+```properties
+log-level.auto-valhalla.annotation.success=debug
+log-level.auto-valhalla.synchronization-monitor=off
+```
 
 #### Logging modes
 
@@ -188,7 +217,7 @@ are not re-appended, and a missing file is treated as empty.
 `none` suppresses all agent logging.
 
 `application` redirects agent logs to the instrumented application's SLF4J
-logger (`io.github.thunkware.auto.valhalla`). The agent instruments two points
+loggers (one per named logger above). The agent instruments two points
 in the application's class loading to detect when the logging system is ready:
 
 - **Non-Spring apps**: the bridge is installed once

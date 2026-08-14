@@ -28,6 +28,8 @@ public final class InternalLogger {
 
     private static volatile Level level = Level.INFO;
     private static volatile LoggingMode loggingMode = LoggingMode.SIMPLE;
+    private static final java.util.concurrent.ConcurrentHashMap<String, Level> loggerLevels =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
 
@@ -63,6 +65,26 @@ public final class InternalLogger {
             level = Level.INFO;
             getLogger(InternalLogger.class).warning("Unknown log-level '" + s.trim() + "'; valid values are: "
                     + "off, error, warning, info, debug. Defaulting to info.");
+        }
+    }
+
+    /**
+     * Sets a per-logger level override for {@code loggerName}. Overrides the
+     * global level set by {@link #setLevel(String)} for that specific logger only.
+     * Pass a {@code null} or blank level to remove an existing override.
+     */
+    public static void setLevel(String loggerName, String levelString) {
+        if (loggerName == null || loggerName.isBlank()) return;
+        if (levelString == null || levelString.isBlank()) {
+            loggerLevels.remove(loggerName);
+            return;
+        }
+        try {
+            loggerLevels.put(loggerName, Level.valueOf(levelString.trim().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            getLogger(InternalLogger.class).warning(
+                    "Unknown log-level '" + levelString.trim() + "' for logger '"
+                    + loggerName + "'; valid values are: off, error, warning, info, debug. Ignoring.");
         }
     }
 
@@ -113,7 +135,8 @@ public final class InternalLogger {
     }
 
     private void log(Level lv, String msg, Throwable t) {
-        if (lv.rank > level.rank) return;
+        Level effective = loggerLevels.getOrDefault(name, level);
+        if (lv.rank > effective.rank) return;
         switch (loggingMode) {
             case NONE -> {}
             case APPLICATION -> {
