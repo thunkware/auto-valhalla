@@ -6,8 +6,8 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Logging facade for the auto-valhalla agent. Supports log levels: {@code OFF},
- * {@code ERROR}, {@code WARNING}, {@code INFO}, {@code DEBUG}. Messages are
- * prefixed with an ISO 8601 timestamp (with millisecond precision and timezone
+ * {@code FATAL}, {@code ERROR}, {@code WARNING}, {@code INFO}, {@code DEBUG}. Messages
+ * are prefixed with an ISO 8601 timestamp (with millisecond precision and timezone
  * offset), the log level, and the logger name (the fully-qualified class name of
  * the class that created the logger).
  *
@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 public final class InternalLogger {
 
     enum Level {
-        OFF(0), ERROR(1), WARNING(2), INFO(3), DEBUG(4);
+        OFF(0), FATAL(1), ERROR(2), WARNING(3), INFO(4), DEBUG(5);
 
         final int rank;
         Level(int rank) { this.rank = rank; }
@@ -64,7 +64,7 @@ public final class InternalLogger {
         } catch (IllegalArgumentException e) {
             level = Level.INFO;
             getLogger(InternalLogger.class).warning("Unknown log-level '" + s.trim() + "'; valid values are: "
-                    + "off, error, warning, info, debug. Defaulting to info.");
+                    + "off, fatal, error, warning, info, debug. Defaulting to info.");
         }
     }
 
@@ -84,7 +84,7 @@ public final class InternalLogger {
         } catch (IllegalArgumentException e) {
             getLogger(InternalLogger.class).warning(
                     "Unknown log-level '" + levelString.trim() + "' for logger '"
-                    + loggerName + "'; valid values are: off, error, warning, info, debug. Ignoring.");
+                    + loggerName + "'; valid values are: off, fatal, error, warning, info, debug. Ignoring.");
         }
     }
 
@@ -134,6 +134,25 @@ public final class InternalLogger {
         log(Level.ERROR, msg, t);
     }
 
+    /**
+     * Logs at WARNING level and always throws. If {@code t} is a
+     * {@link RuntimeException} it is rethrown as-is; otherwise it is wrapped in
+     * a new {@code RuntimeException}. Returns {@code RuntimeException} so callers
+     * can write {@code throw log.fatal(…)} to satisfy the compiler's control-flow
+     * analysis — the method never returns normally.
+     */
+    public RuntimeException fatal(String msg, Throwable t) {
+        log(Level.FATAL, msg, t);
+        if (t instanceof RuntimeException re) throw re;
+        throw new RuntimeException(msg, t);
+    }
+
+    /** Like {@link #fatal(String, Throwable)} but with no cause. Always throws. */
+    public RuntimeException fatal(String msg) {
+        log(Level.FATAL, msg, null);
+        throw new RuntimeException(msg);
+    }
+
     private void log(Level lv, String msg, Throwable t) {
         Level effective = loggerLevels.getOrDefault(name, level);
         if (lv.rank > effective.rank) return;
@@ -159,7 +178,8 @@ public final class InternalLogger {
 
     private void logToStderr(Level lv, String msg, Throwable t) {
         String timestamp = ZonedDateTime.now().format(TIMESTAMP_FORMAT);
-        System.err.println(timestamp + " " + lv + " " + name + " - " + msg);
+        String displayLevel = lv == Level.FATAL ? Level.WARNING.name() : lv.name();
+        System.err.println(timestamp + " " + displayLevel + " " + name + " - " + msg);
         if (t != null) {
             t.printStackTrace(System.err);
         }
@@ -185,6 +205,7 @@ public final class InternalLogger {
         private static volatile boolean attempted;
         private static volatile Method getLoggerMethod;
         private static volatile Method warnMethod;
+        private static volatile Method warnWithCauseMethod;
         private static volatile Method errorMethod;
         private static volatile Method errorWithCauseMethod;
         private static volatile Method infoMethod;
@@ -207,10 +228,13 @@ public final class InternalLogger {
                 if (lv == Level.ERROR && t != null) {
                     m = errorWithCauseMethod;
                     args = new Object[] { msg, t };
+                } else if ((lv == Level.FATAL || lv == Level.WARNING) && t != null) {
+                    m = warnWithCauseMethod;
+                    args = new Object[] { msg, t };
                 } else {
                     m = switch (lv) {
+                        case FATAL, WARNING -> warnMethod;
                         case ERROR -> errorMethod;
-                        case WARNING -> warnMethod;
                         case INFO -> infoMethod;
                         case DEBUG -> debugMethod;
                         default -> null;
@@ -233,6 +257,7 @@ public final class InternalLogger {
         static synchronized void reinstall() {
             getLoggerMethod = null;
             warnMethod = null;
+            warnWithCauseMethod = null;
             errorMethod = null;
             errorWithCauseMethod = null;
             infoMethod = null;
@@ -251,6 +276,7 @@ public final class InternalLogger {
                 Class<?> loggerIface = Class.forName("org.slf4j.Logger", true, cl);
                 getLoggerMethod = factory.getMethod("getLogger", String.class);
                 warnMethod = loggerIface.getMethod("warn", String.class);
+                warnWithCauseMethod = loggerIface.getMethod("warn", String.class, Throwable.class);
                 errorMethod = loggerIface.getMethod("error", String.class);
                 errorWithCauseMethod = loggerIface.getMethod("error", String.class, Throwable.class);
                 infoMethod = loggerIface.getMethod("info", String.class);
