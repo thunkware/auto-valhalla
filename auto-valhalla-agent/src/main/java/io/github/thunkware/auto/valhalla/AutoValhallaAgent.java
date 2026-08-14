@@ -39,11 +39,11 @@ import java.util.Set;
  *   <li>{@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
  *       — path to a file with one pattern per line (blank lines and {@code #}
  *       comments ignored). CSV format is automatically detected and parsed.</li>
- *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
- *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
- *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
- *       selected by {@code includes} (default {@code yolo} =
- *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
+     *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
+     *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
+     *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
+     *       selected by {@code includes} (default {@code yolo} =
+     *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
  *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
  *   <li>{@code auto-valhalla.log-level} — logging level: {@code off}, {@code error},
  *       {@code warning} (default), {@code info}, {@code debug}. Controls verbosity
@@ -100,6 +100,8 @@ import java.util.Set;
  */
 public final class AutoValhallaAgent {
 
+    private AutoValhallaAgent() {}
+
     /**
      * Whether the running JVM has Project Valhalla / value classes available.
      * Determined once from the JVM's input arguments: value classes are a preview
@@ -109,9 +111,6 @@ public final class AutoValhallaAgent {
      * to accept).
      */
     private static final boolean VALHALLA_AVAILABLE = valhallaAvailable();
-
-    private AutoValhallaAgent() {
-    }
 
     public static void premain(String agentArgs, Instrumentation inst) {
         install(agentArgs, inst, false);
@@ -133,7 +132,6 @@ public final class AutoValhallaAgent {
         ValueClassTransformer transformer = new ValueClassTransformer(
                 cfg.includes(), cfg.excludes(),
                 cfg.annotationMode(), cfg.includesMode(),
-                cfg.debug(),
                 cfg.annotationOnFailThrow(), cfg.annotationOnFailAppendTo(),
                 cfg.annotationOnSuccessAppendTo(),
                 cfg.includesOnFailThrow(), cfg.includesOnFailAppendTo(),
@@ -142,7 +140,7 @@ public final class AutoValhallaAgent {
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
 
-        InternalLogger.info("attached"
+        InternalLogger.debug("attached"
                 + (attach ? " (dynamically)" : "")
                 + "; includes=" + cfg.includes()
                 + " excludes=" + cfg.excludes()
@@ -194,14 +192,11 @@ public final class AutoValhallaAgent {
 
         Set<String> includes = new HashSet<>();
         Set<String> excludes = new HashSet<>();
-        // Default excludes: read failure and synchronization log files as patterns.
-        // Use quiet variant since these files may not exist on first run.
-        excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
-        excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
+        String includesFilesPath = null;
+        String excludesFilesPath = null;
 
         Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
         Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
-        boolean debug = false;
         String logLevel = null;
         // annotation-selected classes are an explicit opt-in: fail loudly by
         // default. includes sweep broadly: stay quiet by default.
@@ -217,14 +212,15 @@ public final class AutoValhallaAgent {
             switch (a[0]) {
                 case Config.INCLUDES -> includes.addAll(parsePatternSet(a[1]));
                 case Config.EXCLUDES -> excludes.addAll(parsePatternSet(a[1]));
-                case Config.INCLUDES_FILES -> includes.addAll(readPatternFile(a[1]));
-                case Config.EXCLUDES_FILES -> excludes.addAll(readPatternFile(a[1]));
+                case Config.INCLUDES_FILES -> includesFilesPath = a[1].trim();
+                case Config.EXCLUDES_FILES -> excludesFilesPath = a[1].trim();
                 case Config.ANNOTATION_MODE -> annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
                 case Config.INCLUDES_MODE -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
-                case Config.DEBUG -> debug = Boolean.parseBoolean(a[1]);
                 case Config.LOG_LEVEL -> logLevel = a[1].trim();
-                case Config.ANNOTATION_ON_FAIL_THROW -> annotationOnFailThrow = Boolean.parseBoolean(a[1]);
-                case Config.INCLUDES_ON_FAIL_THROW -> includesOnFailThrow = Boolean.parseBoolean(a[1]);
+                case Config.ANNOTATION_ON_FAIL_THROW ->
+                        annotationOnFailThrow = Boolean.parseBoolean(a[1]);
+                case Config.INCLUDES_ON_FAIL_THROW ->
+                        includesOnFailThrow = Boolean.parseBoolean(a[1]);
                 case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
                     annotationOnFailAppendTo = t.isEmpty() ? null : t;
@@ -248,8 +244,33 @@ public final class AutoValhallaAgent {
                 default -> { /* unreachable */ }
             }
         }
+        // Log the configuration as provided (before resolving file contents)
+        if (InternalLogger.isDebugEnabled()) {
+            InternalLogger.debug("configuration:"
+                    + " includes=" + (includes.isEmpty() ? (includesFilesPath == null ? "[]" : "[from " + includesFilesPath + "]") : includes)
+                    + " excludes=" + (excludes.isEmpty() ? (excludesFilesPath == null ? "[]" : "[from " + excludesFilesPath + "]") : excludes)
+                    + " annotation-mode=" + annotationMode
+                    + " includes-mode=" + includesMode
+                    + " log-level=" + logLevel
+                    + " annotation.on-fail-throw=" + annotationOnFailThrow
+                    + " includes.on-fail-throw=" + includesOnFailThrow);
+        }
+
+        // Now resolve file contents
+        if (includesFilesPath != null) {
+            includes.addAll(readPatternFile(includesFilesPath));
+        }
+        if (excludesFilesPath != null) {
+            excludes.addAll(readPatternFile(excludesFilesPath));
+        }
+
+        // Default excludes: read failure and synchronization log files as patterns.
+        // Use quiet variant since these files may not exist on first run.
+        excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
+        excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
+
         return new Config(includes, excludes, annotationMode, includesMode,
-                debug, logLevel, annotationOnFailThrow, annotationOnFailAppendTo,
+                logLevel, annotationOnFailThrow, annotationOnFailAppendTo,
                 annotationOnSuccessAppendTo,
                 includesOnFailThrow, includesOnFailAppendTo,
                 includesOnSuccessAppendTo,
@@ -274,7 +295,7 @@ public final class AutoValhallaAgent {
             }
             return;
         }
-        assigns.add(new String[]{key, value});
+        assigns.add(new String[] { key, value });
     }
 
     private static String canonicalKey(String input) {

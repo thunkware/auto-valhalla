@@ -74,7 +74,6 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private final Set<String> excludes;
     private final Set<Mode> annotationMode;
     private final Set<Mode> includesMode;
-    private final boolean debug;
     private final boolean annotationOnFailThrow;
     private final String annotationOnFailAppendTo;
     private final String annotationOnSuccessAppendTo;
@@ -90,29 +89,26 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
             Set<Mode> annotationMode, Set<Mode> includesMode,
-            boolean debug,
             boolean annotationOnFailThrow, String annotationOnFailAppendTo,
             boolean includesOnFailThrow, String includesOnFailAppendTo) {
-        this(includes, excludes, annotationMode, includesMode, debug,
+        this(includes, excludes, annotationMode, includesMode,
                 annotationOnFailThrow, annotationOnFailAppendTo, null,
                 includesOnFailThrow, includesOnFailAppendTo, null, null);
     }
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
             Set<Mode> annotationMode, Set<Mode> includesMode,
-            boolean debug,
             boolean annotationOnFailThrow, String annotationOnFailAppendTo,
             String annotationOnSuccessAppendTo,
             boolean includesOnFailThrow, String includesOnFailAppendTo,
             String includesOnSuccessAppendTo) {
-        this(includes, excludes, annotationMode, includesMode, debug,
+        this(includes, excludes, annotationMode, includesMode,
                 annotationOnFailThrow, annotationOnFailAppendTo, annotationOnSuccessAppendTo,
                 includesOnFailThrow, includesOnFailAppendTo, includesOnSuccessAppendTo, null);
     }
 
     ValueClassTransformer(Set<String> includes, Set<String> excludes,
             Set<Mode> annotationMode, Set<Mode> includesMode,
-            boolean debug,
             boolean annotationOnFailThrow, String annotationOnFailAppendTo,
             String annotationOnSuccessAppendTo,
             boolean includesOnFailThrow, String includesOnFailAppendTo,
@@ -122,7 +118,6 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         this.excludes = excludes;
         this.annotationMode = annotationMode;
         this.includesMode = includesMode;
-        this.debug = debug;
         this.annotationOnFailThrow = annotationOnFailThrow;
         this.annotationOnFailAppendTo = annotationOnFailAppendTo;
         this.annotationOnSuccessAppendTo = annotationOnSuccessAppendTo;
@@ -182,10 +177,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             if (selection.effective().contains(Mode.SYNCHRONIZATION_MONITOR)) {
                 byte[] monitored = SynchronizationInstrumenter.instrument(model);
                 if (monitored != null) {
-                    if (debug) {
-                        InternalLogger.debug(internal.replace('/', '.')
-                                + ": instrumented for synchronization monitoring");
-                    }
+                    InternalLogger.debug(internal.replace('/', '.')
+                            + ": instrumented for synchronization monitoring");
                     return monitored;
                 }
                 return null;
@@ -290,10 +283,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             transformedToFinal.add(internal);
         }
         appendTo(selection.onSuccessAppendTo(), internal);
-        if (debug) {
-            InternalLogger.debug(internal.replace('/', '.')
-                    + ": transformed to value class (" + out.length + " bytes)");
-        }
+        InternalLogger.debug(internal.replace('/', '.')
+                + ": transformed to value class (" + out.length + " bytes)");
         return out;
     }
 
@@ -321,11 +312,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     + " into a value class: " + t, t);
         }
         appendOnFail(internal, onFailAppendTo);
-        if (debug) {
-            InternalLogger.debug(internal.replace('/', '.')
-                    + ": transform failed:");
-            InternalLogger.error("", t);
-        }
+        InternalLogger.debug(internal.replace('/', '.')
+                + ": transform failed:");
+        InternalLogger.error("", t);
         return null;
     }
 
@@ -344,10 +333,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             // hand back a class file that fails to load, surfacing the failure loudly.
             return brokenClass();
         }
-        if (debug) {
-            InternalLogger.debug(internal.replace('/', '.') + ": " + reason
-                    + ", leaving as identity class");
-        }
+        InternalLogger.debug(internal.replace('/', '.') + ": " + reason
+                + ", leaving as identity class");
         return null;
     }
 

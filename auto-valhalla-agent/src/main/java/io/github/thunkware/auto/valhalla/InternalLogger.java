@@ -43,6 +43,10 @@ public final class InternalLogger {
         }
     }
 
+    public static boolean isDebugEnabled() {
+        return level.rank >= Level.DEBUG.rank;
+    }
+
     public static void debug(String msg) {
         log(Level.DEBUG, msg);
     }

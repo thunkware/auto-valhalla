@@ -19,6 +19,8 @@
          (RuntimeMXBean input arguments) then disables the agent if the JVM was
          not started with the enable-preview flag. -->
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+    <maven.compiler.source>28</maven.compiler.source>
+    <maven.compiler.target>28</maven.compiler.target>
   </properties>
 
   <dependencies>

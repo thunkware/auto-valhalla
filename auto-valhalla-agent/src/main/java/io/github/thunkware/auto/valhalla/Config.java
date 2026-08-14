@@ -5,11 +5,10 @@ import java.util.Set;
 
 /** Parsed agent configuration: include/exclude patterns, the {@link Mode} sets
  *  applied to annotation-selected vs includes-selected classes, the per-source
- *  failure-handling flags, the synchronization monitor path, the debug flag, and
- *  the log level. */
+ *  failure-handling flags, the synchronization monitor path, and the log level. */
 record Config(Set<String> includes, Set<String> excludes,
         Set<Mode> annotationMode, Set<Mode> includesMode,
-        boolean debug, String logLevel,
+        String logLevel,
         boolean annotationOnFailThrow, String annotationOnFailAppendTo,
         String annotationOnSuccessAppendTo,
         boolean includesOnFailThrow, String includesOnFailAppendTo,
@@ -24,7 +23,6 @@ record Config(Set<String> includes, Set<String> excludes,
     static final String EXCLUDES_FILES = "excludes-files";
     static final String ANNOTATION_MODE = "annotation-mode";
     static final String INCLUDES_MODE = "includes-mode";
-    static final String DEBUG = "debug";
     static final String LOG_LEVEL = "log-level";
     static final String ANNOTATION_ON_FAIL_THROW = "annotation.on-fail-throw";
     static final String ANNOTATION_ON_FAIL_APPEND_TO = "annotation.on-fail-append-to";
@@ -41,7 +39,7 @@ record Config(Set<String> includes, Set<String> excludes,
     static final List<String> KNOWN = List.of(
             INCLUDES, INCLUDES_FILES, EXCLUDES, EXCLUDES_FILES,
             ANNOTATION_MODE, INCLUDES_MODE,
-            DEBUG, LOG_LEVEL,
+            LOG_LEVEL,
             ANNOTATION_ON_FAIL_THROW, ANNOTATION_ON_FAIL_APPEND_TO,
             ANNOTATION_ON_SUCCESS_APPEND_TO,
             INCLUDES_ON_FAIL_THROW, INCLUDES_ON_FAIL_APPEND_TO,
