@@ -43,6 +43,10 @@ public final class InternalLogger {
         return new InternalLogger(cls.getName());
     }
 
+    public static InternalLogger getLogger(String name) {
+        return new InternalLogger(name);
+    }
+
     /**
      * Sets the global log level from a string (case-insensitive):
      * {@code off}, {@code error}, {@code warning}, {@code info}, {@code debug}.

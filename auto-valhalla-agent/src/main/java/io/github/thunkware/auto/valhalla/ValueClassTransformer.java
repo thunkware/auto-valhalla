@@ -37,6 +37,18 @@ import java.util.stream.Stream;
 public final class ValueClassTransformer implements ClassFileTransformer {
 
     private final InternalLogger log = InternalLogger.getLogger(ValueClassTransformer.class);
+    private final InternalLogger annotationSuccessLog =
+            InternalLogger.getLogger("auto-valhalla.annotation.success");
+    private final InternalLogger includesSuccessLog =
+            InternalLogger.getLogger("auto-valhalla.includes.success");
+    private final InternalLogger annotationFailLog =
+            InternalLogger.getLogger("auto-valhalla.annotation.fail");
+    private final InternalLogger includesFailLog =
+            InternalLogger.getLogger("auto-valhalla.includes.fail");
+    private final InternalLogger annotationRejectedLog =
+            InternalLogger.getLogger("auto-valhalla.annotation.rejected");
+    private final InternalLogger includesRejectedLog =
+            InternalLogger.getLogger("auto-valhalla.includes.rejected");
     private final Config config;
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
@@ -117,7 +129,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             log.debug(className.java() + ": instrumented for synchronization monitoring");
             return monitored;
         }
-        return onFail(className,
+        return onRejected(className,
                 "is selected for synchronization monitoring but could not be"
                         + " instrumented (stack-map verification failed)", selection);
     }
@@ -171,7 +183,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     "mode=synchronization-monitor cannot be combined with other modes; "
                     + "got: " + effective);
         }
-        return new Selection(effective, onFail, onSuccess, onFailAppendTo, onSuccessAppendTo);
+        return new Selection(effective, onFail, onSuccess, onFailAppendTo, onSuccessAppendTo, annotated);
     }
 
     /**
@@ -188,19 +200,19 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         List<String> problems = ValueClassRewriter.suitabilityProblems(
                 model, ignoreSync, markClassFinal);
         if (!problems.isEmpty()) {
-            return onFail(className, "is selected for value-class transformation but is not"
+            return onRejected(className, "is selected for value-class transformation but is not"
                     + " suitable: " + String.join("; ", problems), selection);
         }
         if (effective.contains(Mode.MARK_FIELDS_FINAL)
                 && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
-            return onFail(className,
+            return onRejected(className,
                     "is selected for value-class transformation but has a non-final field"
                     + " not written in every constructor (mode=mark-fields-final)", selection);
         }
         byte[] out = ValueClassRewriter.transform(model, selection.onFail() == OnFail.THROW,
                 ignoreSync, markClassFinal, loader);
         if (out == null) {
-            return onFail(className,
+            return onRejected(className,
                     "is selected for value-class transformation but could not be safely"
                     + " transformed", selection);
         }
@@ -217,6 +229,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             case INFO  -> log.info(successMsg);
             case OFF   -> {}
         }
+        (selection.annotated() ? annotationSuccessLog : includesSuccessLog).info(successMsg);
         return out;
     }
 
@@ -225,10 +238,16 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * settings of the selection source that applied. A class selected by both
      * the annotation and includes is annotation-selected only.
      */
-    private record Selection(Set<Mode> effective, OnFail onFail, OnSuccess onSuccess,
-            String onFailAppendTo, String onSuccessAppendTo) {
+    private record Selection(
+            Set<Mode> effective,
+            OnFail onFail,
+            OnSuccess onSuccess,
+            String onFailAppendTo,
+            String onSuccessAppendTo,
+            boolean annotated) {
         static Selection empty() {
-            return new Selection(Collections.emptySet(), OnFail.DEBUG, OnSuccess.INFO, null, null);
+            return new Selection(
+                    Collections.emptySet(), OnFail.DEBUG, OnSuccess.INFO, null, null, false);
         }
     }
 
@@ -254,16 +273,19 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             case DEBUG   -> log.debug(msg);
             default      -> {}
         }
+        (selection.annotated() ? annotationFailLog : includesFailLog).warning(msg);
         return null;
     }
 
     /** Handles a selected-but-untransformable class: records the name if configured,
      *  then either causes a load failure ({@link OnFail#THROW}) or logs at the
      *  configured level and leaves the class as an identity class. */
-    private byte[] onFail(ClassName className, String reason, Selection selection) {
+    private byte[] onRejected(ClassName className, String reason, Selection selection) {
         appendOnFail(className, selection.onFailAppendTo());
         String base = className.java() + ": " + reason;
-        return switch (selection.onFail()) {
+        InternalLogger rejectedLog =
+                selection.annotated() ? annotationRejectedLog : includesRejectedLog;
+        byte[] result = switch (selection.onFail()) {
             case THROW -> {
                 log.error(base + "; the JVM will reject it rather than"
                         + " silently keep an identity class.");
@@ -289,6 +311,8 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             }
             default -> null;
         };
+        rejectedLog.warning(base + ", leaving as identity class");
+        return result;
     }
 
     private void appendOnFail(ClassName className, String onFailAppendTo) {
