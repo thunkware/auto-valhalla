@@ -1,5 +1,8 @@
 package io.github.thunkware.auto.valhalla.logger;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -204,47 +207,51 @@ public final class InternalLogger {
         static volatile int version = 0;
         private static volatile boolean attempted;
         private static volatile Method getLoggerMethod;
-        private static volatile Method warnMethod;
-        private static volatile Method warnWithCauseMethod;
-        private static volatile Method errorMethod;
-        private static volatile Method errorWithCauseMethod;
-        private static volatile Method infoMethod;
-        private static volatile Method debugMethod;
+        private static volatile MethodHandle warnHandle;
+        private static volatile MethodHandle warnWithCauseHandle;
+        private static volatile MethodHandle errorHandle;
+        private static volatile MethodHandle errorWithCauseHandle;
+        private static volatile MethodHandle infoHandle;
+        private static volatile MethodHandle debugHandle;
 
         static Object getLoggerInstance(String name) {
             if (!attempted) init();
             if (getLoggerMethod == null) return null;
             try {
                 return getLoggerMethod.invoke(null, name);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 return null;
             }
         }
 
         static boolean invoke(Level lv, Object logger, String msg, Throwable t) {
             try {
-                Method m;
-                Object[] args;
+                MethodHandle h;
+                boolean withCause;
                 if (lv == Level.ERROR && t != null) {
-                    m = errorWithCauseMethod;
-                    args = new Object[] { msg, t };
+                    h = errorWithCauseHandle;
+                    withCause = true;
                 } else if ((lv == Level.FATAL || lv == Level.WARNING) && t != null) {
-                    m = warnWithCauseMethod;
-                    args = new Object[] { msg, t };
+                    h = warnWithCauseHandle;
+                    withCause = true;
                 } else {
-                    m = switch (lv) {
-                        case FATAL, WARNING -> warnMethod;
-                        case ERROR -> errorMethod;
-                        case INFO -> infoMethod;
-                        case DEBUG -> debugMethod;
+                    h = switch (lv) {
+                        case FATAL, WARNING -> warnHandle;
+                        case ERROR -> errorHandle;
+                        case INFO -> infoHandle;
+                        case DEBUG -> debugHandle;
                         default -> null;
                     };
-                    args = new Object[] { msg };
+                    withCause = false;
                 }
-                if (m == null) return false;
-                m.invoke(logger, args);
+                if (h == null) return false;
+                if (withCause) {
+                    h.invokeWithArguments(logger, msg, t);
+                } else {
+                    h.invokeWithArguments(logger, msg);
+                }
                 return true;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 return false;
             }
         }
@@ -256,12 +263,12 @@ public final class InternalLogger {
          */
         static synchronized void reinstall() {
             getLoggerMethod = null;
-            warnMethod = null;
-            warnWithCauseMethod = null;
-            errorMethod = null;
-            errorWithCauseMethod = null;
-            infoMethod = null;
-            debugMethod = null;
+            warnHandle = null;
+            warnWithCauseHandle = null;
+            errorHandle = null;
+            errorWithCauseHandle = null;
+            infoHandle = null;
+            debugHandle = null;
             attempted = false;
             version++; // triggers lazy re-acquire in all InternalLogger instances
             init();    // reentrant: same thread holds the lock
@@ -272,17 +279,27 @@ public final class InternalLogger {
             try {
                 ClassLoader cl = Thread.currentThread().getContextClassLoader();
                 if (cl == null) cl = ClassLoader.getSystemClassLoader();
-                Class<?> factory = Class.forName("org.slf4j.LoggerFactory", true, cl);
-                Class<?> loggerIface = Class.forName("org.slf4j.Logger", true, cl);
+                Class<?> factory = Class.forName("org.slf4j.LoggerFactory", false, cl);
                 getLoggerMethod = factory.getMethod("getLogger", String.class);
-                warnMethod = loggerIface.getMethod("warn", String.class);
-                warnWithCauseMethod = loggerIface.getMethod("warn", String.class, Throwable.class);
-                errorMethod = loggerIface.getMethod("error", String.class);
-                errorWithCauseMethod = loggerIface.getMethod("error", String.class, Throwable.class);
-                infoMethod = loggerIface.getMethod("info", String.class);
-                debugMethod = loggerIface.getMethod("debug", String.class);
-            } catch (Exception e) {
-                // SLF4J not available; caller falls back to stderr
+                // Obtain a probe logger and discover methods via MethodHandles.findVirtual().
+                // findVirtual() resolves by name+descriptor without calling getDeclaredMethods0(),
+                // so org.slf4j.event.Level is never loaded through LaunchedClassLoader's
+                // JarUrlClassLoader — which would throw a duplicate class definition LinkageError
+                // in Spring Boot (JarUrlClassLoader.findLoadedClass() does not see classes already
+                // defined in LaunchedClassLoader, causing it to attempt defineClass() again).
+                Object probe = getLoggerMethod.invoke(null, "io.github.thunkware.auto.valhalla");
+                Class<?> cls = probe.getClass();
+                MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+                MethodType str = MethodType.methodType(void.class, String.class);
+                MethodType strCause = MethodType.methodType(void.class, String.class, Throwable.class);
+                warnHandle = lookup.findVirtual(cls, "warn", str);
+                warnWithCauseHandle = lookup.findVirtual(cls, "warn", strCause);
+                errorHandle = lookup.findVirtual(cls, "error", str);
+                errorWithCauseHandle = lookup.findVirtual(cls, "error", strCause);
+                infoHandle = lookup.findVirtual(cls, "info", str);
+                debugHandle = lookup.findVirtual(cls, "debug", str);
+            } catch (Throwable e) {
+                // SLF4J not available or classloader conflict; caller falls back to stderr
             } finally {
                 attempted = true;
             }
