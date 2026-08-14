@@ -31,10 +31,13 @@ class DemoFixturesTest {
         // handling (annotation throws, includes stay quiet).
         Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,
                 Mode.IGNORE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of("demo16.includes.", "demo5.includes."), Set.of(),
-                yolo, yolo,
-                true, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("demo16.includes.", "demo5.includes.");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = yolo;
+        cfg.includesMode = yolo;
+        cfg.annotationOnFailThrow = true;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
 
         // Point is selected only by @AutoValhalla (it is in demo5.annotation,
         // outside the demo5.includes. prefix). annotation-mode=yolo marks its
@@ -85,10 +88,13 @@ class DemoFixturesTest {
         // class.
         Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,
                 Mode.IGNORE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
-        ValueClassTransformer loud = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                yolo, yolo,
-                true, null, false, null);
+        Config loudCfg = new Config();
+        loudCfg.includes = Set.of();
+        loudCfg.excludes = Set.of();
+        loudCfg.annotationMode = yolo;
+        loudCfg.includesMode = yolo;
+        loudCfg.annotationOnFailThrow = true;
+        ValueClassTransformer loud = new ValueClassTransformer(loudCfg);
         byte[] loudOut = loud.transform(null, null, internal, null, null, original);
         assertNotNull(loudOut, "annotation.on-fail-throw=true surfaces the rejection");
         assertFalse(isUsableValueClass(loudOut),
@@ -96,10 +102,12 @@ class DemoFixturesTest {
 
         // With throwing disabled for both sources it is instead left as an
         // identity class -- still never rewritten into a value class.
-        ValueClassTransformer quiet = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                yolo, yolo,
-                false, null, false, null);
+        Config quietCfg = new Config();
+        quietCfg.includes = Set.of();
+        quietCfg.excludes = Set.of();
+        quietCfg.annotationMode = yolo;
+        quietCfg.includesMode = yolo;
+        ValueClassTransformer quiet = new ValueClassTransformer(quietCfg);
         assertNull(quiet.transform(null, null, internal, null, null, original),
                 "without on-fail-throw the annotated mutable class is left as identity");
     }
@@ -128,11 +136,12 @@ class DemoFixturesTest {
         // A strict config (mark-class-final + mark-fields-final, no
         // ignore-synchronized) selects it but must leave it as an identity class,
         // never an unusable value class.
-        ValueClassTransformer strict = new ValueClassTransformer(
-                Set.of("demo5.broken.SyncPoint"), Set.of(),
-                Mode.ANNOTATION_DEFAULT,
-                EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL),
-                false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("demo5.broken.SyncPoint");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL);
+        ValueClassTransformer strict = new ValueClassTransformer(cfg);
         assertNull(strict.transform(null, null, internal, null, null, original),
                 "a synchronized immutable class is left as identity without ignore-synchronized");
     }
@@ -145,10 +154,13 @@ class DemoFixturesTest {
         // handled by the on-fail settings. The loud annotation default
         // (annotation.on-fail-throw=true) surfaces a broken class, never a
         // usable value class.
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                true, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of();
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        cfg.annotationOnFailThrow = true;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
         assertNotNull(point, "default annotation-mode (safe) rejects non-final demo5.annotation.Point loudly");
@@ -160,11 +172,13 @@ class DemoFixturesTest {
     void annotatedPointIsRewrittenWhenMarkClassFinalOptsIn() throws Exception {
         // The same class converts once the user explicitly opts into
         // mark-class-final (the old annotation default), even without includes.
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED),
-                Mode.INCLUDES_DEFAULT,
-                true, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of();
+        cfg.excludes = Set.of();
+        cfg.annotationMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED);
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        cfg.annotationOnFailThrow = true;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] point = transformer.transform(null, null, "demo5/annotation/Point", null, null,
                 readResource("/demo5/annotation/Point.class"));
         assertNotNull(point, "@AutoValhalla + mark-class-final must convert demo5.annotation.Point");

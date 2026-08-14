@@ -70,76 +70,30 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ValueClassTransformer implements ClassFileTransformer {
 
-    private final Set<String> includes;
-    private final Set<String> excludes;
-    private final Set<Mode> annotationMode;
-    private final Set<Mode> includesMode;
-    private final boolean annotationOnFailThrow;
-    private final String annotationOnFailAppendTo;
-    private final String annotationOnSuccessAppendTo;
-    private final boolean includesOnFailThrow;
-    private final String includesOnFailAppendTo;
-    private final String includesOnSuccessAppendTo;
-    private final String synchronizationMonitorAppendTo;
+    private final Config config;
     /** Internal names of classes we turned into abstract value classes. */
     private final Set<String> transformedToAbstract = ConcurrentHashMap.newKeySet();
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
 
-    ValueClassTransformer(Set<String> includes, Set<String> excludes,
-            Set<Mode> annotationMode, Set<Mode> includesMode,
-            boolean annotationOnFailThrow, String annotationOnFailAppendTo,
-            boolean includesOnFailThrow, String includesOnFailAppendTo) {
-        this(includes, excludes, annotationMode, includesMode,
-                annotationOnFailThrow, annotationOnFailAppendTo, null,
-                includesOnFailThrow, includesOnFailAppendTo, null, null);
-    }
-
-    ValueClassTransformer(Set<String> includes, Set<String> excludes,
-            Set<Mode> annotationMode, Set<Mode> includesMode,
-            boolean annotationOnFailThrow, String annotationOnFailAppendTo,
-            String annotationOnSuccessAppendTo,
-            boolean includesOnFailThrow, String includesOnFailAppendTo,
-            String includesOnSuccessAppendTo) {
-        this(includes, excludes, annotationMode, includesMode,
-                annotationOnFailThrow, annotationOnFailAppendTo, annotationOnSuccessAppendTo,
-                includesOnFailThrow, includesOnFailAppendTo, includesOnSuccessAppendTo, null);
-    }
-
-    ValueClassTransformer(Set<String> includes, Set<String> excludes,
-            Set<Mode> annotationMode, Set<Mode> includesMode,
-            boolean annotationOnFailThrow, String annotationOnFailAppendTo,
-            String annotationOnSuccessAppendTo,
-            boolean includesOnFailThrow, String includesOnFailAppendTo,
-            String includesOnSuccessAppendTo,
-            String synchronizationMonitorAppendTo) {
-        this.includes = includes;
-        this.excludes = excludes;
-        this.annotationMode = annotationMode;
-        this.includesMode = includesMode;
-        this.annotationOnFailThrow = annotationOnFailThrow;
-        this.annotationOnFailAppendTo = annotationOnFailAppendTo;
-        this.annotationOnSuccessAppendTo = annotationOnSuccessAppendTo;
-        this.includesOnFailThrow = includesOnFailThrow;
-        this.includesOnFailAppendTo = includesOnFailAppendTo;
-        this.includesOnSuccessAppendTo = includesOnSuccessAppendTo;
-        this.synchronizationMonitorAppendTo = synchronizationMonitorAppendTo;
+    ValueClassTransformer(Config cfg) {
+        this.config = cfg;
         // Initialize AsyncFileWriter for each append-to path so files are read
         // at startup (deduplicating against existing names). AsyncFileWriter is
         // shared per-path, so success and failure appends to the same file
         // deduplicate against each other.
-        for (String path : new String[] { annotationOnFailAppendTo,
-                annotationOnSuccessAppendTo, includesOnFailAppendTo,
-                includesOnSuccessAppendTo, synchronizationMonitorAppendTo }) {
+        for (String path : new String[] { cfg.annotationOnFailAppendTo,
+                cfg.annotationOnSuccessAppendTo, cfg.includesOnFailAppendTo,
+                cfg.includesOnSuccessAppendTo, cfg.synchronizationMonitorAppendTo }) {
             if (path != null) {
                 AsyncFileWriter.forFile(path);
             }
         }
         // Configure SynchronizationMonitor with the path so it can record
         // classes being synchronized on.
-        if (synchronizationMonitorAppendTo != null) {
-            SynchronizationMonitor.configure(synchronizationMonitorAppendTo);
+        if (cfg.synchronizationMonitorAppendTo != null) {
+            SynchronizationMonitor.configure(cfg.synchronizationMonitorAppendTo);
         }
     }
 
@@ -212,11 +166,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     + " cannot be loaded: it extends " + sup
                     + " which was rewritten into a final value class");
         }
-        if (patternMatches(excludes, internal)) {
+        if (patternMatches(config.excludes, internal)) {
             return null;
         }
         boolean annotated = ValueClassRewriter.hasAutoValhallaAnnotation(model);
-        boolean included = patternMatches(includes, internal);
+        boolean included = patternMatches(config.includes, internal);
         if (!annotated && !included) {
             return null;
         }
@@ -224,17 +178,17 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // annotation (an explicit in-source opt-in) is the stronger statement,
         // so the class is treated as annotation-selected only: its mode set and
         // failure settings, with no contribution from includes.
-        boolean onFailThrow = annotationOnFailThrow;
-        String onFailAppendTo = annotationOnFailAppendTo;
-        String onSuccessAppendTo = annotationOnSuccessAppendTo;
+        boolean onFailThrow = config.annotationOnFailThrow;
+        String onFailAppendTo = config.annotationOnFailAppendTo;
+        String onSuccessAppendTo = config.annotationOnSuccessAppendTo;
         EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
         if (annotated) {
-            effective.addAll(annotationMode);
+            effective.addAll(config.annotationMode);
         } else {
-            onFailThrow = includesOnFailThrow;
-            onFailAppendTo = includesOnFailAppendTo;
-            onSuccessAppendTo = includesOnSuccessAppendTo;
-            effective.addAll(includesMode);
+            onFailThrow = config.includesOnFailThrow;
+            onFailAppendTo = config.includesOnFailAppendTo;
+            onSuccessAppendTo = config.includesOnSuccessAppendTo;
+            effective.addAll(config.includesMode);
         }
         // SYNCHRONIZATION_MONITOR cannot be used in combination with other modes
         if (effective.contains(Mode.SYNCHRONIZATION_MONITOR) && effective.size() > 1) {

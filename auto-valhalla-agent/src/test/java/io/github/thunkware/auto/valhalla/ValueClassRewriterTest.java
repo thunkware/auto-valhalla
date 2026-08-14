@@ -35,10 +35,12 @@ class ValueClassRewriterTest {
 
         ClassFile cf = ClassFile.of();
 
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of("sample.SampleX"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.SampleX");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
 
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "suitable class should be rewritten");
@@ -70,10 +72,12 @@ class ValueClassRewriterTest {
         // mode=safe (no ignore modes) must not rewrite a selected class with a
         // synchronized instance method: it must remain a valid identity class,
         // never an unloadable value-class file.
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of("sample.Sync"), Set.of(),
-                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
-                false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.Sync");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = EnumSet.noneOf(Mode.class);
+        cfg.includesMode = EnumSet.of(Mode.SAFE);
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNull(out, "synchronized-instance-method class must not be rewritten by includes-mode=safe");
     }
@@ -95,11 +99,12 @@ class ValueClassRewriterTest {
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
                 "suitable with mark-class-final + ignore-synchronized");
 
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of("sample.Sync"), Set.of(),
-                EnumSet.noneOf(Mode.class),
-                EnumSet.of(Mode.IGNORE_SYNCHRONIZED, Mode.MARK_CLASS_FINAL),
-                false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.Sync");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = EnumSet.noneOf(Mode.class);
+        cfg.includesMode = EnumSet.of(Mode.IGNORE_SYNCHRONIZED, Mode.MARK_CLASS_FINAL);
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "synchronized non-final class should be rewritten with"
                 + " mark-class-final + ignore-synchronized");
@@ -146,10 +151,12 @@ class ValueClassRewriterTest {
                         .allMatch(ici -> (ici.flagsMask() & ValueClassRewriter.ACC_IDENTITY) != 0),
                 "the input's InnerClasses entries must lack ACC_IDENTITY to prove the fix");
 
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of(internal), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of(internal);
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         byte[] out = transformer.transform(null, null, internal, null, null, original);
         assertNotNull(out, "a class with member classes should be rewritten");
 
@@ -176,16 +183,21 @@ class ValueClassRewriterTest {
         assertNotNull(base, "Base on classpath");
         // Base is selected by includes; the default includes-mode would convert
         // it, but includes-mode=safe narrows selection to already-final classes.
-        ValueClassTransformer safe = new ValueClassTransformer(
-                Set.of("sample.Base"), Set.of(),
-                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.SAFE),
-                false, null, false, null);
+        Config safeCfg = new Config();
+        safeCfg.includes = Set.of("sample.Base");
+        safeCfg.excludes = Set.of();
+        safeCfg.annotationMode = EnumSet.noneOf(Mode.class);
+        safeCfg.includesMode = EnumSet.of(Mode.SAFE);
+        ValueClassTransformer safe = new ValueClassTransformer(safeCfg);
         assertNull(safe.transform(null, null, "sample.Base", null, null, base),
                 "includes-mode=safe must not convert a non-final class (would break its subclasses)");
-        ValueClassTransformer def = new ValueClassTransformer(
-                Set.of("sample.Base"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, null, false, null);
+
+        Config defCfg = new Config();
+        defCfg.includes = Set.of("sample.Base");
+        defCfg.excludes = Set.of();
+        defCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        defCfg.includesMode = Mode.INCLUDES_DEFAULT;
+        ValueClassTransformer def = new ValueClassTransformer(defCfg);
         assertNotNull(def.transform(null, null, "sample.Base", null, null, base),
                 "default includes-mode must convert the selected non-final class");
     }
@@ -217,9 +229,12 @@ class ValueClassRewriterTest {
 
         EnumSet<Mode> mff = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
         mff.add(Mode.MARK_FIELDS_FINAL);
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                Set.of("sample.Once", "sample.TwoCtors", "sample.Mutable", "sample.SampleX"),
-                Set.of(), EnumSet.noneOf(Mode.class), mff, false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.Once", "sample.TwoCtors", "sample.Mutable", "sample.SampleX");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = EnumSet.noneOf(Mode.class);
+        cfg.includesMode = mff;
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         assertNotNull(transformer.transform(null, null, "sample.Once", null, null, once),
                 "includes-mode=mark-fields-final converts classes with non-final fields written in the ctor");
         assertNotNull(transformer.transform(null, null, "sample.TwoCtors", null, null, twoCtors),
@@ -236,10 +251,12 @@ class ValueClassRewriterTest {
         byte[] sub = readResource("/sample/Sub.class");
         assertNotNull(base, "Base on classpath");
         assertNotNull(sub, "Sub on classpath");
-        ValueClassTransformer t = new ValueClassTransformer(
-                Set.of("sample.Base"), Set.of(),
-                EnumSet.noneOf(Mode.class), EnumSet.of(Mode.MARK_CLASS_FINAL),
-                false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.Base");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = EnumSet.noneOf(Mode.class);
+        cfg.includesMode = EnumSet.of(Mode.MARK_CLASS_FINAL);
+        ValueClassTransformer t = new ValueClassTransformer(cfg);
         assertNotNull(t.transform(null, null, "sample.Base", null, null, base),
                 "Base rewrites (made final)");
         // Sub extends Base, which was just made final; loading Sub must now fail,
@@ -258,10 +275,12 @@ class ValueClassRewriterTest {
         assertNotNull(absSub, "AbstractSub on classpath");
         ClassFile cf = ClassFile.of();
 
-        ValueClassTransformer t = new ValueClassTransformer(
-                Set.of("sample.AbstractBase", "sample.AbstractSub"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, null, false, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.AbstractBase", "sample.AbstractSub");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        ValueClassTransformer t = new ValueClassTransformer(cfg);
 
         // An abstract class is never converted: an agent-converted abstract
         // value class whose identity subclass loads later triggers a duplicate
@@ -331,11 +350,13 @@ class ValueClassRewriterTest {
 
         // SyncBlock synchronizes on this, so it is selected but unsuitable; with
         // identity-exception-append-to set, its monitorenter is instrumented.
-        ValueClassTransformer t = new ValueClassTransformer(
-                Set.of("sample.SyncBlock"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, null, null,
-                false, null, null, out.toString());
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.SyncBlock");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = EnumSet.of(Mode.SYNCHRONIZATION_MONITOR);
+        cfg.synchronizationMonitorAppendTo = out.toString();
+        ValueClassTransformer t = new ValueClassTransformer(cfg);
 
         byte[] syncBlock = readResource("/sample/SyncBlock.class");
         byte[] instrumented = t.transform(null, null, "sample/SyncBlock", null, null, syncBlock);
@@ -363,11 +384,16 @@ class ValueClassRewriterTest {
         // A name already present in the file must not be re-appended.
         Files.writeString(success, "sample.SampleX\n");
 
-        ValueClassTransformer t = new ValueClassTransformer(
-                Set.of("sample.SampleX", "sample.Mutable"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, fail.toString(), success.toString(),
-                false, fail.toString(), success.toString());
+        Config cfg = new Config();
+        cfg.includes = Set.of("sample.SampleX", "sample.Mutable");
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        cfg.annotationOnFailAppendTo = fail.toString();
+        cfg.annotationOnSuccessAppendTo = success.toString();
+        cfg.includesOnFailAppendTo = fail.toString();
+        cfg.includesOnSuccessAppendTo = success.toString();
+        ValueClassTransformer t = new ValueClassTransformer(cfg);
 
         byte[] sampleX = readResource("/sample/SampleX.class");
         byte[] mutable = readResource("/sample/Mutable.class");
@@ -376,6 +402,7 @@ class ValueClassRewriterTest {
         assertNull(t.transform(null, null, "sample/Mutable", null, null, mutable),
                 "Mutable must be left as an identity class");
 
+        AsyncFileWriter.drain();
         assertEquals("sample.SampleX\n", Files.readString(success),
                 "the pre-existing name must not be re-appended");
         assertTrue(Files.readString(fail).contains("sample.Mutable"),
@@ -472,25 +499,31 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void onFailThrowIsPerSelectionSource() throws Exception {        byte[] mutable = readResource("/sample/Mutable.class");
+    void onFailThrowIsPerSelectionSource() throws Exception {
+        byte[] mutable = readResource("/sample/Mutable.class");
         assertNotNull(mutable, "Mutable on classpath");
         String internal = "sample/Mutable";
 
         // A mutable field written by a setter fails the mark-fields-final gate.
         // includes.on-fail-throw=false leaves it an identity class...
-        ValueClassTransformer includesQuiet = new ValueClassTransformer(
-                Set.of("sample.Mutable"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, null, false, null);
+        Config quietCfg = new Config();
+        quietCfg.includes = Set.of("sample.Mutable");
+        quietCfg.excludes = Set.of();
+        quietCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        quietCfg.includesMode = Mode.INCLUDES_DEFAULT;
+        ValueClassTransformer includesQuiet = new ValueClassTransformer(quietCfg);
         assertNull(includesQuiet.transform(null, null, internal, null, null, mutable),
                 "includes.on-fail-throw=false leaves the class as identity");
 
         // ...while includes.on-fail-throw=true surfaces the rejection loudly
         // (an unloadable class file, never a usable value class).
-        ValueClassTransformer includesLoud = new ValueClassTransformer(
-                Set.of("sample.Mutable"), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, null, true, null);
+        Config loudCfg = new Config();
+        loudCfg.includes = Set.of("sample.Mutable");
+        loudCfg.excludes = Set.of();
+        loudCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        loudCfg.includesMode = Mode.INCLUDES_DEFAULT;
+        loudCfg.includesOnFailThrow = true;
+        ValueClassTransformer includesLoud = new ValueClassTransformer(loudCfg);
         byte[] out = includesLoud.transform(null, null, internal, null, null, mutable);
         assertNotNull(out, "includes.on-fail-throw=true surfaces the rejection");
         assertFalse(DemoFixturesTest.isUsableValueClass(out),
@@ -503,10 +536,13 @@ class ValueClassRewriterTest {
         // identity class or a usable value class.
         byte[] mp = readResource("/demo5/broken/MutablePoint.class");
         assertNotNull(mp, "MutablePoint on classpath");
-        ValueClassTransformer annoLoud = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, true, null, false, null);
+        Config annoCfg = new Config();
+        annoCfg.includes = Set.of();
+        annoCfg.excludes = Set.of();
+        annoCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        annoCfg.includesMode = Mode.INCLUDES_DEFAULT;
+        annoCfg.annotationOnFailThrow = true;
+        ValueClassTransformer annoLoud = new ValueClassTransformer(annoCfg);
         byte[] mpOut = annoLoud.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
         assertNotNull(mpOut, "annotation.on-fail-throw defaults to true for annotated classes");
         assertFalse(DemoFixturesTest.isUsableValueClass(mpOut),
@@ -519,10 +555,14 @@ class ValueClassRewriterTest {
         // be parsed, must not take the loud annotation.on-fail-throw default (it
         // would crash the whole app for a class the agent never selected).
         byte[] garbage = new byte[] { 0, 0, 0, 0 };
-        ValueClassTransformer t = new ValueClassTransformer(
-                Set.of(), Set.of(),
-                Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                false, true, null, true, null);
+        Config cfg = new Config();
+        cfg.includes = Set.of();
+        cfg.excludes = Set.of();
+        cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        cfg.annotationOnFailThrow = true;
+        cfg.includesOnFailThrow = true;
+        ValueClassTransformer t = new ValueClassTransformer(cfg);
         assertNull(t.transform(null, null, "com/example/Unselected", null, null, garbage),
                 "an unparseable unselected class stays an identity class");
     }
@@ -535,11 +575,18 @@ class ValueClassRewriterTest {
             // Selected by BOTH annotation and includes: the annotation settings
             // win, so the failure is recorded in the annotation file only.
             byte[] mp = readResource("/demo5/broken/MutablePoint.class");
-            ValueClassTransformer both = new ValueClassTransformer(
-                    Set.of("demo5"), Set.of(),
-                    Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                    false, true, ann.getAbsolutePath(), true, inc.getAbsolutePath());
+            Config bothCfg = new Config();
+            bothCfg.includes = Set.of("demo5");
+            bothCfg.excludes = Set.of();
+            bothCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+            bothCfg.includesMode = Mode.INCLUDES_DEFAULT;
+            bothCfg.annotationOnFailThrow = true;
+            bothCfg.annotationOnFailAppendTo = ann.getAbsolutePath();
+            bothCfg.includesOnFailThrow = true;
+            bothCfg.includesOnFailAppendTo = inc.getAbsolutePath();
+            ValueClassTransformer both = new ValueClassTransformer(bothCfg);
             both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
+            AsyncFileWriter.drain();
             assertEquals("demo5.broken.MutablePoint\n", Files.readString(ann.toPath()),
                     "a both-selected class is appended to the annotation file as a class name");
             assertTrue(Files.readString(inc.toPath()).isEmpty(),
@@ -549,11 +596,15 @@ class ValueClassRewriterTest {
             byte[] mutable = readResource("/sample/Mutable.class");
             File inc2 = File.createTempFile("inc2", ".log");
             try {
-                ValueClassTransformer includesOnly = new ValueClassTransformer(
-                        Set.of("sample.Mutable"), Set.of(),
-                        Mode.ANNOTATION_DEFAULT, Mode.INCLUDES_DEFAULT,
-                        false, null, false, inc2.getAbsolutePath());
+                Config incCfg = new Config();
+                incCfg.includes = Set.of("sample.Mutable");
+                incCfg.excludes = Set.of();
+                incCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+                incCfg.includesMode = Mode.INCLUDES_DEFAULT;
+                incCfg.includesOnFailAppendTo = inc2.getAbsolutePath();
+                ValueClassTransformer includesOnly = new ValueClassTransformer(incCfg);
                 includesOnly.transform(null, null, "sample/Mutable", null, null, mutable);
+                AsyncFileWriter.drain();
                 assertEquals("sample.Mutable\n", Files.readString(inc2.toPath()),
                         "an includes-only class is appended to the includes file as a class name");
             } finally {

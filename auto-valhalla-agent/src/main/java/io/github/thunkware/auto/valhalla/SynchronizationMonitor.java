@@ -33,10 +33,7 @@ public final class SynchronizationMonitor {
         if (o == null || writer == null) {
             return;
         }
-        try {
-            writer.record(o.getClass().getName());
-        } catch (Throwable ignored) {
-            // the monitor must never affect the synchronized block
-        }
+        // the monitor must never affect the synchronized block
+        Failable.runQuietly(() -> writer.record(o.getClass().getName()));
     }
 }

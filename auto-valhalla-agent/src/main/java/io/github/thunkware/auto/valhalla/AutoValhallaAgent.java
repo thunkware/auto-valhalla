@@ -128,26 +128,19 @@ public final class AutoValhallaAgent {
             return;
         }
         Config cfg = parse(agentArgs);
-        InternalLogger.setLevel(cfg.logLevel());
-        ValueClassTransformer transformer = new ValueClassTransformer(
-                cfg.includes(), cfg.excludes(),
-                cfg.annotationMode(), cfg.includesMode(),
-                cfg.annotationOnFailThrow(), cfg.annotationOnFailAppendTo(),
-                cfg.annotationOnSuccessAppendTo(),
-                cfg.includesOnFailThrow(), cfg.includesOnFailAppendTo(),
-                cfg.includesOnSuccessAppendTo(),
-                cfg.synchronizationMonitorAppendTo());
+        InternalLogger.setLevel(cfg.logLevel);
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);
 
         InternalLogger.debug("attached"
                 + (attach ? " (dynamically)" : "")
-                + "; includes=" + cfg.includes()
-                + " excludes=" + cfg.excludes()
-                + " annotation-mode=" + cfg.annotationMode()
-                + " includes-mode=" + cfg.includesMode()
-                + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow()
-                + " includes.on-fail-throw=" + cfg.includesOnFailThrow());
+                + "; includes=" + cfg.includes
+                + " excludes=" + cfg.excludes
+                + " annotation-mode=" + cfg.annotationMode
+                + " includes-mode=" + cfg.includesMode
+                + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow
+                + " includes.on-fail-throw=" + cfg.includesOnFailThrow);
     }
 
     static Config parse(String agentArgs) {
@@ -190,56 +183,50 @@ public final class AutoValhallaAgent {
             }
         }
 
-        Set<String> includes = new HashSet<>();
-        Set<String> excludes = new HashSet<>();
+        Config cfg = new Config();
+        cfg.includes = new HashSet<>();
+        cfg.excludes = new HashSet<>();
+        cfg.annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
+        cfg.includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
+        // annotation-selected classes are an explicit opt-in: fail loudly by
+        // default. includes sweep broadly: stay quiet by default.
+        cfg.annotationOnFailThrow = true;
+        cfg.synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
         String includesFilesPath = null;
         String excludesFilesPath = null;
 
-        Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
-        Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
-        String logLevel = null;
-        // annotation-selected classes are an explicit opt-in: fail loudly by
-        // default. includes sweep broadly: stay quiet by default.
-        boolean annotationOnFailThrow = true;
-        String annotationOnFailAppendTo = null;
-        String annotationOnSuccessAppendTo = null;
-        boolean includesOnFailThrow = false;
-        String includesOnFailAppendTo = null;
-        String includesOnSuccessAppendTo = null;
-        String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
-
         for (String[] a : assigns) {
             switch (a[0]) {
-                case Config.INCLUDES -> includes.addAll(parsePatternSet(a[1]));
-                case Config.EXCLUDES -> excludes.addAll(parsePatternSet(a[1]));
+                case Config.INCLUDES -> cfg.includes.addAll(parsePatternSet(a[1]));
+                case Config.EXCLUDES -> cfg.excludes.addAll(parsePatternSet(a[1]));
                 case Config.INCLUDES_FILES -> includesFilesPath = a[1].trim();
                 case Config.EXCLUDES_FILES -> excludesFilesPath = a[1].trim();
-                case Config.ANNOTATION_MODE -> annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
-                case Config.INCLUDES_MODE -> includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
-                case Config.LOG_LEVEL -> logLevel = a[1].trim();
+                case Config.ANNOTATION_MODE -> cfg.annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
+                case Config.INCLUDES_MODE -> cfg.includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
+                case Config.LOG_LEVEL -> cfg.logLevel = a[1].trim();
                 case Config.ANNOTATION_ON_FAIL_THROW ->
-                        annotationOnFailThrow = Boolean.parseBoolean(a[1]);
+                        cfg.annotationOnFailThrow = Boolean.parseBoolean(a[1]);
                 case Config.INCLUDES_ON_FAIL_THROW ->
-                        includesOnFailThrow = Boolean.parseBoolean(a[1]);
+                        cfg.includesOnFailThrow = Boolean.parseBoolean(a[1]);
                 case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
-                    annotationOnFailAppendTo = t.isEmpty() ? null : t;
+                    cfg.annotationOnFailAppendTo = t.isEmpty() ? null : t;
                 }
                 case Config.ANNOTATION_ON_SUCCESS_APPEND_TO -> {
                     String t = a[1].trim();
-                    annotationOnSuccessAppendTo = t.isEmpty() ? null : t;
+                    cfg.annotationOnSuccessAppendTo = t.isEmpty() ? null : t;
                 }
                 case Config.INCLUDES_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
-                    includesOnFailAppendTo = t.isEmpty() ? null : t;
+                    cfg.includesOnFailAppendTo = t.isEmpty() ? null : t;
                 }
                 case Config.INCLUDES_ON_SUCCESS_APPEND_TO -> {
                     String t = a[1].trim();
-                    includesOnSuccessAppendTo = t.isEmpty() ? null : t;
+                    cfg.includesOnSuccessAppendTo = t.isEmpty() ? null : t;
                 }
                 case Config.SYNCHRONIZATION_MONITOR_APPEND_TO -> {
                     String t = a[1].trim();
-                    synchronizationMonitorAppendTo = t.isEmpty() ? null : t;
+                    cfg.synchronizationMonitorAppendTo = t.isEmpty() ? null : t;
                 }
                 default -> { /* unreachable */ }
             }
@@ -247,34 +234,29 @@ public final class AutoValhallaAgent {
         // Log the configuration as provided (before resolving file contents)
         if (InternalLogger.isDebugEnabled()) {
             InternalLogger.debug("configuration:"
-                    + " includes=" + (includes.isEmpty() ? (includesFilesPath == null ? "[]" : "[from " + includesFilesPath + "]") : includes)
-                    + " excludes=" + (excludes.isEmpty() ? (excludesFilesPath == null ? "[]" : "[from " + excludesFilesPath + "]") : excludes)
-                    + " annotation-mode=" + annotationMode
-                    + " includes-mode=" + includesMode
-                    + " log-level=" + logLevel
-                    + " annotation.on-fail-throw=" + annotationOnFailThrow
-                    + " includes.on-fail-throw=" + includesOnFailThrow);
+                    + " includes=" + (cfg.includes.isEmpty() ? (includesFilesPath == null ? "[]" : "[from " + includesFilesPath + "]") : cfg.includes)
+                    + " excludes=" + (cfg.excludes.isEmpty() ? (excludesFilesPath == null ? "[]" : "[from " + excludesFilesPath + "]") : cfg.excludes)
+                    + " annotation-mode=" + cfg.annotationMode
+                    + " includes-mode=" + cfg.includesMode
+                    + " log-level=" + cfg.logLevel
+                    + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow
+                    + " includes.on-fail-throw=" + cfg.includesOnFailThrow);
         }
 
         // Now resolve file contents
         if (includesFilesPath != null) {
-            includes.addAll(readPatternFile(includesFilesPath));
+            cfg.includes.addAll(readPatternFile(includesFilesPath));
         }
         if (excludesFilesPath != null) {
-            excludes.addAll(readPatternFile(excludesFilesPath));
+            cfg.excludes.addAll(readPatternFile(excludesFilesPath));
         }
 
         // Default excludes: read failure and synchronization log files as patterns.
         // Use quiet variant since these files may not exist on first run.
-        excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
-        excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
+        cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
+        cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
 
-        return new Config(includes, excludes, annotationMode, includesMode,
-                logLevel, annotationOnFailThrow, annotationOnFailAppendTo,
-                annotationOnSuccessAppendTo,
-                includesOnFailThrow, includesOnFailAppendTo,
-                includesOnSuccessAppendTo,
-                synchronizationMonitorAppendTo);
+        return cfg;
     }
 
     private static void emit(List<String[]> assigns, String key, String value) {
@@ -446,7 +428,7 @@ public final class AutoValhallaAgent {
                 field.append(c);
             }
         }
-        if (field.length() > 0 || !line.isEmpty()) {
+        if (!field.isEmpty() || !line.isEmpty()) {
             fields.add(field.toString().trim());
         }
         return fields;

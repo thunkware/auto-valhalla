@@ -6,14 +6,20 @@ import java.util.Set;
 /** Parsed agent configuration: include/exclude patterns, the {@link Mode} sets
  *  applied to annotation-selected vs includes-selected classes, the per-source
  *  failure-handling flags, the synchronization monitor path, and the log level. */
-record Config(Set<String> includes, Set<String> excludes,
-        Set<Mode> annotationMode, Set<Mode> includesMode,
-        String logLevel,
-        boolean annotationOnFailThrow, String annotationOnFailAppendTo,
-        String annotationOnSuccessAppendTo,
-        boolean includesOnFailThrow, String includesOnFailAppendTo,
-        String includesOnSuccessAppendTo,
-        String synchronizationMonitorAppendTo) {
+class Config {
+
+    Set<String> includes;
+    Set<String> excludes;
+    Set<Mode> annotationMode;
+    Set<Mode> includesMode;
+    String logLevel;
+    boolean annotationOnFailThrow;
+    String annotationOnFailAppendTo;
+    String annotationOnSuccessAppendTo;
+    boolean includesOnFailThrow;
+    String includesOnFailAppendTo;
+    String includesOnSuccessAppendTo;
+    String synchronizationMonitorAppendTo;
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
      *  used by {@link AutoValhallaAgent#parse(String)} switch. */

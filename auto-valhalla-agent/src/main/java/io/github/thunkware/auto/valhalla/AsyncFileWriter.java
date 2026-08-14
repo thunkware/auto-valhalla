@@ -35,7 +35,7 @@ final class AsyncFileWriter {
     private final Thread writerThread;
 
     static {
-        Runtime.getRuntime().addShutdownHook(new Thread(AsyncFileWriter::shutdown,
+        Runtime.getRuntime().addShutdownHook(new Thread(AsyncFileWriter::shutdownAll,
                 "AsyncFileWriter-Shutdown"));
     }
 
@@ -48,14 +48,7 @@ final class AsyncFileWriter {
         if (path == null || path.isEmpty()) {
             return null;
         }
-        return WRITERS.computeIfAbsent(path, p -> {
-            try {
-                return new AsyncFileWriter(p);
-            } catch (IOException ignored) {
-                // fail silently; record() will be a no-op
-                return null;
-            }
-        });
+        return WRITERS.computeIfAbsent(path, p -> Failable.callQuietly(() -> new AsyncFileWriter(p)));
     }
 
     private AsyncFileWriter(String path) throws IOException {
@@ -75,7 +68,7 @@ final class AsyncFileWriter {
         // Spawn a background virtual thread to read from queue and flush periodically
         this.writerThread = Thread.ofVirtual()
                 .name("AsyncFileWriter-" + file.getFileName())
-                .start(this::run);
+                .start(() -> Failable.runQuietly(this::run));
     }
 
     /**
@@ -91,28 +84,24 @@ final class AsyncFileWriter {
         }
     }
 
-    private void run() {
-        try {
-            long lastFlush = System.currentTimeMillis();
-            while (!Thread.currentThread().isInterrupted()) {
-                String name = queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS);
-                synchronized (lock) {
-                    if (name != null) {
-                        initWriter();
-                        writer.write(name);
-                        writer.write('\n');
+    private void run() throws Exception {
+        long lastFlush = System.currentTimeMillis();
+        while (!Thread.currentThread().isInterrupted()) {
+            String name = queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS);
+            synchronized (lock) {
+                if (name != null) {
+                    initWriter();
+                    writer.write(name);
+                    writer.write('\n');
+                }
+                long now = System.currentTimeMillis();
+                if (now - lastFlush >= FLUSH_INTERVAL_MS) {
+                    if (writer != null) {
+                        writer.flush();
                     }
-                    long now = System.currentTimeMillis();
-                    if (now - lastFlush >= FLUSH_INTERVAL_MS) {
-                        if (writer != null) {
-                            writer.flush();
-                        }
-                        lastFlush = now;
-                    }
+                    lastFlush = now;
                 }
             }
-        } catch (Throwable ignored) {
-            // best-effort writing; thread exits on any exception
         }
     }
 
@@ -125,26 +114,44 @@ final class AsyncFileWriter {
         }
     }
 
+    /** Synchronously processes all pending records and flushes. For testing only. */
+    static void drain() {
+        for (AsyncFileWriter w : WRITERS.values()) {
+            synchronized (w.lock) {
+                String pending;
+                while ((pending = w.queue.poll()) != null) {
+                    String finalPending = pending;
+                    Failable.runQuietly(() -> {
+                        w.initWriter();
+                        w.writer.write(finalPending);
+                        w.writer.write('\n');
+                    });
+                }
+                if (w.writer != null) {
+                    Failable.runQuietly(w.writer::flush);
+                }
+            }
+        }
+    }
+
+    private void shutdown() throws IOException {
+        // Interrupt the background thread
+        writerThread.interrupt();
+
+        // Flush any remaining data
+        synchronized (lock) {
+            if (writer != null) {
+                writer.flush();
+                writer.close();
+            }
+        }
+    }
+
     /**
      * Shutdown hook: flush all writers and close resources. Called by
      * Runtime.addShutdownHook() when the JVM is shutting down.
      */
-    private static void shutdown() {
-        for (AsyncFileWriter writer : WRITERS.values()) {
-            try {
-                // Interrupt the background thread
-                writer.writerThread.interrupt();
-
-                // Flush any remaining data
-                synchronized (writer.lock) {
-                    if (writer.writer != null) {
-                        writer.writer.flush();
-                        writer.writer.close();
-                    }
-                }
-            } catch (IOException ignored) {
-                // best-effort cleanup
-            }
-        }
+    private static void shutdownAll() {
+        WRITERS.values().forEach(writer -> Failable.runQuietly(writer::shutdown));
     }
 }

@@ -36,11 +36,7 @@ public final class InternalLogger {
             level = Level.INFO;
             return;
         }
-        try {
-            level = Level.valueOf(s.trim().toUpperCase());
-        } catch (IllegalArgumentException ignored) {
-            level = Level.INFO;
-        }
+        level = Level.valueOf(s.trim().toUpperCase());
     }
 
     public static boolean isDebugEnabled() {
