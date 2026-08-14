@@ -77,6 +77,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // always treated as "leave as identity"; the selection's settings only
         // apply once selection is known.
         boolean onFailThrow = false;
+        boolean onFailWarn = false;
         String onFailAppendTo = null;
         try {
             ClassModel model = ClassFile.of().parse(classfileBuffer);
@@ -85,6 +86,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 return null;
             }
             onFailThrow = selection.onFailThrow();
+            onFailWarn = selection.onFailWarn();
             onFailAppendTo = selection.onFailAppendTo();
             // SYNCHRONIZATION_MONITOR is an either-or mode: either rewrite the class
             // to a value class, or instrument monitorenter calls, but not both.
@@ -95,7 +97,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         } catch (LinkageError e) {
             throw e;
         } catch (Throwable t) {
-            return onTransformError(className, t, onFailThrow, onFailAppendTo);
+            return onTransformError(className, t, onFailThrow, onFailWarn, onFailAppendTo);
         }
     }
 
@@ -113,7 +115,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         return onFail(className,
                 "is selected for synchronization monitoring but could not be"
                         + " instrumented (stack-map verification failed)",
-                selection.onFailThrow(), selection.onFailAppendTo());
+                selection.onFailThrow(), selection.onFailWarn(), selection.onFailAppendTo());
     }
 
     /**
@@ -146,6 +148,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // so the class is treated as annotation-selected only: its mode set and
         // failure settings, with no contribution from includes.
         boolean onFailThrow = config.annotationOnFailThrow;
+        boolean onFailWarn = config.annotationOnFailWarn;
         String onFailAppendTo = config.annotationOnFailAppendTo;
         String onSuccessAppendTo = config.annotationOnSuccessAppendTo;
         EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
@@ -153,6 +156,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             effective.addAll(config.annotationMode);
         } else {
             onFailThrow = config.includesOnFailThrow;
+            onFailWarn = config.includesOnFailWarn;
             onFailAppendTo = config.includesOnFailAppendTo;
             onSuccessAppendTo = config.includesOnSuccessAppendTo;
             effective.addAll(config.includesMode);
@@ -163,7 +167,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     "mode=synchronization-monitor cannot be combined with other modes; "
                     + "got: " + effective);
         }
-        return new Selection(effective, onFailThrow, onFailAppendTo, onSuccessAppendTo);
+        return new Selection(effective, onFailThrow, onFailWarn, onFailAppendTo, onSuccessAppendTo);
     }
 
     /**
@@ -182,21 +186,22 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         if (!problems.isEmpty()) {
             return onFail(className, "is selected for value-class transformation but is not"
                     + " suitable: " + String.join("; ", problems),
-                    selection.onFailThrow(), selection.onFailAppendTo());
+                    selection.onFailThrow(), selection.onFailWarn(), selection.onFailAppendTo());
         }
         if (effective.contains(Mode.MARK_FIELDS_FINAL)
                 && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
             return onFail(className,
                     "is selected for value-class transformation but has a non-final field"
                     + " not written in every constructor (mode=mark-fields-final)",
-                    selection.onFailThrow(), selection.onFailAppendTo());
+                    selection.onFailThrow(), selection.onFailWarn(), selection.onFailAppendTo());
         }
         byte[] out = ValueClassRewriter.transform(model, selection.onFailThrow(),
                 ignoreSync, markClassFinal, loader);
         if (out == null) {
             return onFail(className,
                     "is selected for value-class transformation but could not be safely"
-                    + " transformed", selection.onFailThrow(), selection.onFailAppendTo());
+                    + " transformed", selection.onFailThrow(), selection.onFailWarn(),
+                    selection.onFailAppendTo());
         }
         // Record what we turned classes into so later loads can reason about
         // them: a non-final class becomes a final value class (its subclasses
@@ -215,13 +220,14 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * the annotation and includes is annotation-selected only.
      */
     private record Selection(Set<Mode> effective,
-            boolean onFailThrow, String onFailAppendTo, String onSuccessAppendTo) {}
+            boolean onFailThrow, boolean onFailWarn,
+            String onFailAppendTo, String onSuccessAppendTo) {}
 
     /** Handles an unexpected failure: rethrows a {@link LinkageError}, otherwise
      *  surfaces a loud failure or leaves the class as identity per the effective
      *  {@code onFail} settings. */
     private byte[] onTransformError(ClassName className, Throwable t,
-            boolean onFailThrow, String onFailAppendTo) {
+            boolean onFailThrow, boolean onFailWarn, String onFailAppendTo) {
         if (t instanceof LinkageError) {
             // e.g. a superclass was rewritten into a final value class: this
             // class cannot be loaded regardless of on-fail-throw, so surface
@@ -233,17 +239,21 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     + " into a value class: " + t, t);
         }
         appendOnFail(className, onFailAppendTo);
-        InternalLogger.debug(className.java() + ": transform failed:");
+        if (onFailWarn) {
+            InternalLogger.warning(className.java() + ": transform failed: " + t);
+        } else {
+            InternalLogger.debug(className.java() + ": transform failed:");
+        }
         InternalLogger.error("", t);
         return null;
     }
 
     /** Handles a selected-but-untransformable class: optionally records the name
-     *  and either surfaces a loud failure ({@code onFailThrow}) or leaves the
-     *  class as an identity class. {@code onFailThrow} / {@code onFailAppendTo}
-     *  come from the class's selection source (annotation vs includes). */
+     *  and either surfaces a loud failure ({@code onFailThrow}), logs a warning
+     *  ({@code onFailWarn}), or leaves the class as an identity class silently.
+     *  Settings come from the class's selection source (annotation vs includes). */
     private byte[] onFail(ClassName className, String reason,
-            boolean onFailThrow, String onFailAppendTo) {
+            boolean onFailThrow, boolean onFailWarn, String onFailAppendTo) {
         appendOnFail(className, onFailAppendTo);
         if (onFailThrow) {
             InternalLogger.error(className.java() + " " + reason
@@ -253,7 +263,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             // hand back a class file that fails to load, surfacing the failure loudly.
             return brokenClass();
         }
-        InternalLogger.debug(className.java() + ": " + reason + ", leaving as identity class");
+        if (onFailWarn) {
+            InternalLogger.warning(className.java() + ": " + reason + ", leaving as identity class");
+        } else {
+            InternalLogger.debug(className.java() + ": " + reason + ", leaving as identity class");
+        }
         return null;
     }
 
