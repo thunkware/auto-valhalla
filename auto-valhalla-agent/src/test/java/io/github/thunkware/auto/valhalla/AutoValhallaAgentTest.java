@@ -14,15 +14,15 @@ class AutoValhallaAgentTest {
 
     @Test
     void prefixedAgentArgsAreHonored() {
-        var cfg = AutoValhallaAgent.parse("auto-valhalla.includes=p.,auto-valhalla.debug=true");
+        var cfg = AutoValhallaAgent.parse("auto-valhalla.includes=p.,auto-valhalla.log-level=debug");
         assertTrue(cfg.includes().contains("p/"), "includes must be honored via the auto-valhalla. prefix");
-        assertTrue(cfg.debug(), "debug must be honored via the auto-valhalla. prefix");
+        assertEquals("debug", cfg.logLevel(), "log-level must be honored via the auto-valhalla. prefix");
     }
 
     @Test
     void prefixedKeyIsTopLevelAssignment() {
-        assertTrue(AutoValhallaAgent.isTopLevelAssignment("auto-valhalla.debug=true"));
-        assertTrue(AutoValhallaAgent.isTopLevelAssignment("debug=true"));
+        assertTrue(AutoValhallaAgent.isTopLevelAssignment("auto-valhalla.log-level=debug"));
+        assertTrue(AutoValhallaAgent.isTopLevelAssignment("log-level=debug"));
         assertFalse(AutoValhallaAgent.isTopLevelAssignment("foo=true"));
     }
 
@@ -73,9 +73,9 @@ class AutoValhallaAgentTest {
         File f = File.createTempFile("inc", ".txt");
         Files.writeString(f.toPath(), "com.B\n");
         try {
-            var cfg = AutoValhallaAgent.parse("includes=a.,includes-file=" + f.getAbsolutePath());
+            var cfg = AutoValhallaAgent.parse("includes=a.,includes-files=" + f.getAbsolutePath());
             assertTrue(cfg.includes().contains("a/"), "explicit includes retained");
-            assertTrue(cfg.includes().contains("com/B"), "includes-file patterns merged in");
+            assertTrue(cfg.includes().contains("com/B"), "includes-files patterns merged in");
         } finally {
             f.delete();
         }
