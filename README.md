@@ -46,7 +46,7 @@ After transformation, your class or record behaves like a value object:
   * `Objects.hasIdentity(new Point(1, 2)) == false`
   * `Objects.hasIdentity(new Pair(3, 4)) == false`
 
-Because `@AutoValhalla` annotation was compiled with Java 5, it is compatible
+Because `@AutoValhalla` annotation was compiled with Java 5, it is compatible with
 **JDK 1.5 and later**. You can apply the annotation in older codebases
 without raising their compile version to JDK28.
 
@@ -88,10 +88,10 @@ You can use the file to:
   - more confidently apply `@AutoValhalla` annotation to classes, or
   - feed back as `excludes-files` in a later run to avoid converting those classes.
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.synchronization-monitor.append-to` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_APPEND_TO` | Optional. Path to a file; records class names synchronized on at runtime. Default: `auto-valhalla.synchronization.txt`. |
-| `auto-valhalla.synchronization-monitor.log-level` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_LOG_LEVEL` | Log level when a synchronized-on class is first seen: `info` (default), `debug`, or `off`. |
+| Option | Env var | Description                                                                               |
+| --- | --- |-------------------------------------------------------------------------------------------|
+| `auto-valhalla.synchronization-monitor.append-to` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_APPEND_TO` | File path. Default: `auto-valhalla.synchronization.txt`.                                  |
+| `auto-valhalla.synchronization-monitor.log-level` | `AUTO_VALHALLA_SYNCHRONIZATION_MONITOR_LOG_LEVEL` | Log level: `info` (default), `debug`, or `off`. |
 
 ## Options
 
@@ -123,8 +123,8 @@ treated as annotation-selected.
 ### Mode
 
 The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_
-classes are selected. Mode further narrows _which_ of those selected classes
-are actually converted and _how_. If a class is selected but not convertible
+classes are selected based on very basic class information. Mode further narrows _which_ of those selected classes
+are actually converted, based on deeper class definition, and _how_ they are converted. If a class is selected but not convertible
 under the active mode, that is a failure; see [Failure handling](#failure-handling).
 
 | Option | Env var | Description |
@@ -134,13 +134,13 @@ under the active mode, that is a failure; see [Failure handling](#failure-handli
 
 #### Mode values
 
-| Mode | Effect |
-| --- | --- |
-| `safe` | Convert only classes that are already `final`. Non-final candidates are not converted. |
-| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `ACC_SYNCHRONIZED` is stripped. |
-| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (subclasses fail with `IncompatibleClassChangeError`). |
-| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected. |
-| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`. |
+| Mode | Effect                                                                                                                                                                                                                           |
+| --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `safe` | Convert only classes that are already `final`. Non-final candidates are not converted.                                                                                                                                           |
+| `ignore-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed.                                                                                                                                   |
+| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                                                                           |
+| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected.                                            |
+| `yolo` | Shorthand for `ignore-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`.                                                                                                                         |
 | `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. Optionally also records them to a file via `synchronization-monitor.append-to`. **Cannot be combined with other modes.** |
 
 Multiple modes are comma-separated. Mode names are case-insensitive and
@@ -152,12 +152,12 @@ accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and
 Controls what happens when a selected class cannot be converted, and how
 successful conversions are logged.
 
-| Option | Env var | Description |
-| --- | --- | --- |
-| `auto-valhalla.annotation.on-fail` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL` | `throw` (default) surfaces a `LinkageError`; `error`, `warning`, `info`, `debug` log at that level and leave the class as an identity class; `off` silently leaves it as an identity class. |
-| `auto-valhalla.includes.on-fail` | `AUTO_VALHALLA_INCLUDES_ON_FAIL` | Same, for includes-selected classes. Default: `debug`, so a broad sweep cannot crash the application. |
-| `auto-valhalla.annotation.on-success` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS` | Log level for a successful conversion: `info` (default), `debug`, or `off`. |
-| `auto-valhalla.includes.on-success` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS` | Same, for includes-selected classes. Default: `info`. |
+| Option | Env var | Description                                                                                                                                                                                 |
+| --- | --- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `auto-valhalla.annotation.on-fail` | `AUTO_VALHALLA_ANNOTATION_ON_FAIL` | `throw` (default) surfaces a throwable; `error`, `warning`, `info`, `debug`, `off` log at that level and leave the class as an identity class |
+| `auto-valhalla.includes.on-fail` | `AUTO_VALHALLA_INCLUDES_ON_FAIL` | Same, for includes-selected classes. Default: `debug`, so a broad sweep cannot crash the application.                                                                                       |
+| `auto-valhalla.annotation.on-success` | `AUTO_VALHALLA_ANNOTATION_ON_SUCCESS` | Log level for a successful conversion: `info` (default), `debug`, or `off`.                                                                                                                 |
+| `auto-valhalla.includes.on-success` | `AUTO_VALHALLA_INCLUDES_ON_SUCCESS` | Same, for includes-selected classes. Default: `info`.                                                                                                                                       |
 
 ### Recording
 
@@ -210,13 +210,13 @@ excludes=com.example.dto.
 annotation.on-fail=throw
 ```
 
-### Feedback loop: `.includes.on-fail-append-to` + `.excludes-files`
+### Feedback loop: `includes.on-fail-append-to` + `excludes-files`
 
-`includes.on-fail-append-to` and `.excludes-files` are designed to work
+`includes.on-fail-append-to` and `excludes-files` are designed to work
 together. Run once with `includes.on-fail=debug` (the default) and
 `includes.on-fail-append-to` pointing at a file; every class that could not
 be safely transformed is recorded there. Feed that file back as
-`.excludes-files` on subsequent runs so those classes are skipped instead of
+`excludes-files` on subsequent runs so those classes are skipped instead of
 surfacing errors:
 
 ```bash
@@ -274,7 +274,6 @@ explicit `includes-files` list:
 
 ## Note on AI assistance
 
-This project was vibe-coded with an AI coding agent
-([opencode](https://opencode.ai)). Humans designed, directed, reviewed, and
+This project was vibe-coded with an AI coding agent. Humans designed, directed, reviewed, and
 edited the work. The agent authored the bulk of the implementation, build
 configuration, and documentation.
