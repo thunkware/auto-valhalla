@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.logger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,8 +26,8 @@ public final class ApplicationLoggerFlags {
 
     private ApplicationLoggerFlags() {}
 
-    /** Called from {@link AutoValhallaAgent} when {@code logging=application} is set. */
-    static void enableApplicationMode() {
+    /** Called from {@code AutoValhallaAgent} when {@code logging=application} is set. */
+    public static void enableApplicationMode() {
         bridgeLoggerFactory.set(true);
     }
 

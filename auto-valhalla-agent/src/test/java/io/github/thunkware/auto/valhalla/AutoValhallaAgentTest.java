@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.EnumSet;

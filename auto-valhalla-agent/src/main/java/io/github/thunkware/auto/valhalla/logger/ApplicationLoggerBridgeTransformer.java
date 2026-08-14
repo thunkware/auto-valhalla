@@ -1,5 +1,6 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.logger;
 
+import io.github.thunkware.auto.valhalla.ClassFiles;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.ClassTransform;
@@ -36,10 +37,10 @@ import java.util.List;
  *       once the backing library (Logback / Log4j2) is configured.</li>
  * </ul>
  *
- * <p>Only registered by {@link AutoValhallaAgent} when
+ * <p>Only registered by {@code AutoValhallaAgent} when
  * {@code auto-valhalla.logging=application} is configured.
  */
-final class ApplicationLoggerBridgeTransformer implements ClassFileTransformer {
+public final class ApplicationLoggerBridgeTransformer implements ClassFileTransformer {
 
     private static final String SLF4J_LOGGER_FACTORY  = "org/slf4j/LoggerFactory";
     private static final String SPRING_APPLICATION     = "org/springframework/boot/SpringApplication";
@@ -49,7 +50,7 @@ final class ApplicationLoggerBridgeTransformer implements ClassFileTransformer {
             "org/springframework/boot/context/logging/LoggingApplicationListener";
 
     private static final ClassDesc FLAGS_CLASS =
-            ClassDesc.of("io.github.thunkware.auto.valhalla.ApplicationLoggerFlags");
+            ClassDesc.of("io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags");
     private static final MethodTypeDesc VOID_DESC = MethodTypeDesc.of(ConstantDescs.CD_void);
 
     @Override

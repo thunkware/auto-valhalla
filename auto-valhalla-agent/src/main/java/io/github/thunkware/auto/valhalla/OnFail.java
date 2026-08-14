@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+
 /**
  * Controls how a failure to transform a selected class is reported.
  * Used as the value of {@code annotation.on-fail} and {@code includes.on-fail}.

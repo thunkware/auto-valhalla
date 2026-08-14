@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.logger;
 
 import java.lang.reflect.Method;
 import java.time.ZonedDateTime;

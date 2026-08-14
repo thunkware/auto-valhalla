@@ -1,5 +1,6 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import java.util.concurrent.Callable;
 
 class Failable {

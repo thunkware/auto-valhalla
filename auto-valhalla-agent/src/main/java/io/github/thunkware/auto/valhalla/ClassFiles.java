@@ -14,7 +14,7 @@ import java.lang.reflect.AccessFlag;
 /** Factory for {@link ClassFile} instances configured with an application-aware
  *  class-hierarchy resolver so stack-map generation succeeds for classes whose
  *  referenced types are not on the bootstrap classpath. */
-final class ClassFiles {
+public final class ClassFiles {
 
     private ClassFiles() {}
 
@@ -34,7 +34,7 @@ final class ClassFiles {
      * @param loader the classloader used to look up {@code .class} resources;
      *               {@code null} is treated as the system classloader
      */
-    static ClassFile of(ClassLoader loader) {
+    public static ClassFile of(ClassLoader loader) {
         ClassLoader cl = loader != null ? loader : ClassLoader.getSystemClassLoader();
         ClassHierarchyResolver appResolver = desc -> {
             // ClassDesc.descriptorString() returns "Lcom/example/Foo;" — strip L and ;

@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+
 /**
  * Controls the log level used when a selected class is successfully converted.
  * Used as the value of {@code annotation.on-success} and {@code includes.on-success}.

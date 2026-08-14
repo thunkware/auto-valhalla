@@ -1,5 +1,8 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerBridgeTransformer;
+import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags;
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
