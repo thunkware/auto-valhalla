@@ -18,7 +18,7 @@ import java.util.Set;
  * combined with other modes; doing so throws {@link IllegalArgumentException}.
  */
 public enum Mode {
-    /** Narrow selection to classes that are <em>already final</em> ({@code safe}).
+    /** Narrow selection to final classes with final fields ({@code safe}).
      *  Non-final candidates are not converted; whether that is a silent skip or
      *  a loud failure depends on the configured {@code on-fail-throw} setting. */
     SAFE("safe"),
@@ -56,10 +56,6 @@ public enum Mode {
 
     public final String flag;
 
-    Mode(String flag) {
-        this.flag = flag;
-    }
-
     /** The default set for {@code annotation-mode} (classes selected by the
      *  {@code @AutoValhalla} annotation): {@code safe} — only classes that are
      *  <em>already final</em> are converted. A selected
@@ -75,6 +71,15 @@ public enum Mode {
     public static final Set<Mode> INCLUDES_DEFAULT =
             Collections.unmodifiableSet(EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED,
                     Mode.MARK_FIELDS_FINAL));
+
+    Mode(String flag) {
+        this.flag = flag;
+    }
+
+    @Override
+    public String toString() {
+        return name().toLowerCase(Locale.ENGLISH);
+    }
 
     /** Parses a mode string into a set of {@link Mode}s using
      *  {@link #INCLUDES_DEFAULT} as the default. */

@@ -42,14 +42,14 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     ValueClassTransformer(Config cfg) {
         this.config = cfg;
-        // Initialize AsyncFileWriter for each append-to path so files are read
-        // at startup (deduplicating against existing names). AsyncFileWriter is
+        // Initialize BackgroundFileWriter for each append-to path so files are read
+        // at startup (deduplicating against existing names). BackgroundFileWriter is
         // shared per-path, so success and failure appends to the same file
         // deduplicate against each other.
         Stream.of(cfg.annotationOnFailAppendTo, cfg.annotationOnSuccessAppendTo, cfg.includesOnFailAppendTo,
                         cfg.includesOnSuccessAppendTo, cfg.synchronizationMonitorAppendTo)
                 .filter(Objects::nonNull)
-                .forEach(AsyncFileWriter::forFile);
+                .forEach(BackgroundFileWriter::forFile);
 
         // Configure SynchronizationMonitor with the path so it can record
         // classes being synchronized on.
@@ -279,12 +279,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     /** Appends the Java name of {@code className} to the file at {@code path}
      *  (unless it is already recorded there), deduplicating across runs by reading
-     *  the file at start-up. Uses {@link AsyncFileWriter} for non-blocking I/O. */
+     *  the file at start-up. Uses {@link BackgroundFileWriter} for non-blocking I/O. */
     private void appendTo(String path, ClassName className) {
         if (path == null || path.isEmpty()) {
             return;
         }
-        AsyncFileWriter.forFile(path).record(className.java());
+        BackgroundFileWriter.forFile(path).record(className.java());
     }
 
     /**

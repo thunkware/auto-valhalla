@@ -12,15 +12,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Tests for {@link AsyncFileWriter}: producer-consumer queue-based file writing
+ * Tests for {@link BackgroundFileWriter}: producer-consumer queue-based file writing
  * with background flushing and shutdown hook cleanup.
  */
-class AsyncFileWriterTest {
+class BackgroundFileWriterTest {
 
     @Test
     void recordsAreWrittenToFile(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("records.txt");
-        AsyncFileWriter writer = AsyncFileWriter.forFile(file.toString());
+        BackgroundFileWriter writer = BackgroundFileWriter.forFile(file.toString());
 
         writer.record("com.example.Foo");
         writer.record("com.example.Bar");
@@ -36,7 +36,7 @@ class AsyncFileWriterTest {
     @Test
     void deduplicatesOnSecondRecord(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("dedup.txt");
-        AsyncFileWriter writer = AsyncFileWriter.forFile(file.toString());
+        BackgroundFileWriter writer = BackgroundFileWriter.forFile(file.toString());
 
         writer.record("com.example.Foo");
         writer.record("com.example.Foo"); // duplicate
@@ -53,7 +53,7 @@ class AsyncFileWriterTest {
         Path file = dir.resolve("existing.txt");
         Files.writeString(file, "com.example.Existing\n");
 
-        AsyncFileWriter writer = AsyncFileWriter.forFile(file.toString());
+        BackgroundFileWriter writer = BackgroundFileWriter.forFile(file.toString());
         writer.record("com.example.Existing"); // already in file
         writer.record("com.example.New");
 
@@ -72,8 +72,8 @@ class AsyncFileWriterTest {
         Path file1 = dir.resolve("file1.txt");
         Path file2 = dir.resolve("file2.txt");
 
-        AsyncFileWriter writer1 = AsyncFileWriter.forFile(file1.toString());
-        AsyncFileWriter writer2 = AsyncFileWriter.forFile(file2.toString());
+        BackgroundFileWriter writer1 = BackgroundFileWriter.forFile(file1.toString());
+        BackgroundFileWriter writer2 = BackgroundFileWriter.forFile(file2.toString());
 
         writer1.record("com.example.File1");
         writer2.record("com.example.File2");
@@ -93,8 +93,8 @@ class AsyncFileWriterTest {
     void samePathReturnsCachedInstance(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("cached.txt");
 
-        AsyncFileWriter writer1 = AsyncFileWriter.forFile(file.toString());
-        AsyncFileWriter writer2 = AsyncFileWriter.forFile(file.toString());
+        BackgroundFileWriter writer1 = BackgroundFileWriter.forFile(file.toString());
+        BackgroundFileWriter writer2 = BackgroundFileWriter.forFile(file.toString());
 
         // Same instance (both go to same queue, both see same SEEN set)
         assertSame(writer1, writer2, "Same path must return cached instance");
@@ -111,14 +111,14 @@ class AsyncFileWriterTest {
 
     @Test
     void nullOrEmptyPathReturnsNull() {
-        assertNull(AsyncFileWriter.forFile(null), "null path returns null");
-        assertNull(AsyncFileWriter.forFile(""), "empty path returns null");
+        assertNull(BackgroundFileWriter.forFile(null), "null path returns null");
+        assertNull(BackgroundFileWriter.forFile(""), "empty path returns null");
     }
 
     @Test
     void nullOrEmptyNamesAreIgnored(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("nulls.txt");
-        AsyncFileWriter writer = AsyncFileWriter.forFile(file.toString());
+        BackgroundFileWriter writer = BackgroundFileWriter.forFile(file.toString());
 
         writer.record(null);
         writer.record("");
@@ -133,7 +133,7 @@ class AsyncFileWriterTest {
     @Test
     void flushHappensWithin1Second(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("flush_timing.txt");
-        AsyncFileWriter writer = AsyncFileWriter.forFile(file.toString());
+        BackgroundFileWriter writer = BackgroundFileWriter.forFile(file.toString());
 
         writer.record("com.example.Test");
 

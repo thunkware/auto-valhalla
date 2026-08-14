@@ -22,21 +22,21 @@ import java.util.concurrent.TimeUnit;
  * <p>This is used by {@link SynchronizationMonitor} and
  * {@link ValueClassTransformer} for non-blocking append operations.
  */
-final class AsyncFileWriter {
+final class BackgroundFileWriter {
 
-    private static final Map<String, AsyncFileWriter> WRITERS = new ConcurrentHashMap<>();
+    private static final Map<String, BackgroundFileWriter> WRITERS = new ConcurrentHashMap<>();
     private static final long FLUSH_INTERVAL_MS = 1000;
 
     private final Object lock = new Object();
     private final Path file;
-    private BufferedWriter writer;
     private final Set<String> seen;
     private final LinkedBlockingQueue<String> queue;
     private final Thread writerThread;
+    private BufferedWriter writer;
 
     static {
-        Runtime.getRuntime().addShutdownHook(new Thread(AsyncFileWriter::shutdownAll,
-                "AsyncFileWriter-Shutdown"));
+        Runtime.getRuntime().addShutdownHook(new Thread(BackgroundFileWriter::shutdownAll,
+                "BackgroundFileWriter-Shutdown"));
     }
 
     /**
@@ -44,14 +44,14 @@ final class AsyncFileWriter {
      * path gets a single shared instance with its own queue and background thread.
      * The file is read once so names already present are not appended again.
      */
-    static AsyncFileWriter forFile(String path) {
+    static BackgroundFileWriter forFile(String path) {
         if (path == null || path.isEmpty()) {
             return null;
         }
-        return WRITERS.computeIfAbsent(path, p -> Failable.callQuietly(() -> new AsyncFileWriter(p)));
+        return WRITERS.computeIfAbsent(path, p -> Failable.callQuietly(() -> new BackgroundFileWriter(p)));
     }
 
-    private AsyncFileWriter(String path) throws IOException {
+    private BackgroundFileWriter(String path) throws IOException {
         this.seen = ConcurrentHashMap.newKeySet();
         this.queue = new LinkedBlockingQueue<>();
 
@@ -67,7 +67,7 @@ final class AsyncFileWriter {
 
         // Spawn a background virtual thread to read from queue and flush periodically
         this.writerThread = Thread.ofVirtual()
-                .name("AsyncFileWriter-" + file.getFileName())
+                .name("BackgroundFileWriter-" + file.getFileName())
                 .start(() -> Failable.runQuietly(this::run));
     }
 
@@ -90,9 +90,8 @@ final class AsyncFileWriter {
             String name = queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS);
             synchronized (lock) {
                 if (name != null) {
-                    initWriter();
-                    writer.write(name);
-                    writer.write('\n');
+                    write(name);
+                    write("\n");
                 }
                 long now = System.currentTimeMillis();
                 if (now - lastFlush >= FLUSH_INTERVAL_MS) {
@@ -105,26 +104,26 @@ final class AsyncFileWriter {
         }
     }
 
-    private void initWriter() throws IOException {
+    private void write(String str) throws IOException {
         if (writer == null) {
             // Open writer in append mode, not auto-flush (background thread will flush)
             this.writer = new BufferedWriter(Files.newBufferedWriter(file,
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND,
                     StandardOpenOption.WRITE));
         }
+        writer.write(str);
     }
 
     /** Synchronously processes all pending records and flushes. For testing only. */
     static void drain() {
-        for (AsyncFileWriter w : WRITERS.values()) {
+        for (BackgroundFileWriter w : WRITERS.values()) {
             synchronized (w.lock) {
                 String pending;
                 while ((pending = w.queue.poll()) != null) {
                     String finalPending = pending;
                     Failable.runQuietly(() -> {
-                        w.initWriter();
-                        w.writer.write(finalPending);
-                        w.writer.write('\n');
+                        w.write(finalPending);
+                        w.write("\n");
                     });
                 }
                 if (w.writer != null) {

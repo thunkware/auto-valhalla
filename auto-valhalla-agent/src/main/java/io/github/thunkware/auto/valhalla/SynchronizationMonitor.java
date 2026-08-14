@@ -6,7 +6,7 @@ package io.github.thunkware.auto.valhalla;
  * enabled and {@code auto-valhalla.synchronization-monitor.append-to} is configured.
  *
  * <p>Records the name of every class being synchronized on using
- * {@link AsyncFileWriter} for non-blocking, background-flushed I/O.
+ * {@link BackgroundFileWriter} for non-blocking, background-flushed I/O.
  *
  * <p>This class must be loadable from the instrumented application classes (it
  * lives in the agent's own package, which is never transformed) and must never
@@ -14,7 +14,7 @@ package io.github.thunkware.auto.valhalla;
  */
 public final class SynchronizationMonitor {
 
-    private static volatile AsyncFileWriter writer;
+    private static volatile BackgroundFileWriter writer;
 
     private SynchronizationMonitor() {}
 
@@ -24,7 +24,7 @@ public final class SynchronizationMonitor {
         if (path == null || path.isEmpty()) {
             return;
         }
-        writer = AsyncFileWriter.forFile(path);
+        writer = BackgroundFileWriter.forFile(path);
     }
 
     /** Called immediately before each {@code monitorenter} with the object being

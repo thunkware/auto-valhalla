@@ -402,7 +402,7 @@ class ValueClassRewriterTest {
         assertNull(t.transform(null, null, "sample/Mutable", null, null, mutable),
                 "Mutable must be left as an identity class");
 
-        AsyncFileWriter.drain();
+        BackgroundFileWriter.drain();
         assertEquals("sample.SampleX\n", Files.readString(success),
                 "the pre-existing name must not be re-appended");
         assertTrue(Files.readString(fail).contains("sample.Mutable"),
@@ -586,7 +586,7 @@ class ValueClassRewriterTest {
             bothCfg.includesOnFailAppendTo = inc.getAbsolutePath();
             ValueClassTransformer both = new ValueClassTransformer(bothCfg);
             both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
-            AsyncFileWriter.drain();
+            BackgroundFileWriter.drain();
             assertEquals("demo5.broken.MutablePoint\n", Files.readString(ann.toPath()),
                     "a both-selected class is appended to the annotation file as a class name");
             assertTrue(Files.readString(inc.toPath()).isEmpty(),
@@ -604,7 +604,7 @@ class ValueClassRewriterTest {
                 incCfg.includesOnFailAppendTo = inc2.getAbsolutePath();
                 ValueClassTransformer includesOnly = new ValueClassTransformer(incCfg);
                 includesOnly.transform(null, null, "sample/Mutable", null, null, mutable);
-                AsyncFileWriter.drain();
+                BackgroundFileWriter.drain();
                 assertEquals("sample.Mutable\n", Files.readString(inc2.toPath()),
                         "an includes-only class is appended to the includes file as a class name");
             } finally {
