@@ -1,5 +1,8 @@
 package io.github.thunkware.auto.valhalla;
 
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -8,18 +11,22 @@ import java.util.Set;
  *  failure-handling flags, the synchronization monitor path, and the log level. */
 class Config {
 
-    Set<String> includes;
-    Set<String> excludes;
-    Set<Mode> annotationMode;
-    Set<Mode> includesMode;
-    String logLevel;
-    boolean annotationOnFailThrow;
+    Set<String> includes = new LinkedHashSet<>();
+    List<String> includesFiles = new ArrayList<>();
+    Set<String> excludes = new LinkedHashSet<>();
+    List<String> excludesFiles = new ArrayList<>();
+    Set<Mode> annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
+    Set<Mode> includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
+    // annotation-selected classes are an explicit opt-in: fail loudly by
+    // default. includes sweep broadly: stay quiet by default.
+    boolean annotationOnFailThrow = true;
     String annotationOnFailAppendTo;
     String annotationOnSuccessAppendTo;
     boolean includesOnFailThrow;
     String includesOnFailAppendTo;
     String includesOnSuccessAppendTo;
-    String synchronizationMonitorAppendTo;
+    String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
+    String logLevel;
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
      *  used by {@link AutoValhallaAgent#parse(String)} switch. */

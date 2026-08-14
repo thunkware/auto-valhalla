@@ -7,7 +7,6 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -128,6 +127,7 @@ public final class AutoValhallaAgent {
                     + "The agent is disabled and classes are left as identity classes.");
             return;
         }
+        InternalLogger.info("Starting agent");
         Config cfg = parse(agentArgs);
         InternalLogger.setLevel(cfg.logLevel);
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
@@ -185,16 +185,6 @@ public final class AutoValhallaAgent {
         }
 
         Config cfg = new Config();
-        cfg.includes = new HashSet<>();
-        cfg.excludes = new HashSet<>();
-        cfg.annotationMode = EnumSet.copyOf(Mode.ANNOTATION_DEFAULT);
-        cfg.includesMode = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
-        // annotation-selected classes are an explicit opt-in: fail loudly by
-        // default. includes sweep broadly: stay quiet by default.
-        cfg.annotationOnFailThrow = true;
-        cfg.synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
-        List<String> includesFilePaths = new ArrayList<>();
-        List<String> excludesFilePaths = new ArrayList<>();
         boolean userSuppliedExcludes = false;
 
         for (String[] a : assigns) {
@@ -207,13 +197,13 @@ public final class AutoValhallaAgent {
                 case Config.INCLUDES_FILES -> {
                     for (String p : a[1].split("[;,]")) {
                         String t = p.trim();
-                        if (!t.isEmpty()) includesFilePaths.add(t);
+                        if (!t.isEmpty()) cfg.includesFiles.add(t);
                     }
                 }
                 case Config.EXCLUDES_FILES -> {
                     for (String p : a[1].split("[;,]")) {
                         String t = p.trim();
-                        if (!t.isEmpty()) excludesFilePaths.add(t);
+                        if (!t.isEmpty()) cfg.excludesFiles.add(t);
                     }
                     userSuppliedExcludes = true;
                 }
@@ -247,30 +237,36 @@ public final class AutoValhallaAgent {
                 default -> { /* unreachable */ }
             }
         }
+
         // Log the configuration as provided (before resolving file contents)
-        if (InternalLogger.isDebugEnabled()) {
-            InternalLogger.debug("configuration:"
-                    + " includes=" + (cfg.includes.isEmpty() ? (includesFilePaths.isEmpty() ? "[]" : "[from " + includesFilePaths + "]") : cfg.includes)
-                    + " excludes=" + (cfg.excludes.isEmpty() ? (excludesFilePaths.isEmpty() ? "[]" : "[from " + excludesFilePaths + "]") : cfg.excludes)
-                    + " annotation-mode=" + cfg.annotationMode
-                    + " includes-mode=" + cfg.includesMode
-                    + " log-level=" + cfg.logLevel
-                    + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow
-                    + " includes.on-fail-throw=" + cfg.includesOnFailThrow);
-        }
+        InternalLogger.info("Configuration:"
+                + " includes=" + cfg.includes
+                + " includes-files=" + cfg.includesFiles
+                + " excludes=" + cfg.excludes
+                + " excludes-files=" + cfg.excludesFiles
+                + " annotation-mode=" + cfg.annotationMode
+                + " includes-mode=" + cfg.includesMode
+                + " annotation.on-fail-throw=" + cfg.annotationOnFailThrow
+                + " annotation.on-fail-append-to=" + cfg.annotationOnFailAppendTo
+                + " annotation.on-success-append-to=" + cfg.annotationOnSuccessAppendTo
+                + " includes.on-fail-throw=" + cfg.includesOnFailThrow
+                + " includes.on-fail-append-to=" + cfg.includesOnFailAppendTo
+                + " includes.on-success-append-to=" + cfg.includesOnSuccessAppendTo
+                + " synchronization-monitor.append-to=" + cfg.synchronizationMonitorAppendTo
+                + " log-level=" + cfg.logLevel);
 
         // Now resolve file contents
-        for (String p : includesFilePaths) {
-            cfg.includes.addAll(readPatternFile(p));
+        for (String p : cfg.includesFiles) {
+            cfg.includes.addAll(readPatternFile(p, false));
         }
-        for (String p : excludesFilePaths) {
-            cfg.excludes.addAll(readPatternFile(p));
+        for (String p : cfg.excludesFiles) {
+            cfg.excludes.addAll(readPatternFile(p, false));
         }
 
         // Default excludes: only when the user has not supplied any excludes.
         if (!userSuppliedExcludes) {
-            cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.failures.txt"));
-            cfg.excludes.addAll(readPatternFileQuietly("auto-valhalla.synchronization.txt"));
+            cfg.excludes.addAll(readPatternFile("auto-valhalla.failures.txt", true));
+            cfg.excludes.addAll(readPatternFile("auto-valhalla.synchronization.txt", true));
         }
 
         return cfg;
@@ -343,7 +339,7 @@ public final class AutoValhallaAgent {
         return set;
     }
 
-    private static Set<String> readPatternFile(String path) {
+    private static Set<String> readPatternFile(String path, boolean quiet) {
         Set<String> set = new HashSet<>();
         try (BufferedReader br = Files.newBufferedReader(Path.of(path.trim()))) {
             String line;
@@ -358,27 +354,9 @@ public final class AutoValhallaAgent {
                 }
             }
         } catch (IOException e) {
-            InternalLogger.error("cannot read pattern file " + path + ": " + e);
-        }
-        return set;
-    }
-
-    private static Set<String> readPatternFileQuietly(String path) {
-        Set<String> set = new HashSet<>();
-        try (BufferedReader br = Files.newBufferedReader(Path.of(path.trim()))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String t = line.trim();
-                if (t.isEmpty() || t.startsWith("#")) {
-                    continue;
-                }
-                String n = normalizePattern(t);
-                if (n != null) {
-                    set.add(n);
-                }
+            if (!quiet) {
+                InternalLogger.error("cannot read pattern file " + path + ": " + e);
             }
-        } catch (IOException ignored) {
-            // file may not exist on first run; silently ignore
         }
         return set;
     }

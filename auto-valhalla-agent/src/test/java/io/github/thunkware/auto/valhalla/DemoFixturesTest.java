@@ -107,6 +107,7 @@ class DemoFixturesTest {
         quietCfg.excludes = Set.of();
         quietCfg.annotationMode = yolo;
         quietCfg.includesMode = yolo;
+        quietCfg.annotationOnFailThrow = false;
         ValueClassTransformer quiet = new ValueClassTransformer(quietCfg);
         assertNull(quiet.transform(null, null, internal, null, null, original),
                 "without on-fail-throw the annotated mutable class is left as identity");

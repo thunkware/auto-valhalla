@@ -1,5 +1,6 @@
 package io.github.thunkware.auto.valhalla;
 
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Locale;
@@ -66,14 +67,14 @@ public enum Mode {
      *  settings (by default a loud failure for annotated classes, so
      *  {@code mark-class-final} must be opted in explicitly to convert it). */
     public static final Set<Mode> ANNOTATION_DEFAULT =
-            EnumSet.of(Mode.SAFE);
+            Collections.unmodifiableSet(EnumSet.of(Mode.SAFE));
 
     /** The default set for {@code includes-mode} (classes selected by
      *  {@code includes}) — and the {@code yolo} expansion:
      *  {@code mark-class-final,ignore-synchronized,mark-fields-final}. */
     public static final Set<Mode> INCLUDES_DEFAULT =
-            EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED,
-                    Mode.MARK_FIELDS_FINAL);
+            Collections.unmodifiableSet(EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.IGNORE_SYNCHRONIZED,
+                    Mode.MARK_FIELDS_FINAL));
 
     /** Parses a mode string into a set of {@link Mode}s using
      *  {@link #INCLUDES_DEFAULT} as the default. */
