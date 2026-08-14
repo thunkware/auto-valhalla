@@ -121,6 +121,13 @@ class AutoValhallaAgentTest {
     }
 
     @Test
+    void unknownLogLevelDefaultsToInfo() {
+        // A bad log-level must not crash the agent — it should warn and fall back.
+        InternalLogger.setLevel("bogus");
+        InternalLogger.setLevel(null); // reset to info for other tests
+    }
+
+    @Test
     void onSuccessDefaultsToInfo() {
         var cfg = AutoValhallaAgent.parse("includes=a.");
         assertEquals(OnSuccess.INFO, cfg.annotationOnSuccess,

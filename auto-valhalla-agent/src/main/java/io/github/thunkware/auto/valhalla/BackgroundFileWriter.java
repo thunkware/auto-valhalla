@@ -134,11 +134,15 @@ final class BackgroundFileWriter {
     }
 
     private void shutdown() throws IOException {
-        // Interrupt the background thread
         writerThread.interrupt();
-
-        // Flush any remaining data
         synchronized (lock) {
+            // Drain any records still queued before flushing: the background thread
+            // may have been interrupted before it processed them.
+            String pending;
+            while ((pending = queue.poll()) != null) {
+                write(pending);
+                write("\n");
+            }
             if (writer != null) {
                 writer.flush();
                 writer.close();

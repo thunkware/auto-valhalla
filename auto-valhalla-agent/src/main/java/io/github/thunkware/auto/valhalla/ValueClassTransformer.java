@@ -95,6 +95,11 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             return rewrite(className, model, selection, loader);
         } catch (LinkageError e) {
             throw e;
+        } catch (IllegalArgumentException e) {
+            // Configuration error (e.g. incompatible modes) — always log at warning
+            // so it is visible regardless of the class's on-fail setting.
+            InternalLogger.warning(className.java() + ": configuration error — " + e.getMessage());
+            return null;
         } catch (Throwable t) {
             return onTransformError(className, t, selection);
         }

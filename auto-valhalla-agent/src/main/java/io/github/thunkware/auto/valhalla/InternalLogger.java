@@ -36,7 +36,13 @@ public final class InternalLogger {
             level = Level.INFO;
             return;
         }
-        level = Level.valueOf(s.trim().toUpperCase());
+        try {
+            level = Level.valueOf(s.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            level = Level.INFO;
+            warning("Unknown log-level '" + s.trim() + "'; valid values are: "
+                    + "off, error, warning, info, debug. Defaulting to info.");
+        }
     }
 
     public static boolean isDebugEnabled() {

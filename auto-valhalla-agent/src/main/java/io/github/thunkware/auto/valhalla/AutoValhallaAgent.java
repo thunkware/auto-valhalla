@@ -46,9 +46,8 @@ import java.util.stream.Collectors;
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
      *       selected by {@code includes} (default {@code yolo} =
      *       {@code mark-class-final,ignore-synchronized,mark-fields-final}).</li>
- *   <li>{@code auto-valhalla.debug=true} — verbose logging of decisions.</li>
  *   <li>{@code auto-valhalla.log-level} — logging level: {@code off}, {@code error},
- *       {@code warning} (default), {@code info}, {@code debug}. Controls verbosity
+ *       {@code warning}, {@code info} (default), {@code debug}. Controls verbosity
  *       of messages to stderr.</li>
  *   <li>{@code auto-valhalla.annotation.on-fail=throw|error|warning|info|debug}
  *       (default {@code throw}) — how to handle an <em>annotation-selected</em>
