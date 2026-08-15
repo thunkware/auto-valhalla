@@ -15,11 +15,11 @@ import java.util.concurrent.ConcurrentMap;
  * Logging facade for the auto-valhalla agent. Example output:
  *
  * <pre>
- * 2024-01-15T10:23:45.123+01:00 WARNING auto-valhalla.annotation.rejected - com.example.Point: not suitable
+ * 2024-01-15T10:23:45.123+01:00 WARN auto-valhalla.annotation.rejected - com.example.Point: not suitable
  * </pre>
  *
- * <p>Supported levels: {@code OFF}, {@code FATAL}, {@code ERROR}, {@code WARNING},
- * {@code INFO}, {@code DEBUG}. {@code FATAL} logs at {@code WARNING} and always throws.
+ * <p>Supported levels: {@code OFF}, {@code FATAL}, {@code ERROR}, {@code WARN},
+ * {@code INFO}, {@code DEBUG}. {@code FATAL} logs at {@code WARN} and always throws.
  *
  * <p>Obtain a logger via {@link #getLogger(Class)} or {@link #getLogger(String)}. The
  * global level is set via {@link #setLevel(String)}; per-logger overrides via
@@ -27,22 +27,18 @@ import java.util.concurrent.ConcurrentMap;
  */
 public final class InternalLogger {
 
-    enum Level {
-        OFF(0), FATAL(1), ERROR(2), WARNING(3), INFO(4), DEBUG(5);
+    private record LogEntry(String name, Level level, String msg, Throwable throwable, ZonedDateTime timestamp) {
 
-        final int rank;
-        Level(int rank) { this.rank = rank; }
     }
-
-    enum LoggingMode { SIMPLE, NONE, APPLICATION }
 
     private static volatile Level level = Level.INFO;
     private static volatile LoggingMode loggingMode = LoggingMode.SIMPLE;
     private static final ConcurrentMap<String, Level> loggerLevels = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, InternalLogger> instances = new ConcurrentHashMap<>();
+
     private static volatile boolean buffering = false;
     private static final Queue<LogEntry> pendingLogs = new ConcurrentLinkedQueue<>();
 
-    private record LogEntry(String name, Level lv, String msg, Throwable t, ZonedDateTime timestamp) {}
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
 
@@ -55,11 +51,11 @@ public final class InternalLogger {
     }
 
     public static InternalLogger getLogger(Class<?> cls) {
-        return new InternalLogger(cls.getName());
+        return getLogger(cls.getName());
     }
 
     public static InternalLogger getLogger(String name) {
-        return new InternalLogger(name);
+        return instances.computeIfAbsent(name, InternalLogger::new);
     }
 
     /**
@@ -97,11 +93,13 @@ public final class InternalLogger {
         } catch (IllegalArgumentException e) {
             getLogger(InternalLogger.class).warning(
                     "Unknown log-level '" + levelString.trim() + "' for logger '"
-                    + loggerName + "'; valid values are: off, fatal, error, warning, info, debug. Ignoring.");
+                            + loggerName + "'; valid values are: off, fatal, error, warning, info, debug. Ignoring.");
         }
     }
 
-    /** Starts buffering log output in memory. Flushed by {@link Slf4jBridge#reinstall()}. */
+    /**
+     * Starts buffering log output in memory. Flushed by {@link Slf4jBridge#reinstall()}.
+     */
     public static void startBuffering() {
         buffering = true;
     }
@@ -127,33 +125,39 @@ public final class InternalLogger {
             loggingMode = LoggingMode.SIMPLE;
             return;
         }
-        switch (s.trim().toLowerCase()) {
-            case "simple" -> loggingMode = LoggingMode.SIMPLE;
-            case "none" -> loggingMode = LoggingMode.NONE;
-            case "application" -> loggingMode = LoggingMode.APPLICATION;
-            default -> {
-                loggingMode = LoggingMode.SIMPLE;
-                getLogger(InternalLogger.class).warning("Unknown logging mode '" + s.trim() + "'; valid values are: "
-                        + "simple, none, application. Defaulting to simple.");
-            }
+        LoggingMode m = LoggingMode.findOrNull(s);
+        if (m != null) {
+            loggingMode = m;
+        } else {
+            loggingMode = LoggingMode.SIMPLE;
+            getLogger(InternalLogger.class).warning("Unknown logging mode '" + s.trim() + "'; valid values are: "
+                    + "simple, none, application. Defaulting to simple.");
         }
     }
 
-    /** Returns true when this logger's effective level is {@link Level#FATAL},
-     *  meaning failures should surface loudly (reject the class) rather than log-and-continue. */
+    /**
+     * Returns true when this logger's effective level is {@link Level#FATAL},
+     * meaning failures should surface loudly (reject the class) rather than log-and-continue.
+     */
     public boolean isFatal() {
         return loggerLevels.getOrDefault(name, level) == Level.FATAL;
     }
 
-    /** Logs at this logger's effective level. Does nothing when effective level is {@code OFF} or {@code FATAL}. */
+    /**
+     * Logs at this logger's effective level. Does nothing when effective level is {@code OFF} or {@code FATAL}.
+     */
     public void logAtEffectiveLevel(String msg) {
         logAtEffectiveLevel(msg, null);
     }
 
-    /** Logs at this logger's effective level, with a throwable. Does nothing when level is {@code OFF} or {@code FATAL}. */
+    /**
+     * Logs at this logger's effective level, with a throwable. Does nothing when level is {@code OFF} or {@code FATAL}.
+     */
     public void logAtEffectiveLevel(String msg, Throwable t) {
         Level eff = loggerLevels.getOrDefault(name, level);
-        if (eff == Level.OFF || eff == Level.FATAL) return;
+        if (eff == Level.OFF || eff == Level.FATAL) {
+            return;
+        }
         log(eff, msg, t);
     }
 
@@ -165,12 +169,16 @@ public final class InternalLogger {
         log(Level.DEBUG, msg, null);
     }
 
+    public void debug(String msg, Throwable t) {
+        log(Level.DEBUG, msg, t);
+    }
+
     public void info(String msg) {
         log(Level.INFO, msg, null);
     }
 
     public void warning(String msg) {
-        log(Level.WARNING, msg, null);
+        log(Level.WARN, msg, null);
     }
 
     public void error(String msg) {
@@ -182,7 +190,7 @@ public final class InternalLogger {
     }
 
     /**
-     * Logs at WARNING level and always throws. If {@code t} is a
+     * Logs at WARN level and always throws. If {@code throwable} is a
      * {@link RuntimeException} it is rethrown as-is; otherwise it is wrapped in
      * a new {@code RuntimeException}. Returns {@code RuntimeException} so callers
      * can write {@code throw log.fatal(…)} to satisfy the compiler's control-flow
@@ -190,11 +198,15 @@ public final class InternalLogger {
      */
     public RuntimeException fatal(String msg, Throwable t) {
         log(Level.FATAL, msg, t);
-        if (t instanceof RuntimeException re) throw re;
+        if (t instanceof RuntimeException re) {
+            throw re;
+        }
         throw new RuntimeException(msg, t);
     }
 
-    /** Like {@link #fatal(String, Throwable)} but with no cause. Always throws. */
+    /**
+     * Like {@link #fatal(String, Throwable)} but with no cause. Always throws.
+     */
     public RuntimeException fatal(String msg) {
         log(Level.FATAL, msg, null);
         throw new RuntimeException(msg);
@@ -202,7 +214,9 @@ public final class InternalLogger {
 
     private void log(Level lv, String msg, Throwable t) {
         Level effective = loggerLevels.getOrDefault(name, level);
-        if (lv.rank > effective.rank) return;
+        if (lv.rank > effective.rank) {
+            return;
+        }
         if (buffering) {
             pendingLogs.add(new LogEntry(name, lv, msg, t, ZonedDateTime.now()));
             return;
@@ -216,9 +230,12 @@ public final class InternalLogger {
 
     private void logDirect(Level lv, String msg, Throwable t, ZonedDateTime timestamp) {
         switch (loggingMode) {
-            case NONE -> {}
+            case NONE -> {
+            }
             case APPLICATION -> {
-                if (logViaSlf4j(lv, msg, t)) return;
+                if (logViaSlf4j(lv, msg, t)) {
+                    return;
+                }
                 logToStderr(lv, msg, t, timestamp); // SLF4J not yet available; fall through to stderr
             }
             default -> logToStderr(lv, msg, t, timestamp);
@@ -229,7 +246,8 @@ public final class InternalLogger {
         buffering = false;
         LogEntry entry;
         while ((entry = pendingLogs.poll()) != null) {
-            new InternalLogger(entry.name()).logDirect(entry.lv(), entry.msg(), entry.t(), entry.timestamp());
+            InternalLogger logger = getLogger(entry.name());
+            logger.logDirect(entry.level(), entry.msg(), entry.throwable(), entry.timestamp());
         }
     }
 
@@ -239,13 +257,15 @@ public final class InternalLogger {
             slf4jLogger = Slf4jBridge.getLoggerInstance(name);
             slf4jVersion = v;
         }
-        if (slf4jLogger == null) return false;
+        if (slf4jLogger == null) {
+            return false;
+        }
         return Slf4jBridge.invoke(lv, slf4jLogger, msg, t);
     }
 
     private void logToStderr(Level lv, String msg, Throwable t, ZonedDateTime timestamp) {
         String ts = (timestamp != null ? timestamp : ZonedDateTime.now()).format(TIMESTAMP_FORMAT);
-        String displayLevel = lv == Level.FATAL ? Level.WARNING.name() : lv.name();
+        String displayLevel = lv == Level.FATAL ? Level.WARN.name() : lv.name();
         System.err.println(ts + " " + displayLevel + " " + name + " - " + msg);
         if (t != null) {
             t.printStackTrace(System.err);
@@ -295,12 +315,12 @@ public final class InternalLogger {
                 if (lv == Level.ERROR && t != null) {
                     h = errorWithCauseHandle;
                     withCause = true;
-                } else if ((lv == Level.FATAL || lv == Level.WARNING) && t != null) {
+                } else if ((lv == Level.FATAL || lv == Level.WARN) && t != null) {
                     h = warnWithCauseHandle;
                     withCause = true;
                 } else {
                     h = switch (lv) {
-                        case FATAL, WARNING -> warnHandle;
+                        case FATAL, WARN -> warnHandle;
                         case ERROR -> errorHandle;
                         case INFO -> infoHandle;
                         case DEBUG -> debugHandle;
@@ -340,7 +360,9 @@ public final class InternalLogger {
         }
 
         private static synchronized void init() {
-            if (attempted) return;
+            if (attempted) {
+                return;
+            }
             try {
                 ClassLoader cl = Thread.currentThread().getContextClassLoader();
                 if (cl == null) cl = ClassLoader.getSystemClassLoader();

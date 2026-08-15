@@ -6,6 +6,7 @@ import java.util.concurrent.Callable;
 class Failable {
 
     private static final InternalLogger LOG = InternalLogger.getLogger(Failable.class);
+
     interface ThrowingRunnable {
         void run() throws Throwable;
     }
@@ -13,17 +14,16 @@ class Failable {
     public static void runQuietly(ThrowingRunnable runnable) {
         try {
             runnable.run();
-        } catch (Throwable e) {
-            LOG.debug(e.toString());
+        } catch (Throwable t) {
+            LOG.debug("", t);
         }
     }
-
 
     public static <T> T callQuietly(Callable<T> callable) {
         try {
             return callable.call();
-        } catch (Throwable e) {
-            LOG.debug(e.toString());
+        } catch (Throwable t) {
+            LOG.debug("", t);
             return null;
         }
     }
