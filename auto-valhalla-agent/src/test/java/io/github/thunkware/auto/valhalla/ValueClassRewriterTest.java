@@ -49,7 +49,7 @@ class ValueClassRewriterTest {
         cfg.includes = Set.of("sample.SampleX");
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
-        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        cfg.includesMode = EnumSet.of(Mode.YOLO);
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
 
         byte[] out = transformer.transform(null, null, internal, null, null, original);
@@ -208,8 +208,8 @@ class ValueClassRewriterTest {
         defCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
         defCfg.includesMode = Mode.INCLUDES_DEFAULT;
         ValueClassTransformer def = new ValueClassTransformer(defCfg);
-        assertNotNull(def.transform(null, null, "sample/Base", null, null, base),
-                "default includes-mode must convert the selected non-final class");
+        assertNull(def.transform(null, null, "sample/Base", null, null, base),
+                "default includes-mode (safe) must not convert a non-final class");
     }
 
     @Test
@@ -237,8 +237,7 @@ class ValueClassRewriterTest {
         assertFalse(ValueClassRewriter.fieldsSafeToMarkFinal(cf.parse(mutable)),
                 "Mutable.v is written outside the constructor");
 
-        EnumSet<Mode> mff = EnumSet.copyOf(Mode.INCLUDES_DEFAULT);
-        mff.add(Mode.MARK_FIELDS_FINAL);
+        EnumSet<Mode> mff = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL);
         Config cfg = new Config();
         cfg.includes = Set.of("sample.Once", "sample.TwoCtors", "sample.Mutable", "sample.SampleX");
         cfg.excludes = Set.of();
@@ -398,7 +397,7 @@ class ValueClassRewriterTest {
         cfg.includes = Set.of("sample.SampleX", "sample.Mutable");
         cfg.excludes = Set.of();
         cfg.annotationMode = Mode.ANNOTATION_DEFAULT;
-        cfg.includesMode = Mode.INCLUDES_DEFAULT;
+        cfg.includesMode = EnumSet.of(Mode.YOLO);
         cfg.annotationOnFailAppendTo = fail.toString();
         cfg.annotationOnSuccessAppendTo = success.toString();
         cfg.includesOnFailAppendTo = fail.toString();
@@ -436,14 +435,12 @@ class ValueClassRewriterTest {
                         Mode.MARK_CLASS_FINAL,
                         Mode.REMOVE_SYNCHRONIZED),
                 Mode.parse("Safe,Mark-Class-Final,REMOVE_SYNCHRONIZED"));
-        // the default includes-mode set and the yolo expansion
+        // the default includes-mode set is safe
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse(null));
         assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("  "));
-        // yolo is a shorthand for the default includes-mode
-        assertEquals(Mode.INCLUDES_DEFAULT, Mode.parse("yolo"));
-        EnumSet<Mode> safeYolo = EnumSet.of(Mode.SAFE);
-        safeYolo.addAll(Mode.INCLUDES_DEFAULT);
-        assertEquals(safeYolo, Mode.parse("safe,yolo"));
+        // yolo is stored as-is; it is not INCLUDES_DEFAULT
+        assertEquals(EnumSet.of(Mode.YOLO), Mode.parse("yolo"));
+        assertEquals(EnumSet.of(Mode.SAFE, Mode.YOLO), Mode.parse("safe,yolo"));
         // the default annotation-mode set is safe (no mark-class-final)
         assertEquals(EnumSet.of(Mode.SAFE), Mode.ANNOTATION_DEFAULT);
     }

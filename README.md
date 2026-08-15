@@ -132,17 +132,17 @@ under the active mode, that is a failure; see [Success and failure handling](#su
 | Option | Description |
 | --- | --- |
 | `auto-valhalla.annotation-mode` | Mode(s) applied to annotation-selected classes. Default: `safe`. |
-| `auto-valhalla.includes-mode` | Mode(s) applied to includes-selected classes. Default: `yolo`. |
+| `auto-valhalla.includes-mode` | Mode(s) applied to includes-selected classes. Default: `safe`. |
 
 #### Mode values
 
-| Mode | Effect |
-| --- | --- |
-| `safe` | Convert only classes that are already `final`. Non-final candidates are not converted. |
-| `remove-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed. |
-| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load). |
-| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected. |
-| `yolo` | Shorthand for `remove-synchronized,mark-class-final,mark-fields-final`. The default for `includes-mode`. |
+| Mode | Effect                                                                                                                                                                                                                           |
+| --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `safe` | Convert only classes that can safely be converted.                                                                                                                                                                               |
+| `remove-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed.                                                                                                                                   |
+| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                                                                           |
+| `mark-fields-final` | If instance fields are non-`final` yet written only once in a constructor, mark them `final`. Candidates with a non-`final` field written elsewhere (or more than once) are rejected.                                            |
+| `yolo` | Shorthand for `remove-synchronized,mark-class-final,mark-fields-final`.                                                                                                                                                          |
 | `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. Optionally also records them to a file via `synchronization-monitor.append-to`. **Cannot be combined with other modes.** |
 
 Multiple modes are comma-separated. Mode names are case-insensitive and
@@ -153,9 +153,9 @@ accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and
 
 Controlled via [per-logger level overrides](#diagnostics).
 
-- **success** — class was successfully transformed to a value class.
-- **rejected** — class was selected but failed suitability checks (e.g. not final, mutable fields).
+- **rejected** — class was selected but did not meet suitability requirements (e.g. not final, mutable fields).
 - **fail** — class passed suitability checks but hit an unexpected error during transformation.
+- **success** — class was selected, passed checks, and was successfully transformed to a value class.
 
 | Logger name | Default level | Effect                                                                            |
 | --- | --- |-----------------------------------------------------------------------------------|
@@ -166,7 +166,7 @@ Controlled via [per-logger level overrides](#diagnostics).
 | `auto-valhalla.includes.rejected` | `debug` | If includes-selected classes are rejected, treat as debug.                        |
 | `auto-valhalla.includes.fail` | `debug` | If includes-selected classes hit an unexpected transform error, treat as debug.   |
 
-`fatal` causes a class load failure (the JVM rejects the class rather than silently keeping an identity class).
+`fatal` causes a class load exception (the JVM rejects the class rather than silently keeping an identity class).
 Any other level (`error`, `warning`, `info`, `debug`, `off`) leaves the class as an identity class and logs at that level.
 
 ### Recording
@@ -183,13 +183,12 @@ are not re-appended, and a missing file is treated as empty.
 
 ### Diagnostics
 
-| Option | Description |
-| --- | --- |
-| `logging.level` | Root logging verbosity: `off`, `error`, `warning`, `info`, `debug`. Default: `info`. |
-| `logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. Same values as `logging.level`. |
-| `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below. |
+| Option | Description                                                                                                   |
+| --- |---------------------------------------------------------------------------------------------------------------|
+| `logging.level` | Root logging verbosity: `off`, `fatal`, `error`, `warning`, `info`, `debug`. Default: `info`.                 |
+| `logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. |
+| `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below.                                    |
 
-Two-level log hierarchy: a per-logger override (if set) takes precedence over the root `logging.level`.
 Named loggers available for fine-grained control:
 
 | Logger name | Default | What it covers |

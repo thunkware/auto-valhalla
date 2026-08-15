@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAccumulator;
 import java.util.stream.Stream;
 
 /**
@@ -39,6 +40,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     private final ValueClassTransformerLoggers loggers = new ValueClassTransformerLoggers();
     private final Config config;
+    private final LongAccumulator totalDuration = new LongAccumulator(Long::sum, 0L);
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
@@ -67,6 +69,23 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     public byte[] transform(Module module, ClassLoader loader, String classNameJvm,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
+        if (!InternalLogger.isDebugEnabled()) {
+            return doTransform(module, loader, classNameJvm, classBeingRedefined, protectionDomain, classfileBuffer);
+        }
+        long startTime = System.nanoTime();
+        byte[] result = doTransform(module, loader, classNameJvm, classBeingRedefined, protectionDomain, classfileBuffer);
+        long duration = System.nanoTime() - startTime;
+        totalDuration.accumulate(duration);
+        if (result != null) {
+            loggers.log().debug("Completed transforming " + classNameJvm.replace('/', '.')
+                    + " in " + duration / 1_000_000 + "ms (total " + totalDuration.get() / 1_000_000 + "ms)");
+        }
+        return result;
+    }
+
+    private byte[] doTransform(Module module, ClassLoader loader, String classNameJvm,
+            Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
+            byte[] classfileBuffer) {
         if (classNameJvm == null || classNameJvm.isEmpty() || classBeingRedefined != null) {
             // No name, or a retransform: changing class modifiers
             // (ACC_IDENTITY / ACC_FINAL) is not a legal redefinition.
@@ -90,7 +109,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             }
             // SYNCHRONIZATION_MONITOR is an either-or mode: either rewrite the class
             // to a value class, or instrument monitorenter calls, but not both.
-            if (selection.effective().contains(Mode.SYNCHRONIZATION_MONITOR)) {
+            if (selection.hasMode(Mode.SYNCHRONIZATION_MONITOR)) {
                 return monitorSynchronization(model, className, selection, loader);
             }
             return rewrite(className, model, selection, loader);
@@ -162,6 +181,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             onFailAppendTo = config.includesOnFailAppendTo;
             onSuccessAppendTo = config.includesOnSuccessAppendTo;
         }
+        if (effective.remove(Mode.YOLO)) {
+            effective.addAll(Mode.YOLO_DEFAULT);
+        }
         // SYNCHRONIZATION_MONITOR cannot be used in combination with other modes
         if (effective.contains(Mode.SYNCHRONIZATION_MONITOR) && effective.size() > 1) {
             throw new IllegalArgumentException(
@@ -179,16 +201,15 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      */
     private byte[] rewrite(ClassName className, ClassModel model, Selection selection,
             ClassLoader loader) {
-        Set<Mode> effective = selection.effective();
-        boolean ignoreSync = effective.contains(Mode.REMOVE_SYNCHRONIZED);
-        boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
+        boolean ignoreSync = selection.hasMode(Mode.REMOVE_SYNCHRONIZED);
+        boolean markClassFinal = selection.hasMode(Mode.MARK_CLASS_FINAL);
         List<String> problems = ValueClassRewriter.suitabilityProblems(
                 model, ignoreSync, markClassFinal);
         if (!problems.isEmpty()) {
             return onRejected(className, "is selected for value-class transformation but is not"
                     + " suitable: " + String.join("; ", problems), selection);
         }
-        if (effective.contains(Mode.MARK_FIELDS_FINAL)
+        if (selection.hasMode(Mode.MARK_FIELDS_FINAL)
                 && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
             return onRejected(className,
                     "is selected for value-class transformation but has a non-final field"
@@ -227,6 +248,10 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             boolean annotated) {
         static Selection empty() {
             return new Selection(Collections.emptySet(), null, null, false);
+        }
+
+        boolean hasMode(Mode mode) {
+            return effective.contains(mode);
         }
     }
 

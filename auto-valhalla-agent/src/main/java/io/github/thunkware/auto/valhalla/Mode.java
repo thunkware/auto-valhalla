@@ -23,9 +23,8 @@ public enum Mode {
      *  a loud failure depends on the configured {@code on-fail} setting. */
     SAFE("safe"),
 
-    /** Shorthand for the default modes
-     *  ({@code mark-class-final,remove-synchronized,mark-fields-final}). Never
-     *  appears in a parsed set: {@link #parse(String)} expands it. */
+    /** Shorthand for
+     *  {@code mark-class-final,remove-synchronized,mark-fields-final}. */
     YOLO("yolo"),
 
     /** Allow candidates with synchronized instance methods: their
@@ -66,11 +65,16 @@ public enum Mode {
             Collections.unmodifiableSet(EnumSet.of(Mode.SAFE));
 
     /** The default set for {@code includes-mode} (classes selected by
-     *  {@code includes}) — and the {@code yolo} expansion:
-     *  {@code mark-class-final,remove-synchronized,mark-fields-final}. */
+     *  {@code includes}): {@code safe} — only classes that are already
+     *  {@code final} are converted. */
     public static final Set<Mode> INCLUDES_DEFAULT =
-            Collections.unmodifiableSet(EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.REMOVE_SYNCHRONIZED,
-                    Mode.MARK_FIELDS_FINAL));
+            Collections.unmodifiableSet(EnumSet.of(Mode.SAFE));
+
+    /** The set that {@code YOLO} expands to when creating a
+     *  {@link ValueClassTransformer.Selection}: the three aggressive modes
+     *  applied together. */
+    public static final Set<Mode> YOLO_DEFAULT =
+            Collections.unmodifiableSet(EnumSet.of(MARK_CLASS_FINAL, REMOVE_SYNCHRONIZED, MARK_FIELDS_FINAL));
 
     Mode(String flag) {
         this.flag = flag;
@@ -88,11 +92,12 @@ public enum Mode {
     }
 
     /** Parses a mode string into a set of {@link Mode}s. A {@code null}, blank or
-     *  unknown value yields {@code dflt}. {@code yolo} is a shorthand for
-     *  {@link #INCLUDES_DEFAULT}. {@code SYNCHRONIZATION_MONITOR} cannot be
-     *  combined with other modes; if present and other modes are also present,
-     *  an {@link IllegalArgumentException} is thrown. Unknown tokens throw
-     *  {@link IllegalArgumentException}. */
+     *  unknown value yields {@code dflt}. {@code yolo} is stored as-is; it is
+     *  expanded to the three constituent modes only when a
+     *  {@link ValueClassTransformer.Selection} is created. {@code SYNCHRONIZATION_MONITOR}
+     *  cannot be combined with other modes; if present and other modes are also
+     *  present, an {@link IllegalArgumentException} is thrown. Unknown tokens
+     *  throw {@link IllegalArgumentException}. */
     public static Set<Mode> parse(String s, Set<Mode> dflt) {
         EnumSet<Mode> set = EnumSet.noneOf(Mode.class);
         if (s == null || s.isBlank()) {
@@ -119,10 +124,6 @@ public enum Mode {
             throw new IllegalArgumentException("Unknown mode tokens: " + unknownTokens
                     + "; valid modes are: safe, yolo, mark-class-final, "
                     + "remove-synchronized, mark-fields-final, synchronization-monitor");
-        }
-        if (set.contains(Mode.YOLO)) {
-            set.remove(Mode.YOLO);
-            set.addAll(INCLUDES_DEFAULT);
         }
         if (set.isEmpty()) {
             return EnumSet.copyOf(dflt);

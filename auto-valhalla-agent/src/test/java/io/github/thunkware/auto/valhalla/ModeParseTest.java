@@ -1,7 +1,6 @@
 package io.github.thunkware.auto.valhalla;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,10 +24,9 @@ class ModeParseTest {
     }
 
     @Test
-    void yoloExpandsToIncludesDefault() {
+    void yoloParsedAsYolo() {
         Set<Mode> parsed = Mode.parse("yolo");
-        assertEquals(Mode.INCLUDES_DEFAULT, parsed, "yolo must expand to INCLUDES_DEFAULT");
-        assertFalse(parsed.contains(Mode.YOLO), "YOLO must not appear in the expanded set");
+        assertEquals(EnumSet.of(Mode.YOLO), parsed, "yolo must parse to {YOLO}");
     }
 
     @Test
