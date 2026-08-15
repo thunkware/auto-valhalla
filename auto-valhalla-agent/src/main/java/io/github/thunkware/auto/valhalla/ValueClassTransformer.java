@@ -309,15 +309,16 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     }
 
     /**
-     * Returns true if {@code internalName} matches any pattern in {@code patterns}.
+     * Returns true if {@code className} matches any pattern in {@code patterns}.
      * Patterns may use either dots ({@code com.example.Foo}) or slashes
      * ({@code com/example/Foo}); both are normalized to internal-name form.
      * <ul>
      *   <li>{@code *} matches everything;</li>
-     *   <li>a pattern ending in {@code .} or {@code /} is a package prefix;</li>
-     *   <li>a pattern containing a {@code .} or {@code /} is an exact class name;</li>
-     *   <li>a bare word (no separator) matches a package of that name or an exact
-     *       class of that name.</li>
+     *   <li>a pattern ending in {@code .} or {@code /} is a package-prefix match
+     *       (includes sub-packages);</li>
+     *   <li>otherwise the pattern matches if it equals the class's JVM name
+     *       (exact class) or the class's JVM package name (exact package,
+     *       sub-packages excluded).</li>
      * </ul>
      */
     static boolean patternMatches(Set<String> patterns, ClassName className) {
@@ -325,6 +326,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             return false;
         }
         String jvm = className.jvm();
+        String pkg = className.packageName();
         for (String p : patterns) {
             // patterns may be in dot form (e.g. from tests or config files) or
             // already in slash form (e.g. after AutoValhallaAgent.normalizePattern)
@@ -336,11 +338,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 if (jvm.startsWith(norm)) {
                     return true;
                 }
-            } else if (norm.contains("/")) {
-                if (jvm.equals(norm)) {
-                    return true;
-                }
-            } else if (jvm.equals(norm) || jvm.startsWith(norm + "/")) {
+            } else if (jvm.equals(norm) || pkg.equals(norm)) {
                 return true;
             }
         }

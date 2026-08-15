@@ -506,6 +506,38 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void patternMatchesExactClassOrExactPackage() {
+        // exact class name (dot or slash form)
+        assertTrue(ValueClassTransformer.patternMatches(
+                Set.of("com.example.Foo"), ClassName.of("com/example/Foo")));
+        assertFalse(ValueClassTransformer.patternMatches(
+                Set.of("com.example.Foo"), ClassName.of("com/example/Bar")));
+
+        // package name without trailing dot — matches classes in that exact package only
+        assertTrue(ValueClassTransformer.patternMatches(
+                Set.of("com.example"), ClassName.of("com/example/Foo")));
+        assertTrue(ValueClassTransformer.patternMatches(
+                Set.of("com.example"), ClassName.of("com/example/Bar")));
+        // sub-packages are NOT matched (exact package, not prefix)
+        assertFalse(ValueClassTransformer.patternMatches(
+                Set.of("com.example"), ClassName.of("com/example/sub/Baz")));
+
+        // trailing dot still matches as a package prefix (includes sub-packages)
+        assertTrue(ValueClassTransformer.patternMatches(
+                Set.of("com.example."), ClassName.of("com/example/Foo")));
+        assertTrue(ValueClassTransformer.patternMatches(
+                Set.of("com.example."), ClassName.of("com/example/sub/Baz")));
+
+        // bare word — exact class or exact package, not sub-packages
+        assertTrue(ValueClassTransformer.patternMatches(
+                Set.of("sample"), ClassName.of("sample/Foo")));
+        assertFalse(ValueClassTransformer.patternMatches(
+                Set.of("sample"), ClassName.of("sample/sub/Foo")));
+        assertFalse(ValueClassTransformer.patternMatches(
+                Set.of("sample"), ClassName.of("other/Foo")));
+    }
+
+    @Test
     void rejectedClassBehaviorByLoggerLevel() throws Exception {
         byte[] mutable = readResource("/sample/Mutable.class");
         assertNotNull(mutable, "Mutable on classpath");

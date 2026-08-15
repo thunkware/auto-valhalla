@@ -117,7 +117,7 @@ treated as annotation-selected.
 
 | Option | Description |
 | --- | --- |
-| `auto-valhalla.includes` | Comma-separated classes/packages to convert. `*` matches everything; `foo.` is a package prefix; `foo.Bar` an exact class name. |
+| `auto-valhalla.includes` | Comma-separated classes/packages to convert. `*` matches everything; `foo.Bar` matches the class `foo.Bar` or any class in the package `foo.Bar`; `foo.` (trailing dot) is a package-prefix match and also includes sub-packages. |
 | `auto-valhalla.excludes` | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
 | `auto-valhalla.includes-files` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
 | `auto-valhalla.excludes-files` | As above, for excludes. |
