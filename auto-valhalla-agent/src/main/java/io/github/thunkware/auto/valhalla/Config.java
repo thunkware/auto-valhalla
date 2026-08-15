@@ -24,7 +24,6 @@ class Config {
     String includesOnFailAppendTo;
     String includesOnSuccessAppendTo;
     String synchronizationMonitorAppendTo = "auto-valhalla.synchronization.txt";
-    String logLevel;
     Map<String, String> loggerLevels = new LinkedHashMap<>();
     String logging;
 
@@ -36,8 +35,8 @@ class Config {
     static final String EXCLUDES_FILES = "excludes-files";
     static final String ANNOTATION_MODE = "annotation-mode";
     static final String INCLUDES_MODE = "includes-mode";
-    static final String LOG_LEVEL = "logging.level";
-    /** Prefix for per-logger level overrides: {@code logging.level.<logger-name>=<level>}. */
+    /** Prefix for per-logger level overrides: {@code logging.level.<logger-name>=<level>}.
+     *  The special name {@code root} sets the global level. */
     static final String LOG_LEVEL_PREFIX = "logging.level.";
     static final String ANNOTATION_ON_FAIL_APPEND_TO = "annotation.on-fail-append-to";
     static final String ANNOTATION_ON_SUCCESS_APPEND_TO = "annotation.on-success-append-to";
@@ -53,7 +52,7 @@ class Config {
     static final List<String> KNOWN = List.of(
             INCLUDES, INCLUDES_FILES, EXCLUDES, EXCLUDES_FILES,
             ANNOTATION_MODE, INCLUDES_MODE,
-            LOG_LEVEL, LOGGING,
+            LOGGING,
             ANNOTATION_ON_FAIL_APPEND_TO, ANNOTATION_ON_SUCCESS_APPEND_TO,
             INCLUDES_ON_FAIL_APPEND_TO, INCLUDES_ON_SUCCESS_APPEND_TO,
             SYNCHRONIZATION_MONITOR_APPEND_TO,

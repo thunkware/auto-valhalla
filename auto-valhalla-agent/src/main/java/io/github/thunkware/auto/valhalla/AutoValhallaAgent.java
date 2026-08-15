@@ -48,9 +48,9 @@ import java.util.stream.Collectors;
      *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
      *       selected by {@code includes} (default {@code yolo} =
      *       {@code mark-class-final,remove-synchronized,mark-fields-final}).</li>
- *   <li>{@code logging.level} — logging level: {@code off}, {@code error},
+ *   <li>{@code logging.level.root} — root logging level: {@code off}, {@code error},
  *       {@code warning}, {@code info} (default), {@code debug}. Controls verbosity
- *       of messages to stderr.</li>
+ *       of messages to stderr. Use {@code logging.level.<name>} for per-logger overrides.</li>
  *   <li>{@code auto-valhalla.annotation.on-fail-append-to=file} /
  *       {@code auto-valhalla.includes.on-fail-append-to=file} — append the
  *       class name of each failing class (e.g. {@code com.example.Foo},
@@ -144,7 +144,7 @@ public final class AutoValhallaAgent {
     }
 
     private static void initLogging(Instrumentation inst, Config cfg) {
-        InternalLogger.setLevel(cfg.logLevel);
+        InternalLogger.setLevel(cfg.loggerLevels.remove("root"));
         cfg.loggerLevels.forEach(InternalLogger::setLevel);
         InternalLogger.setMode(cfg.logging);
         if (LoggingMode.findOrNull(cfg.logging) == LoggingMode.APPLICATION) {
@@ -161,8 +161,7 @@ public final class AutoValhallaAgent {
 
         // System properties take precedence over environment variables.
         for (String key : Config.KNOWN) {
-            // logging.level uses no auto-valhalla. prefix (bare -Dlogging.level=…).
-            String full = key.equals(Config.LOG_LEVEL) ? key : "auto-valhalla." + key;
+            String full = "auto-valhalla." + key;
             String v = System.getProperty(full);
             if (v == null) {
                 v = System.getenv(envName(full));
@@ -217,7 +216,6 @@ public final class AutoValhallaAgent {
                 }
                 case Config.ANNOTATION_MODE -> cfg.annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
                 case Config.INCLUDES_MODE -> cfg.includesMode = Mode.parse(a[1], Mode.INCLUDES_DEFAULT);
-                case Config.LOG_LEVEL -> cfg.logLevel = a[1].trim();
                 case Config.ANNOTATION_ON_FAIL_APPEND_TO -> {
                     String t = a[1].trim();
                     cfg.annotationOnFailAppendTo = t.isEmpty() ? null : t;
@@ -270,7 +268,7 @@ public final class AutoValhallaAgent {
                 + getLogString(Config.INCLUDES_ON_FAIL_APPEND_TO, cfg.includesOnFailAppendTo)
                 + getLogString(Config.INCLUDES_ON_SUCCESS_APPEND_TO, cfg.includesOnSuccessAppendTo)
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_APPEND_TO, cfg.synchronizationMonitorAppendTo)
-                + getLogString(Config.LOG_LEVEL, cfg.loggerLevels)
+                + getLogString("logging.level", cfg.loggerLevels)
                 + getLogString(Config.LOGGING, cfg.logging));
     }
 
@@ -412,8 +410,6 @@ public final class AutoValhallaAgent {
      *  but whose suffix is not a known option key. */
     static List<String> unknownSysProps(Set<String> propNames) {
         Set<String> known = new HashSet<>(Config.KNOWN);
-        // logging.level has no auto-valhalla. prefix; treat it as unknown under auto-valhalla.*
-        known.remove(Config.LOG_LEVEL);
         String prefix = "auto-valhalla.";
         List<String> result = new ArrayList<>();
         for (String prop : propNames) {
@@ -434,9 +430,6 @@ public final class AutoValhallaAgent {
         for (String key : Config.KNOWN) {
             knownEnv.add(envName("auto-valhalla." + key));
         }
-        // logging.level has no auto-valhalla. prefix; its env var is LOGGING_LEVEL, not
-        // AUTO_VALHALLA_LOGGING_LEVEL, so remove the latter from the accepted set.
-        knownEnv.remove(envName("auto-valhalla." + Config.LOG_LEVEL));
         List<String> result = new ArrayList<>();
         for (String env : envNames) {
             if (env.startsWith("AUTO_VALHALLA_") && !knownEnv.contains(env)) {

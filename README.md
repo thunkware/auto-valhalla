@@ -185,7 +185,7 @@ are not re-appended, and a missing file is treated as empty.
 
 | Option | Description                                                                                                   |
 | --- |---------------------------------------------------------------------------------------------------------------|
-| `logging.level` | Root logging verbosity: `off`, `fatal`, `error`, `warning`, `info`, `debug`. Default: `info`.                 |
+| `logging.level.root` | Root logging verbosity: `off`, `fatal`, `error`, `warning`, `info`, `debug`. Default: `info`.             |
 | `logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. |
 | `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below.                                    |
 
