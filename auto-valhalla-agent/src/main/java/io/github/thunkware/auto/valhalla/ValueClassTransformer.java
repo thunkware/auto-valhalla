@@ -1,5 +1,6 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
@@ -36,19 +37,7 @@ import java.util.stream.Stream;
  */
 public final class ValueClassTransformer implements ClassFileTransformer {
 
-    private final InternalLogger log = InternalLogger.getLogger(ValueClassTransformer.class);
-    private final InternalLogger annotationSuccessLog =
-            InternalLogger.getLogger("auto-valhalla.annotation.success");
-    private final InternalLogger includesSuccessLog =
-            InternalLogger.getLogger("auto-valhalla.includes.success");
-    private final InternalLogger annotationFailLog =
-            InternalLogger.getLogger("auto-valhalla.annotation.fail");
-    private final InternalLogger includesFailLog =
-            InternalLogger.getLogger("auto-valhalla.includes.fail");
-    private final InternalLogger annotationRejectedLog =
-            InternalLogger.getLogger("auto-valhalla.annotation.rejected");
-    private final InternalLogger includesRejectedLog =
-            InternalLogger.getLogger("auto-valhalla.includes.rejected");
+    private final ValueClassTransformerLoggers loggers = new ValueClassTransformerLoggers();
     private final Config config;
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
@@ -72,15 +61,6 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 || cfg.includesMode.contains(Mode.SYNCHRONIZATION_MONITOR)) {
             SynchronizationMonitor.configure(cfg.synchronizationMonitorAppendTo);
         }
-
-        // Set default logger levels (only if the user has not already configured them).
-        // annotation.rejected/fail default to FATAL (log + reject): annotation-selected
-        // classes are an explicit opt-in so a failure to convert is always surfaced loudly.
-        // includes.rejected/fail default to DEBUG: a broad sweep must not crash the app.
-        InternalLogger.setLevelIfAbsent("auto-valhalla.annotation.rejected", "fatal");
-        InternalLogger.setLevelIfAbsent("auto-valhalla.annotation.fail", "fatal");
-        InternalLogger.setLevelIfAbsent("auto-valhalla.includes.rejected", "debug");
-        InternalLogger.setLevelIfAbsent("auto-valhalla.includes.fail", "debug");
     }
 
     @Override
@@ -104,11 +84,10 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         Selection selection = Selection.empty();
         try {
             ClassModel model = ClassFile.of().parse(classfileBuffer);
-            Selection sel = select(className, model);
-            if (sel == null) {
+            selection = select(className, model);
+            if (selection == null) {
                 return null;
             }
-            selection = sel;
             // SYNCHRONIZATION_MONITOR is an either-or mode: either rewrite the class
             // to a value class, or instrument monitorenter calls, but not both.
             if (selection.effective().contains(Mode.SYNCHRONIZATION_MONITOR)) {
@@ -120,7 +99,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         } catch (IllegalArgumentException e) {
             // Configuration error (e.g. incompatible modes) — always log at warning
             // so it is visible regardless of the class's on-fail setting.
-            log.warning(className.java() + ": configuration error — " + e.getMessage());
+            loggers.log().warning(className.java() + ": configuration error — " + e.getMessage());
             return null;
         } catch (Throwable t) {
             return onTransformError(className, t, selection);
@@ -134,7 +113,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         byte[] monitored = SynchronizationInstrumenter.instrument(model, loader);
         if (monitored != null) {
-            log.debug(className.java() + ": instrumented for synchronization monitoring");
+            loggers.log().debug(className.java() + ": instrumented for synchronization monitoring");
             return monitored;
         }
         return onRejected(className,
@@ -215,7 +194,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     "is selected for value-class transformation but has a non-final field"
                     + " not written in every constructor (mode=mark-fields-final)", selection);
         }
-        InternalLogger rejectedLog = selection.annotated() ? annotationRejectedLog : includesRejectedLog;
+        InternalLogger rejectedLog = loggers.rejected(selection);
         byte[] out = ValueClassRewriter.transform(model, rejectedLog.isFatal(),
                 ignoreSync, markClassFinal, loader);
         if (out == null) {
@@ -231,7 +210,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         appendTo(selection.onSuccessAppendTo(), className);
         String successMsg = "Transformed to value class: " + className.java();
-        InternalLogger succerLogger = selection.annotated() ? annotationSuccessLog : includesSuccessLog;
+        InternalLogger succerLogger = loggers.success(selection);
         succerLogger.info(successMsg);
         return out;
     }
@@ -241,7 +220,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * paths, and the selection source. A class selected by both the annotation and
      * includes is annotation-selected only.
      */
-    private record Selection(
+    record Selection(
             Set<Mode> effective,
             String onFailAppendTo,
             String onSuccessAppendTo,
@@ -261,7 +240,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             // (superclass-naming) LinkageError rather than swallowing it.
             throw le;
         }
-        InternalLogger failLog = selection.annotated() ? annotationFailLog : includesFailLog;
+        InternalLogger failLog = loggers.fail(selection);
         if (failLog.isFatal()) {
             throw new LinkageError("auto-valhalla: failed to transform " + className.java()
                     + " into a value class: " + t, t);
@@ -278,9 +257,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         appendOnFail(className, selection.onFailAppendTo());
         String base = className.java() + ": " + reason;
         InternalLogger rejectedLog =
-                selection.annotated() ? annotationRejectedLog : includesRejectedLog;
+                loggers.rejected(selection);
         if (rejectedLog.isFatal()) {
-            log.error(base + "; the JVM will reject it rather than silently keep an identity class.");
+            loggers.log().error(base + "; the JVM will reject it rather than silently keep an identity class.");
             // A ClassFileTransformer exception would be swallowed by the JVM, so
             // hand back a class file that fails to load, surfacing the failure loudly.
             rejectedLog.warning(base + "; the JVM will reject it");

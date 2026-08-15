@@ -1,6 +1,6 @@
 package io.github.thunkware.auto.valhalla.logger;
 
-enum Level {
+public enum Level {
     OFF(0),
     FATAL(1),
     ERROR(2),

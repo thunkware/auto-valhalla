@@ -83,7 +83,9 @@ public final class InternalLogger {
      * Pass a {@code null} or blank level to remove an existing override.
      */
     public static void setLevel(String loggerName, String levelString) {
-        if (loggerName == null || loggerName.isBlank()) return;
+        if (loggerName == null || loggerName.isBlank()) {
+            return;
+        }
         if (levelString == null || levelString.isBlank()) {
             loggerLevels.remove(loggerName);
             return;
@@ -108,11 +110,11 @@ public final class InternalLogger {
      * Sets a per-logger level override only when no override is currently present.
      * Used to install defaults that user config (applied before calling this) takes precedence over.
      */
-    public static void setLevelIfAbsent(String loggerName, String levelString) {
-        if (loggerName == null || loggerName.isBlank()) return;
-        if (!loggerLevels.containsKey(loggerName)) {
-            setLevel(loggerName, levelString);
+    public static void setLevelIfAbsent(String loggerName, Level level) {
+        if (loggerName == null || loggerName.isBlank()) {
+            return;
         }
+        loggerLevels.putIfAbsent(loggerName, level);
     }
 
     /**
@@ -163,6 +165,10 @@ public final class InternalLogger {
 
     public static boolean isDebugEnabled() {
         return level.rank >= Level.DEBUG.rank;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public void debug(String msg) {
@@ -299,8 +305,12 @@ public final class InternalLogger {
         private static volatile MethodHandle debugHandle;
 
         static Object getLoggerInstance(String name) {
-            if (!attempted) init();
-            if (getLoggerMethod == null) return null;
+            if (!attempted) {
+                init();
+            }
+            if (getLoggerMethod == null) {
+                return null;
+            }
             try {
                 return getLoggerMethod.invoke(null, name);
             } catch (Throwable e) {
@@ -328,7 +338,9 @@ public final class InternalLogger {
                     };
                     withCause = false;
                 }
-                if (h == null) return false;
+                if (h == null) {
+                    return false;
+                }
                 if (withCause) {
                     h.invokeWithArguments(logger, msg, t);
                 } else {
@@ -365,7 +377,9 @@ public final class InternalLogger {
             }
             try {
                 ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                if (cl == null) cl = ClassLoader.getSystemClassLoader();
+                if (cl == null) {
+                    cl = ClassLoader.getSystemClassLoader();
+                }
                 Class<?> factory = Class.forName("org.slf4j.LoggerFactory", false, cl);
                 getLoggerMethod = factory.getMethod("getLogger", String.class);
                 // Obtain a probe logger and discover methods via MethodHandles.findVirtual().

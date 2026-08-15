@@ -60,7 +60,9 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
     public byte[] transform(Module module, ClassLoader loader, String classNameJvm,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
-        if (classNameJvm == null) return null;
+        if (classNameJvm == null) {
+            return null;
+        }
         if (classNameJvm.startsWith(SPRING_BOOT_LAUNCHER_PKG)) {
             ApplicationLoggerFlags.onSpringBootLauncherSeen();
             return null;

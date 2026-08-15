@@ -327,7 +327,9 @@ final class ConstructorRewriter {
             if (ins instanceof InvokeDynamicInstruction idi) {
                 int argSlots = argsSlots(idi.typeSymbol());
                 for (int i = 0; i < argSlots; i++) {
-                    if (pop(stack) == THIS) return UNSAFE;
+                    if (pop(stack) == THIS) {
+                        return UNSAFE;
+                    }
                 }
                 pushSlots(stack, descSlots(idi.typeSymbol().returnType()));
                 return SAFE;
@@ -339,18 +341,26 @@ final class ConstructorRewriter {
                 return convert(ci, stack);
             }
             if (ins instanceof ArrayLoadInstruction) {
-                if (popNoThis(stack) == -1 || popNoThis(stack) == -1) return UNSAFE;
+                if (popNoThis(stack) == -1 || popNoThis(stack) == -1) {
+                    return UNSAFE;
+                }
                 stack.add(OTHER);
                 return SAFE;
             }
             if (ins instanceof ArrayStoreInstruction) {
-                if (popNoThis(stack) == -1 || popNoThis(stack) == -1 || pop(stack) == THIS) return UNSAFE;
+                if (popNoThis(stack) == -1 || popNoThis(stack) == -1 || pop(stack) == THIS) {
+                    return UNSAFE;
+                }
                 return SAFE;
             }
             if (ins instanceof NewPrimitiveArrayInstruction || ins instanceof NewReferenceArrayInstruction
                     || ins instanceof NewMultiArrayInstruction) {
-                if (ins instanceof NewMultiArrayInstruction && popNoThis(stack) == -1) return UNSAFE;
-                if (popNoThis(stack) == -1) return UNSAFE;
+                if (ins instanceof NewMultiArrayInstruction && popNoThis(stack) == -1) {
+                    return UNSAFE;
+                }
+                if (popNoThis(stack) == -1) {
+                    return UNSAFE;
+                }
                 stack.add(OTHER);
                 return SAFE;
             }
@@ -359,7 +369,9 @@ final class ConstructorRewriter {
                 return SAFE;
             }
             if (ins instanceof TypeCheckInstruction) {
-                if (popNoThis(stack) == -1) return UNSAFE;
+                if (popNoThis(stack) == -1) {
+                    return UNSAFE;
+                }
                 stack.add(OTHER);
                 return SAFE;
             }
@@ -377,16 +389,24 @@ final class ConstructorRewriter {
             switch (fi.opcode()) {
                 case PUTFIELD -> {
                     for (int i = 0; i < valueSlots; i++) {
-                        if (pop(stack) == -1) return UNSAFE;
+                        if (pop(stack) == -1) {
+                            return UNSAFE;
+                        }
                     }
                     int receiver = pop(stack);
-                    if (receiver != THIS || !stack.isEmpty()) return UNSAFE;
+                    if (receiver != THIS || !stack.isEmpty()) {
+                        return UNSAFE;
+                    }
                     return own ? PUTFIELD_OWN : UNSAFE;
                 }
                 case GETFIELD -> {
                     int receiver = pop(stack);
-                    if (receiver == -1) return UNSAFE;
-                    if (receiver == THIS && !own) return UNSAFE;
+                    if (receiver == -1) {
+                        return UNSAFE;
+                    }
+                    if (receiver == THIS && !own) {
+                        return UNSAFE;
+                    }
                     pushSlots(stack, valueSlots);
                     return SAFE;
                 }
@@ -396,7 +416,9 @@ final class ConstructorRewriter {
                 }
                 case PUTSTATIC -> {
                     for (int i = 0; i < valueSlots; i++) {
-                        if (pop(stack) == THIS) return UNSAFE;
+                        if (pop(stack) == THIS) {
+                            return UNSAFE;
+                        }
                     }
                     return SAFE;
                 }
@@ -411,7 +433,9 @@ final class ConstructorRewriter {
             int argSlots = argsSlots(ii.typeSymbol());
             if (ii.opcode() == Opcode.INVOKESTATIC) {
                 for (int i = 0; i < argSlots; i++) {
-                    if (pop(stack) == THIS) return UNSAFE;
+                    if (pop(stack) == THIS) {
+                        return UNSAFE;
+                    }
                 }
                 pushSlots(stack, descSlots(ii.typeSymbol().returnType()));
                 return SAFE;
@@ -422,15 +446,23 @@ final class ConstructorRewriter {
                 // and duplicated by `dup`) remains on the stack, so nothing is
                 // pushed back.
                 for (int i = 0; i < argSlots; i++) {
-                    if (pop(stack) == THIS) return UNSAFE;
+                    if (pop(stack) == THIS) {
+                        return UNSAFE;
+                    }
                 }
-                if (pop(stack) == THIS) return UNSAFE;
+                if (pop(stack) == THIS) {
+                    return UNSAFE;
+                }
                 return SAFE;
             }
             for (int i = 0; i < argSlots; i++) {
-                if (pop(stack) == THIS) return UNSAFE;
+                if (pop(stack) == THIS) {
+                    return UNSAFE;
+                }
             }
-            if (pop(stack) == THIS) return UNSAFE;
+            if (pop(stack) == THIS) {
+                return UNSAFE;
+            }
             pushSlots(stack, descSlots(ii.typeSymbol().returnType()));
             return SAFE;
         }
@@ -438,14 +470,18 @@ final class ConstructorRewriter {
         private int operator(OperatorInstruction op, List<Integer> stack) {
             switch (op.opcode()) {
                 case ARRAYLENGTH -> {
-                    if (popNoThis(stack) == -1) return UNSAFE;
+                    if (popNoThis(stack) == -1) {
+                        return UNSAFE;
+                    }
                     stack.add(OTHER);
                     return SAFE;
                 }
                 case LCMP, DCMPL, DCMPG -> {
                     // pop two category-2 values (4 slots), push one int
                     for (int i = 0; i < 4; i++) {
-                        if (popNoThis(stack) == -1) return UNSAFE;
+                        if (popNoThis(stack) == -1) {
+                            return UNSAFE;
+                        }
                     }
                     stack.add(OTHER);
                     return SAFE;
@@ -460,16 +496,24 @@ final class ConstructorRewriter {
             int k = op.typeKind().slotSize();
             if (unary) {
                 for (int i = 0; i < k; i++) {
-                    if (popNoThis(stack) == -1) return UNSAFE;
+                    if (popNoThis(stack) == -1) {
+                        return UNSAFE;
+                    }
                 }
             } else if (shift) {
                 for (int i = 0; i < k; i++) {
-                    if (popNoThis(stack) == -1) return UNSAFE;
+                    if (popNoThis(stack) == -1) {
+                        return UNSAFE;
+                    }
                 }
-                if (popNoThis(stack) == -1) return UNSAFE;
+                if (popNoThis(stack) == -1) {
+                    return UNSAFE;
+                }
             } else {
                 for (int i = 0; i < 2 * k; i++) {
-                    if (popNoThis(stack) == -1) return UNSAFE;
+                    if (popNoThis(stack) == -1) {
+                        return UNSAFE;
+                    }
                 }
             }
             pushSlots(stack, k);
@@ -478,7 +522,9 @@ final class ConstructorRewriter {
 
         private int convert(ConvertInstruction ci, List<Integer> stack) {
             for (int i = 0; i < ci.fromType().slotSize(); i++) {
-                if (popNoThis(stack) == -1) return UNSAFE;
+                if (popNoThis(stack) == -1) {
+                    return UNSAFE;
+                }
             }
             pushSlots(stack, ci.toType().slotSize());
             return SAFE;
@@ -491,17 +537,23 @@ final class ConstructorRewriter {
                     if (stack.size() >= 2) {
                         return (popNoThis(stack) == -1 || popNoThis(stack) == -1) ? UNSAFE : SAFE;
                     }
-                    if (stack.size() == 1) return popNoThis(stack) == -1 ? UNSAFE : SAFE;
+                    if (stack.size() == 1) {
+                        return popNoThis(stack) == -1 ? UNSAFE : SAFE;
+                    }
                     return UNSAFE;
                 }
                 case DUP -> {
                     int t = top(stack);
-                    if (t == -1) return UNSAFE;
+                    if (t == -1) {
+                        return UNSAFE;
+                    }
                     stack.add(t);
                     return SAFE;
                 }
                 case DUP_X1 -> {
-                    if (stack.size() < 2) return UNSAFE;
+                    if (stack.size() < 2) {
+                        return UNSAFE;
+                    }
                     int t = stack.removeLast();
                     int u = stack.removeLast();
                     stack.add(t);
@@ -510,7 +562,9 @@ final class ConstructorRewriter {
                     return SAFE;
                 }
                 case DUP_X2 -> {
-                    if (stack.size() < 3) return UNSAFE;
+                    if (stack.size() < 3) {
+                        return UNSAFE;
+                    }
                     int t = stack.removeLast();
                     int u = stack.removeLast();
                     int v = stack.removeLast();
@@ -521,13 +575,17 @@ final class ConstructorRewriter {
                     return SAFE;
                 }
                 case DUP2 -> {
-                    if (stack.size() < 2) return UNSAFE;
+                    if (stack.size() < 2) {
+                        return UNSAFE;
+                    }
                     stack.add(stack.get(stack.size() - 2));
                     stack.add(stack.get(stack.size() - 2));
                     return SAFE;
                 }
                 case DUP2_X1 -> {
-                    if (stack.size() < 3) return UNSAFE;
+                    if (stack.size() < 3) {
+                        return UNSAFE;
+                    }
                     int t = stack.removeLast();
                     int u = stack.removeLast();
                     int v = stack.removeLast();
@@ -539,7 +597,9 @@ final class ConstructorRewriter {
                     return SAFE;
                 }
                 case DUP2_X2 -> {
-                    if (stack.size() < 4) return UNSAFE;
+                    if (stack.size() < 4) {
+                        return UNSAFE;
+                    }
                     int t = stack.removeLast();
                     int u = stack.removeLast();
                     int v = stack.removeLast();
@@ -553,7 +613,9 @@ final class ConstructorRewriter {
                     return SAFE;
                 }
                 case SWAP -> {
-                    if (stack.size() < 2) return UNSAFE;
+                    if (stack.size() < 2) {
+                        return UNSAFE;
+                    }
                     Collections.swap(stack, stack.size() - 1, stack.size() - 2);
                     return SAFE;
                 }
@@ -572,7 +634,9 @@ final class ConstructorRewriter {
         }
 
         private int popNoThis(List<Integer> stack) {
-            if (stack.isEmpty()) return -1;
+            if (stack.isEmpty()) {
+                return -1;
+            }
             int v = stack.removeLast();
             return v == THIS ? -1 : v;
         }

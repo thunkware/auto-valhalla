@@ -98,8 +98,6 @@ public final class AutoValhallaAgent {
 
     private static final InternalLogger LOG = InternalLogger.getLogger(AutoValhallaAgent.class);
 
-    private AutoValhallaAgent() {}
-
     /**
      * Whether the running JVM has Project Valhalla / value classes available.
      * Determined once from the JVM's input arguments: value classes are a preview
@@ -109,6 +107,9 @@ public final class AutoValhallaAgent {
      * to accept).
      */
     private static final boolean VALHALLA_AVAILABLE = valhallaAvailable();
+
+    private AutoValhallaAgent() {
+    }
 
     public static void premain(String agentArgs, Instrumentation inst) {
         if (agentArgs != null && !agentArgs.isBlank()) {
@@ -135,8 +136,14 @@ public final class AutoValhallaAgent {
                     + "The agent is disabled and classes are left as identity classes.");
             return;
         }
-        LOG.info("Starting agent");
         Config cfg = parse();
+        initLogging(inst, cfg);
+        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
+        // canRetransform = true so dynamically attached classes can be fixed up too
+        inst.addTransformer(transformer, true);
+    }
+
+    private static void initLogging(Instrumentation inst, Config cfg) {
         InternalLogger.setLevel(cfg.logLevel);
         cfg.loggerLevels.forEach(InternalLogger::setLevel);
         InternalLogger.setMode(cfg.logging);
@@ -144,9 +151,7 @@ public final class AutoValhallaAgent {
             ApplicationLoggerFlags.enableApplicationMode();
             inst.addTransformer(new ApplicationLoggerBridgeTransformer(), false);
         }
-        ValueClassTransformer transformer = new ValueClassTransformer(cfg);
-        // canRetransform = true so dynamically attached classes can be fixed up too
-        inst.addTransformer(transformer, true);
+        LOG.info("Starting agent");
     }
 
     static Config parse() {
@@ -174,7 +179,9 @@ public final class AutoValhallaAgent {
                 String loggerName = prop.substring(Config.LOG_LEVEL_PREFIX.length());
                 if (!loggerName.isEmpty()) {
                     String v = System.getProperty(prop);
-                    if (v != null) assigns.add(new String[]{Config.LOG_LEVEL_PREFIX + loggerName, v});
+                    if (v != null) {
+                        assigns.add(new String[]{Config.LOG_LEVEL_PREFIX + loggerName, v});
+                    }
                 }
             }
         }
@@ -194,13 +201,17 @@ public final class AutoValhallaAgent {
                 case Config.INCLUDES_FILES -> {
                     for (String p : a[1].split("[;,]")) {
                         String t = p.trim();
-                        if (!t.isEmpty()) cfg.includesFiles.add(t);
+                        if (!t.isEmpty()) {
+                            cfg.includesFiles.add(t);
+                        }
                     }
                 }
                 case Config.EXCLUDES_FILES -> {
                     for (String p : a[1].split("[;,]")) {
                         String t = p.trim();
-                        if (!t.isEmpty()) cfg.excludesFiles.add(t);
+                        if (!t.isEmpty()) {
+                            cfg.excludesFiles.add(t);
+                        }
                     }
                     userSuppliedExcludes = true;
                 }
@@ -379,9 +390,13 @@ public final class AutoValhallaAgent {
      *  empty collection. Collections are formatted as {@code a,b,c} (no brackets). */
     @SuppressWarnings("rawtypes")
     private static String getLogString(String label, Object value) {
-        if (value == null) return "";
+        if (value == null) {
+            return "";
+        }
         if (value instanceof Collection<?> c) {
-            if (c.isEmpty()) return "";
+            if (c.isEmpty()) {
+                return "";
+            }
             String combined = c.stream()
                     .map(Object::toString)
                     .collect(Collectors.joining(","));
