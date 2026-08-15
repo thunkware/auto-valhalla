@@ -163,8 +163,9 @@ public final class InternalLogger {
         log(eff, msg, t);
     }
 
-    public static boolean isDebugEnabled() {
-        return level.rank >= Level.DEBUG.rank;
+    public boolean isDebugEnabled() {
+        Level myLevel = loggerLevels.getOrDefault(name, level);
+        return myLevel.rank >= Level.DEBUG.rank;
     }
 
     public String getName() {

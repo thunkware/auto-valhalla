@@ -270,7 +270,7 @@ public final class AutoValhallaAgent {
                 + getLogString(Config.INCLUDES_ON_FAIL_APPEND_TO, cfg.includesOnFailAppendTo)
                 + getLogString(Config.INCLUDES_ON_SUCCESS_APPEND_TO, cfg.includesOnSuccessAppendTo)
                 + getLogString(Config.SYNCHRONIZATION_MONITOR_APPEND_TO, cfg.synchronizationMonitorAppendTo)
-                + getLogString(Config.LOG_LEVEL, cfg.logLevel)
+                + getLogString(Config.LOG_LEVEL, cfg.loggerLevels)
                 + getLogString(Config.LOGGING, cfg.logging));
     }
 

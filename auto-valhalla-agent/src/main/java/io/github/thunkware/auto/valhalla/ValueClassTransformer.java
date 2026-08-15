@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAccumulator;
 import java.util.stream.Stream;
 
@@ -69,7 +70,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     public byte[] transform(Module module, ClassLoader loader, String classNameJvm,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
-        if (!InternalLogger.isDebugEnabled()) {
+        if (!loggers.log().isDebugEnabled()) {
             return doTransform(module, loader, classNameJvm, classBeingRedefined, protectionDomain, classfileBuffer);
         }
         long startTime = System.nanoTime();
@@ -77,8 +78,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         long duration = System.nanoTime() - startTime;
         totalDuration.accumulate(duration);
         if (result != null) {
+            long ms = TimeUnit.MILLISECONDS.toNanos(1);
             loggers.log().debug("Completed transforming " + classNameJvm.replace('/', '.')
-                    + " in " + duration / 1_000_000 + "ms (total " + totalDuration.get() / 1_000_000 + "ms)");
+                    + " in " + duration / ms + "ms (total " + totalDuration.get() / ms + "ms)");
         }
         return result;
     }
@@ -231,8 +233,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         appendTo(selection.onSuccessAppendTo(), className);
         String successMsg = "Transformed to value class: " + className.java();
-        InternalLogger succerLogger = loggers.success(selection);
-        succerLogger.info(successMsg);
+        loggers.success(selection).info(successMsg);
         return out;
     }
 
