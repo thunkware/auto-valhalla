@@ -518,8 +518,8 @@ class ValueClassRewriterTest {
                 Set.of("com.example"), ClassName.of("com/example/Foo")));
         assertTrue(ValueClassTransformer.patternMatches(
                 Set.of("com.example"), ClassName.of("com/example/Bar")));
-        // sub-packages are NOT matched (exact package, not prefix)
-        assertFalse(ValueClassTransformer.patternMatches(
+        // sub-packages ARE matched (recursive)
+        assertTrue(ValueClassTransformer.patternMatches(
                 Set.of("com.example"), ClassName.of("com/example/sub/Baz")));
 
         // trailing dot still matches as a package prefix (includes sub-packages)
@@ -528,10 +528,10 @@ class ValueClassRewriterTest {
         assertTrue(ValueClassTransformer.patternMatches(
                 Set.of("com.example."), ClassName.of("com/example/sub/Baz")));
 
-        // bare word — exact class or exact package, not sub-packages
+        // bare word — exact class or recursive package match
         assertTrue(ValueClassTransformer.patternMatches(
                 Set.of("sample"), ClassName.of("sample/Foo")));
-        assertFalse(ValueClassTransformer.patternMatches(
+        assertTrue(ValueClassTransformer.patternMatches(
                 Set.of("sample"), ClassName.of("sample/sub/Foo")));
         assertFalse(ValueClassTransformer.patternMatches(
                 Set.of("sample"), ClassName.of("other/Foo")));

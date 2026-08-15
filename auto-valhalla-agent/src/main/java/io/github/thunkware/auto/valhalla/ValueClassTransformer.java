@@ -317,8 +317,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      *   <li>a pattern ending in {@code .} or {@code /} is a package-prefix match
      *       (includes sub-packages);</li>
      *   <li>otherwise the pattern matches if it equals the class's JVM name
-     *       (exact class) or the class's JVM package name (exact package,
-     *       sub-packages excluded).</li>
+     *       (exact class), or if the class's JVM package name equals the pattern
+     *       or starts with the pattern followed by {@code /} (recursive package
+     *       match).</li>
      * </ul>
      */
     static boolean patternMatches(Set<String> patterns, ClassName className) {
@@ -338,7 +339,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 if (jvm.startsWith(norm)) {
                     return true;
                 }
-            } else if (jvm.equals(norm) || pkg.equals(norm)) {
+            } else if (jvm.equals(norm) || pkg.equals(norm) || pkg.startsWith(norm + "/")) {
                 return true;
             }
         }
