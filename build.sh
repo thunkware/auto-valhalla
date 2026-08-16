@@ -52,6 +52,7 @@ check "$RC" "mvn install (annotation=JDK8, agent=JDK28)"
 [ "$RC" -eq 0 ] || { echo "FATAL: mvn install failed (see /tmp/avv-build.log); aborting."; exit 1; }
 
 AGENT_JAR=$(ls auto-valhalla-agent/target/auto-valhalla-agent-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+ATTACH_JAR=$(ls auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 DEMO5_JAR=$(ls test/auto-valhalla-demo5/target/auto-valhalla-demo5-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 
 echo "== 2. agent jar class-file audit =="
@@ -65,7 +66,7 @@ COUNT=$("$JAVA_HOME/bin/jar" tf "$AGENT_JAR" | grep -c "io/github/thunkware/auto
 [ "$COUNT" = "1" ]; check $? "exactly one AutoValhallaAgent28 (dummy excluded) [got $COUNT]"
 
 echo "== 3. JDK 5 safety (agent must warn + return, app still runs) =="
-OUT=$( "$JAVA5_HOME/bin/java" -javaagent:"$AGENT_JAR" -cp "$RUNNER5_CLASSES:$DEMO5_JAR" demo5runner.Main 2>&1 )
+OUT=$( "$JAVA5_HOME/bin/java" -javaagent:"$AGENT_JAR" -cp "$RUNNER5_CLASSES:$DEMO5_JAR:$ATTACH_JAR" demo5runner.Main 2>&1 )
 RC=$?
 echo "$OUT" | grep -q "unsupported JVM"; check $? "JDK 5 prints unsupported-JVM warning"
 echo "$OUT" | grep -q "attach not supported"; check $? "JDK 5 attach entry point reports unsupported"
@@ -73,7 +74,7 @@ echo "$OUT" | grep -q "application executed without agent interference"; check $
 [ "$RC" = "0" ]; check $? "JDK 5 exit code 0 [got $RC]"
 
 echo "== 3b. JDK 28 WITHOUT --enable-preview (agent must disable, not crash) =="
-OUT28=$( "$JAVA_HOME/bin/java" -javaagent:"$AGENT_JAR" -cp "$RUNNER5_CLASSES:$DEMO5_JAR" demo5runner.Main 2>&1 )
+OUT28=$( "$JAVA_HOME/bin/java" -javaagent:"$AGENT_JAR" -cp "$RUNNER5_CLASSES:$DEMO5_JAR:$ATTACH_JAR" demo5runner.Main 2>&1 )
 RC28=$?
 echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints disable warning"
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"

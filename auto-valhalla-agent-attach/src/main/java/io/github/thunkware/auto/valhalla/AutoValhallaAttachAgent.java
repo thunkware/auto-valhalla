@@ -1,15 +1,22 @@
 package io.github.thunkware.auto.valhalla;
 
+import java.lang.instrument.Instrumentation;
+import net.bytebuddy.agent.ByteBuddyAgent;
+
 /**
  * Programmatic entry point for attaching the auto-valhalla agent to an
  * already-running JVM, instead of launching the application with
  * {@code -javaagent}.
  *
  * <p>This class is compiled with a real JDK 5 compiler (class-file version 49)
- * so it can be loaded on any JVM from JDK 5 upwards. It delegates to
- * {@link AutoValhallaAgent}, which performs the actual attach via
- * and lazily links to the real
- * {@link AutoValhallaAgent28} implementation only when the JVM supports it.
+ * so it can be loaded on any JVM from JDK 5 upwards. It installs the
+ * {@code ByteBuddyAgent} to obtain an {@link Instrumentation} and then delegates
+ * to {@link AutoValhallaAgent#agentmain} to install the value-class transformer.
+ *
+ * <p>Byte Buddy is shaded (relocated to
+ * {@code io.github.thunkware.auto.valhalla.internal.bytebuddy}) inside this
+ * module's jar, so {@code net.bytebuddy} never leaks onto the application
+ * classpath and cannot conflict with another Byte Buddy version.
  *
  * <p>Add the {@code auto-valhalla-agent-attach} dependency and call
  * {@link #attach()} as early as possible at startup, e.g. from a static initializer.
@@ -32,7 +39,13 @@ public final class AutoValhallaAttachAgent {
      *         {@link #isSupported()}.
      */
     public static void attach() {
-        AutoValhallaAgent.attach();
+        if (!isSupported()) {
+            throw new IllegalStateException(
+                    "auto-valhalla agent attach is not supported on this JVM. "
+                            + "Project Valhalla requires JDK 28+ with --enable-preview.");
+        }
+        Instrumentation instrumentation = ByteBuddyAgent.install();
+        AutoValhallaAgent.agentmain(null, instrumentation);
     }
 
     /**

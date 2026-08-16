@@ -1,7 +1,5 @@
 package io.github.thunkware.auto.valhalla;
 
-import net.bytebuddy.agent.ByteBuddyAgent;
-
 import java.lang.instrument.Instrumentation;
 import java.lang.management.ManagementFactory;
 
@@ -42,31 +40,7 @@ public final class AutoValhallaAgent {
         AutoValhallaAgent28.install(instrumentation);
     }
 
-    static void attach() {
-        if (!isSupported()) {
-            String msg = "auto-valhalla agent started via attach"
-                    + " on an unsupported JVM (Java " + jdkFeature()
-                    + "). Project Valhalla requires JDK " + MIN_JDK
-                    + "+ with --enable-preview.";
-            throw new IllegalStateException(msg);
-        }
-        System.out.println("ByteBuddyAgent.LATENT_RESOLVE.length");
-        try {
-            //noinspection ResultOfMethodCallIgnored
-            ByteBuddyAgent.getInstrumentation();
-        } catch (RuntimeException ignore) {
-        } catch (Error t) {
-            String msg = "Cannot load byte-buddy-agent. Verify that byte-buddy-agent dependency is defined and its scope is 'compile' ";
-            throw new IllegalStateException(msg, t);
-        }
-
-        System.out.println("ByteBuddyAgent.LATENT_RESOLVE.length ok");
-
-        Instrumentation instrumentation = ByteBuddyAgent.install();
-        AutoValhallaAgent28.install(instrumentation);
-    }
-
-    static boolean isSupported() {
+    public static boolean isSupported() {
         return jdkFeature() >= MIN_JDK && isEnablePreview();
     }
 

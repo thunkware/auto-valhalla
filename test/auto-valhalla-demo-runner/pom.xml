@@ -32,6 +32,11 @@
     </dependency>
     <dependency>
       <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-agent-attach</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
       <artifactId>auto-valhalla-demo5</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -44,12 +49,6 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>5.10.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.bytebuddy</groupId>
-      <artifactId>byte-buddy-agent</artifactId>
-      <version>1.18.11-jdk5</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

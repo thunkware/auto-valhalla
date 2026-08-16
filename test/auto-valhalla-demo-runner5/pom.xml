@@ -61,7 +61,7 @@
                 <argument>-target</argument>
                 <argument>1.5</argument>
                 <argument>-cp</argument>
-                <argument>../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+                <argument>../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar:../../auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-${project.version}.jar</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>src/main/jdk5/demo5runner/Main.java</argument>
@@ -82,7 +82,7 @@
               <arguments>
                 <argument>-javaagent:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
                 <argument>-cp</argument>
-                <argument>${project.build.outputDirectory}:../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+                <argument>${project.build.outputDirectory}:../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar:../../auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-${project.version}.jar</argument>
                 <argument>demo5runner.Main</argument>
               </arguments>
             </configuration>

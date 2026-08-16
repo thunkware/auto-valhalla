@@ -24,13 +24,6 @@
     <!-- Real JDK 5 install: the shim must be class-file version 49 so it can
          be loaded on any JVM from JDK 5 upwards. -->
     <java5.home>${env.JAVA5_HOME}</java5.home>
-    <!-- the JDK 5 build of ByteBuddyAgent, whose class file the JDK 5 javac
-         must be able to read for the shim's attach() -->
-    <net.bytebuddy.version>1.18.11-jdk5</net.bytebuddy.version>
-    <!-- ByteBuddyAgent references @SuppressFBWarnings; the annotation jar must
-         be class-file version 49 or older (hence version 3.0.1u2, not the
-         v52 spotbugs-annotations) so the JDK 5 javac can read it. -->
-    <findbugs.annotations.version>3.0.1u2</findbugs.annotations.version>
   </properties>
 
   <dependencies>
@@ -53,19 +46,6 @@
       <artifactId>auto-valhalla-demo5</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>net.bytebuddy</groupId>
-      <artifactId>byte-buddy-agent</artifactId>
-      <version>${net.bytebuddy.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
-      <version>${findbugs.annotations.version}</version>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -105,15 +85,14 @@
           </execution>
         </executions>
       </plugin>
-      <!-- The JDK 5 shim (AutoValhallaAgent) and its platform-agnostic attach
-           entry point (AutoValhallaAttachAgent) must be class-file version 49 so
-           the published agent jar is loadable/attachable on any JVM from JDK 5
-           upwards. Their sources live in src/main/java like the rest of the
-           agent, but they are excluded from the JDK 28 compile so that the
-           .class files in target/classes are produced only by the JDK 5 javac
-           step below (guaranteed v49, no ordering race). The shim loads first
-           and, on a JVM older than JDK 28, warns and returns harmlessly; on
-           JDK 28+ it calls the real agent's entry point directly. -->
+      <!-- The JDK 5 shim (AutoValhallaAgent) must be class-file version 49 so
+           the published agent jar is loadable on any JVM from JDK 5 upwards.
+           Its source lives in src/main/java like the rest of the agent, but it
+           is excluded from the JDK 28 compile so that its .class file in
+           target/classes is produced only by the JDK 5 javac step below
+           (guaranteed v49, no ordering race). The shim loads first and, on a
+           JVM older than JDK 28, warns and returns harmlessly; on JDK 28+ it
+           calls the real agent's entry point directly. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -121,7 +100,6 @@
         <configuration>
           <excludes>
             <exclude>**/AutoValhallaAgent.java</exclude>
-            <exclude>**/AutoValhallaAttachAgent.java</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -162,13 +140,7 @@
                 <argument>1.5</argument>
                 <argument>-d</argument>
                 <argument>${project.build.directory}/shim-classes</argument>
-                <!-- ByteBuddyAgent (provided scope) backs the shim's attach(); the
-                     JDK 5 compiler must see it and its @SuppressFBWarnings
-                     annotation (findbugs) on its own classpath. -->
-                <argument>-classpath</argument>
-                <argument>${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${net.bytebuddy.version}/byte-buddy-agent-${net.bytebuddy.version}.jar:${settings.localRepository}/com/google/code/findbugs/annotations/${findbugs.annotations.version}/annotations-${findbugs.annotations.version}.jar</argument>
                 <argument>src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent.java</argument>
-                <argument>src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaAttachAgent.java</argument>
                 <argument>src/main/agent5/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent28.java</argument>
               </arguments>
             </configuration>
@@ -183,7 +155,6 @@
               <executable>/bin/cp</executable>
               <arguments>
                 <argument>${project.build.directory}/shim-classes/io/github/thunkware/auto/valhalla/AutoValhallaAgent.class</argument>
-                <argument>${project.build.directory}/shim-classes/io/github/thunkware/auto/valhalla/AutoValhallaAttachAgent.class</argument>
                 <argument>${project.build.outputDirectory}/io/github/thunkware/auto/valhalla/</argument>
               </arguments>
             </configuration>
