@@ -118,7 +118,7 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
                 }
             };
             byte[] out = cf.transformClass(model, classTransform);
-            List<java.lang.VerifyError> errors = cf.verify(out);
+            List<VerifyError> errors = cf.verify(out);
             if (!errors.isEmpty()) {
                 log.debug("application-logger bridge: verify failed for "
                         + methodName + " in " + model.thisClass().asInternalName()

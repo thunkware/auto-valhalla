@@ -3,7 +3,9 @@ package io.github.thunkware.auto.valhalla;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.ClassTransform;
+import java.lang.classfile.CodeModel;
 import java.lang.classfile.CodeTransform;
+import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.MonitorInstruction;
 import java.lang.constant.ClassDesc;
@@ -13,7 +15,7 @@ import java.util.List;
 
 /**
  * Instruments {@code monitorenter} instructions in a class to call
- * {@link SynchronizationMonitor#check(Object)}, which records the class being
+ * {@link SynchronizationMonitor#onSynchronized(Object)}, which records the class being
  * synchronized on for monitoring.
  *
  * <p>This is applied when {@code Mode.SYNCHRONIZATION_MONITOR} is set and
@@ -26,15 +28,22 @@ final class SynchronizationInstrumenter {
     /** Returns true if any method in the class contains a {@code monitorenter}. */
     static boolean hasMonitorEnter(ClassModel model) {
         return model.methods().stream()
-                .anyMatch(m -> m.code().map(c -> c.elementList().stream()
-                        .anyMatch(e -> e instanceof MonitorInstruction mi
-                                && mi.opcode() == Opcode.MONITORENTER))
-                        .orElse(false));
+                .anyMatch(SynchronizationInstrumenter::hasMonitorEnter);
+    }
+
+    private static boolean hasMonitorEnter(final MethodModel method) {
+        return method.code().map(SynchronizationInstrumenter::hasMonitorEnter).orElse(false);
+    }
+
+    private static boolean hasMonitorEnter(final CodeModel code) {
+        return code.elementList().stream()
+                .anyMatch(e -> e instanceof MonitorInstruction mi
+                        && mi.opcode() == Opcode.MONITORENTER);
     }
 
     /**
      * Instruments all {@code monitorenter} instructions in the model by
-     * inserting a {@link SynchronizationMonitor#check(Object)} call before each one.
+     * inserting a {@link SynchronizationMonitor#onSynchronized(Object)} call before each one.
      * Returns {@code null} when stack-map regeneration produces invalid frames
      * (e.g. the class references types absent from the system classloader); the
      * caller is responsible for failure handling. Callers should check
@@ -45,8 +54,9 @@ final class SynchronizationInstrumenter {
         CodeTransform guard = (cb, e) -> {
             if (e instanceof MonitorInstruction mi && mi.opcode() == Opcode.MONITORENTER) {
                 cb.dup();
-                cb.invokestatic(ClassDesc.of("io.github.thunkware.auto.valhalla.SynchronizationMonitor"),
-                        "check", MethodTypeDesc.of(ConstantDescs.CD_void, ConstantDescs.CD_Object));
+                final var classDesc = ClassDesc.of(SynchronizationMonitor.class.getName());
+                final var methodDesc = MethodTypeDesc.of(ConstantDescs.CD_void, ConstantDescs.CD_Object);
+                cb.invokestatic(classDesc, SynchronizationMonitor.ON_SYNCHRONIZED, methodDesc);
             }
             cb.accept(e);
         };

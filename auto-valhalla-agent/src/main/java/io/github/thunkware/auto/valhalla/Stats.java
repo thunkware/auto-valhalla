@@ -45,6 +45,10 @@ final class Stats {
         return TimeUnit.NANOSECONDS.toMillis(synchronizedOverheadDuration.get());
     }
 
+    public static Long synchronizedCount() {
+        return synchronizedCount.get();
+    }
+
     private static void logStats() {
         while (!Thread.currentThread().isInterrupted()) {
             Failable.runQuietly(() -> TimeUnit.MINUTES.sleep(1));

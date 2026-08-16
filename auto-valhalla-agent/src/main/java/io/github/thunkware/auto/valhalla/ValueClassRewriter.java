@@ -374,7 +374,6 @@ public final class ValueClassRewriter {
         return true;
     }
 
-    /** True if the class is annotated with {@link AutoValhalla}. */
     public static boolean hasAutoValhallaAnnotation(ClassModel model) {
         return model.findAttribute(runtimeVisibleAnnotations())
                 .map(attr -> attr.annotations().stream()
