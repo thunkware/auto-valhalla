@@ -42,8 +42,8 @@ class AutoValhallaAgent28Test {
     }
 
     @Test
-    void bareWordPatternIsPackagePrefix() {
-        assertEquals("demo16/", AutoValhallaAgent28.normalizePattern("demo16"));
+    void normalizePatternDoesNotRequireTrailingDot() {
+        assertEquals("demo16", AutoValhallaAgent28.normalizePattern("demo16"));
         assertEquals("com/Foo", AutoValhallaAgent28.normalizePattern("com.Foo"));
         assertEquals("com/Foo/", AutoValhallaAgent28.normalizePattern("com.Foo."));
         assertEquals("*", AutoValhallaAgent28.normalizePattern("*"));

@@ -141,7 +141,7 @@ treated as annotation-selected.
 
 | Option | Description |
 | --- | --- |
-| `auto-valhalla.includes` | Comma-separated classes/packages to convert. `*` matches everything; `foo.Bar` matches the class `foo.Bar` or any class in the package `foo.Bar`; `foo.` (trailing dot) is a package-prefix match and also includes sub-packages. |
+| `auto-valhalla.includes` | Comma-separated classes/packages to convert. `*` matches everything. |
 | `auto-valhalla.excludes` | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
 | `auto-valhalla.includes-files` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
 | `auto-valhalla.excludes-files` | As above, for excludes. |
@@ -284,8 +284,8 @@ env vars but can be overridden by explicit system properties set alongside it.
 `/etc/auto-valhalla.properties`:
 
 ```properties
-includes=com.example.
-excludes=com.example.dto.
+includes=com.example
+excludes=com.example.dto
 logging.level.auto-valhalla.includes.rejected=fatal
 ```
 

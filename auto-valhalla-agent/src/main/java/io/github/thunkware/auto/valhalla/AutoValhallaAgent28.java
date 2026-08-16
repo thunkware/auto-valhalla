@@ -38,8 +38,9 @@ import java.util.stream.Collectors;
  * may also supply options.
  * <ul>
  *   <li>{@code auto-valhalla.includes} — comma-separated classes or packages to
- *       convert. A value ending in {@code .} matches a package prefix
- *       ({@code startsWith}); otherwise it is an exact class name.</li>
+ *       convert. A pattern {@code X} matches a class named {@code X}, or a
+ *       package named {@code X} or starting with {@code X.} (recursive);
+ *       no trailing dot is required.</li>
  *   <li>{@code auto-valhalla.excludes} — same matching rules, but excludes the
  *       matching classes (takes precedence over includes and the annotation).</li>
  *   <li>{@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
@@ -97,6 +98,7 @@ import java.util.stream.Collectors;
  * {@code --enable-preview}, since the transformed class files use preview
  * class-file versions and the value-object semantics are preview features.
  */
+// public class with non-public members to ensure javadoc visibility
 public final class AutoValhallaAgent28 {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent28.class);
@@ -301,11 +303,12 @@ public final class AutoValhallaAgent28 {
     }
 
     /**
-     * Normalizes a user-supplied pattern to an internal form:
-     * {@code *} matches everything; {@code foo.*} or {@code foo/*} becomes a
-     * package prefix (trailing slash); a value ending in {@code .} becomes a
-     * package prefix; a value containing a dot is an exact class name; a bare
-     * word (no dot) is treated as a package prefix.
+     * Normalizes a user-supplied pattern to an internal (slash) form.
+     * Matching is uniform: a pattern {@code X} matches a class whose name is
+     * {@code X}, or whose package name is {@code X} or starts with {@code X.}
+     * (recursive package match). No trailing dot is required. {@code *}
+     * matches everything. {@code foo.*} or {@code foo/*} (or a trailing
+     * {@code .}) is an explicit recursive package prefix.
      */
     static String normalizePattern(String p) {
         String t = p.trim();
@@ -321,13 +324,7 @@ public final class AutoValhallaAgent28 {
         if (t.endsWith("/*")) {
             return StringUtils.substringBeforeLast(t, "/*").replace('.', '/') + "/";
         }
-        if (t.endsWith(".")) {
-            return StringUtils.substringBeforeLast(t, ".").replace('.', '/') + "/";
-        }
-        if (t.indexOf('.') >= 0) {
-            return t.replace('.', '/');
-        }
-        return t.replace('.', '/') + "/";
+        return t.replace('.', '/');
     }
 
     private static Set<String> parsePatternSet(String value) {
