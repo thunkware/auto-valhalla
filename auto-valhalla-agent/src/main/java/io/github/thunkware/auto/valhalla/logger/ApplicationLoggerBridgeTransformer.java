@@ -50,7 +50,8 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
             "org/springframework/boot/logging/LoggingApplicationListener";
     private static final String SPRING_LISTENER_2X      =
             "org/springframework/boot/context/logging/LoggingApplicationListener";
-    private static final String SPRING_BOOT_LAUNCHER_PKG = "org/springframework/boot/loader/launch/";
+    private static final String SPRING_BOOT_LAUNCHER_PKG = "org/springframework/boot/loader/";
+    private static final String SPRING_BOOT_LAUNCHER_SUFFIX = "Launcher";
 
     private static final ClassDesc FLAGS_CLASS =
             ClassDesc.of("io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags");
@@ -63,7 +64,7 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
         if (classNameJvm == null) {
             return null;
         }
-        if (classNameJvm.startsWith(SPRING_BOOT_LAUNCHER_PKG)) {
+        if (classNameJvm.startsWith(SPRING_BOOT_LAUNCHER_PKG) && classNameJvm.endsWith(SPRING_BOOT_LAUNCHER_SUFFIX)) {
             ApplicationLoggerFlags.onSpringBootLauncherSeen();
             return null;
         }

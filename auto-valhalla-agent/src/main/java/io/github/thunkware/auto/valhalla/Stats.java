@@ -51,10 +51,10 @@ final class Stats {
 
     private static void logStats() {
         while (!Thread.currentThread().isInterrupted()) {
-            Failable.runQuietly(() -> TimeUnit.MINUTES.sleep(1));
+            Failable.runQuietly(() -> TimeUnit.SECONDS.sleep(5));
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Stats: transformTotalDuration=%s transformTotalCount=%s " +
-                                                "synchronizedOverheadDuration=%s synchronizedCount=%s",
+                log.debug(String.format("Stats: transformTotalDurationMs=%s transformTotalCount=%s " +
+                                                "synchronizedOverheadDurationMs=%s synchronizedCount=%s",
                                         transformTotalDurationMs(), transformTotalCount(),
                                         synchronizedOverheadDurationMs(), synchronizedCount.get()));
             }
