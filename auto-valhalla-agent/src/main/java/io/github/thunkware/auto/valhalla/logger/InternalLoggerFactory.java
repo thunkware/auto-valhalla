@@ -45,7 +45,7 @@ public final class InternalLoggerFactory {
 
     private static InternalLogger create(String name) {
         // The mode is typically set after loggers are first obtained (static
-        // initializers run before AutoValhallaAgent.install), so the default
+        // initializers run before AutoValhallaAgent28.install), so the default
         // implementation re-checks the mode at log time; in APPLICATION mode it
         // delegates to a ApplicationLogger.
         return new SimpleLogger(name);

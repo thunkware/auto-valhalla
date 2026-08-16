@@ -2,7 +2,7 @@
 # Builds the project, runs all tests, and runs every verification the agent relies on:
 #   1. full Maven build + tests (annotation tests on JDK 8, agent tests on JDK 28)
 #   2. agent jar class-file version audit (shim = 49, real agent = 72,
-#      annotation = 49, exactly one AutoValhallaAgent)
+#      annotation = 49, exactly one AutoValhallaAgent28)
 #   3. JDK 5 safety: the agent must warn and return on an ancient JVM
 #   4. JDK 28 agent-attach integration test (real transformation path)
 #   5. end-to-end demo (with vs without the agent) (./run-demo.sh)
@@ -55,14 +55,14 @@ AGENT_JAR=$(ls auto-valhalla-agent/target/auto-valhalla-agent-*.jar 2>/dev/null 
 DEMO5_JAR=$(ls auto-valhalla-demo5/target/auto-valhalla-demo5-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 
 echo "== 2. agent jar class-file audit =="
-SHIM=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent5.class)
-REAL=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent.class)
+SHIM=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent.class)
+REAL=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent28.class)
 ANNO=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/api/AutoValhalla.class)
-COUNT=$("$JAVA_HOME/bin/jar" tf "$AGENT_JAR" | grep -c "io/github/thunkware/auto/valhalla/AutoValhallaAgent.class$")
+COUNT=$("$JAVA_HOME/bin/jar" tf "$AGENT_JAR" | grep -c "io/github/thunkware/auto/valhalla/AutoValhallaAgent28.class$")
 [ "$SHIM" = "49" ]; check $? "shim is class-file 49 (JDK 5) [got $SHIM]"
 [ "$REAL" = "72" ]; check $? "real agent is class-file 72 (JDK 28) [got $REAL]"
 [ "$ANNO" = "49" ]; check $? "annotation is class-file 49 (JDK 5) [got $ANNO]"
-[ "$COUNT" = "1" ]; check $? "exactly one AutoValhallaAgent (dummy excluded) [got $COUNT]"
+[ "$COUNT" = "1" ]; check $? "exactly one AutoValhallaAgent28 (dummy excluded) [got $COUNT]"
 
 echo "== 3. JDK 5 safety (agent must warn + return, app still runs) =="
 OUT=$( "$JAVA5_HOME/bin/java" -javaagent:"$AGENT_JAR" -cp "$RUNNER5_CLASSES:$DEMO5_JAR" demo5runner.Main 2>&1 )

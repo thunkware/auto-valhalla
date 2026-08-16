@@ -21,17 +21,15 @@
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
     <maven.compiler.source>28</maven.compiler.source>
     <maven.compiler.target>28</maven.compiler.target>
+    <!-- Real JDK 5 install: the shim must be class-file version 49 so it can
+         be loaded on any JVM from JDK 5 upwards. -->
+    <java5.home>${env.JAVA5_HOME}</java5.home>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>io.github.thunkware</groupId>
       <artifactId>auto-valhalla-api</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-agent5</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -73,14 +71,14 @@
 
   <build>
     <plugins>
-      <!-- Unpack the (JDK 5) annotation classes into this jar so the agent is
-           self-contained and can read @AutoValhalla at load time without the
-           annotation artifact being on the application classpath. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>3.8.1</version>
         <executions>
+          <!-- Unpack the JDK 5 annotation classes into this jar so the agent is
+               self-contained and can read @AutoValhalla at load time without the
+               annotation artifact being on the application classpath. -->
           <execution>
             <id>embed-annotation</id>
             <phase>prepare-package</phase>
@@ -92,24 +90,71 @@
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
           </execution>
-          <!-- Unpack the JDK 5 shim (AutoValhallaAgent5, class-file version 49)
-               into this jar so the published agent jar is loadable/attachable on
-               any JVM from JDK 5 upwards. The shim loads first and, on a JVM older
-               than JDK 28, warns and returns harmlessly; on JDK 28+ it calls
-               the real agent's entry point directly. -->
+        </executions>
+      </plugin>
+      <!-- Compile the JDK 5 shim (AutoValhallaAgent, class-file version 49)
+           with a real JDK 5 compiler so the published agent jar is
+           loadable/attachable on any JVM from JDK 5 upwards. The shim loads
+           first and, on a JVM older than JDK 28, warns and returns harmlessly;
+           on JDK 28+ it calls the real agent's entry point directly. The source
+           lives under src/main/agent5 (outside Maven's default root), so the
+           JDK 28 default compiler finds nothing to do; the shim is compiled to a
+           scratch directory and only AutoValhallaAgent.class is copied into
+           target/classes, leaving the real (JDK 28) AutoValhallaAgent28 untouched. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <!-- Ensure the output directories exist; the JDK 5 compiler will not
+               create them on its own. -->
           <execution>
-            <id>embed-agent5</id>
-            <phase>prepare-package</phase>
+            <id>make-output-dir</id>
+            <phase>compile</phase>
             <goals>
-              <goal>unpack-dependencies</goal>
+              <goal>exec</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>auto-valhalla-agent5</includeArtifactIds>
-              <!-- Keep only the JDK 5 shim; drop this module's placeholder
-                   AutoValhallaAgent so the real (JDK 28) one compiled by the
-                   agent module is used instead. -->
-              <excludes>io/github/thunkware/auto/valhalla/AutoValhallaAgent.class</excludes>
-              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+              <executable>/bin/mkdir</executable>
+              <arguments>
+                <argument>-p</argument>
+                <argument>${project.build.directory}/shim-classes</argument>
+                <argument>${project.build.outputDirectory}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-shim-jdk5</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${java5.home}/bin/javac</executable>
+              <arguments>
+                <argument>-source</argument>
+                <argument>1.5</argument>
+                <argument>-target</argument>
+                <argument>1.5</argument>
+                <argument>-d</argument>
+                <argument>${project.build.directory}/shim-classes</argument>
+                <argument>src/main/agent5/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent.java</argument>
+                <argument>src/main/agent5/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent28.java</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>install-shim-class</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>/bin/cp</executable>
+              <arguments>
+                <argument>${project.build.directory}/shim-classes/io/github/thunkware/auto/valhalla/AutoValhallaAgent.class</argument>
+                <argument>${project.build.outputDirectory}/io/github/thunkware/auto/valhalla/</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
@@ -121,8 +166,8 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Premain-Class>io.github.thunkware.auto.valhalla.AutoValhallaAgent5</Premain-Class>
-              <Agent-Class>io.github.thunkware.auto.valhalla.AutoValhallaAgent5</Agent-Class>
+              <Premain-Class>io.github.thunkware.auto.valhalla.AutoValhallaAgent</Premain-Class>
+              <Agent-Class>io.github.thunkware.auto.valhalla.AutoValhallaAgent</Agent-Class>
               <Can-Redefine-Classes>true</Can-Redefine-Classes>
               <Can-Retransform-Classes>true</Can-Retransform-Classes>
             </manifestEntries>

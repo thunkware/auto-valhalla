@@ -8,8 +8,7 @@ read [README.md](README.md) instead.
 | Module | Purpose |
 | --- | --- |
 | `auto-valhalla-api` | The `@AutoValhalla` annotation and `AutoValhallaVerifier`. Compiled with a **real JDK 5** to genuine Java 5 bytecode (major 49) so it is loadable everywhere. |
-| `auto-valhalla-agent5` | The JDK 5 shim (`AutoValhallaAgent5`, major version 49). Compiled with `JAVA5_HOME` (targeting Java 5) and unpacked into the agent jar. |
-| `auto-valhalla-agent` | The real agent (`AutoValhallaAgent`, `ValueClassTransformer`, `ValueClassRewriter`, `ConstructorRewriter`). Compiled **without** preview so it loads even when preview is off; embeds the annotation and the shim. |
+| `auto-valhalla-agent` | The real agent (`AutoValhallaAgent28`, `ValueClassTransformer`, `ValueClassRewriter`, `ConstructorRewriter`). Compiled **without** preview so it loads even when preview is off; embeds the annotation and the JDK 5 shim (`AutoValhallaAgent`). |
 | `auto-valhalla-demo5` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files. |
 | `auto-valhalla-demo16` | Candidates compiled to Java 16 bytecode (a record is included to show records are rewritten by the agent). |
 | `auto-valhalla-demo-runner` | Runs the demos with `Objects.hasIdentity` to report value-ness, and holds the agent-attach integration test. |
@@ -29,14 +28,14 @@ export JAVA5_HOME=/path/to/jdk-5-or-6
 
 - `JAVA_HOME` — the JDK that compiles and runs Maven (JDK 28+).
 - `JAVA5_HOME` — an old JDK (5/6) used, via `exec-maven-plugin`, to compile the
-  shim (`auto-valhalla-agent5`), the annotation, and `auto-valhalla-demo5` to
+  shim (inside `auto-valhalla-agent`), the annotation, and `auto-valhalla-demo5` to
   Java 5 bytecode (JDK 5's `javac -version` exits non-zero, so
   `maven-compiler-plugin` is not used for them), and to verify the agent is safe
   to attach on a pre-Valhalla JVM (`auto-valhalla-demo-runner5`).
 
 This produces `auto-valhalla-agent/target/auto-valhalla-agent-<version>.jar` — a single self-contained jar
 that contains the JDK 28 real agent **and** a JDK 5 shim
-(`AutoValhallaAgent5`, major version 49) as its `Premain-Class`/`Agent-Class`.
+(`AutoValhallaAgent`, major version 49) as its `Premain-Class`/`Agent-Class`.
 On a JVM older than JDK 28 the shim warns and returns harmlessly; on JDK 28+ it
 delegates to the real agent. The real agent checks
 `RuntimeMXBean.getInputArguments()` for `--enable-preview`: if the JVM was not

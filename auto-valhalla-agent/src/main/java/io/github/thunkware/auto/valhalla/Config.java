@@ -28,7 +28,7 @@ class Config {
     String logging;
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
-     *  used by {@link AutoValhallaAgent#parse(String)} switch. */
+     *  used by {@link AutoValhallaAgent28#parse(String)} switch. */
     static final String INCLUDES = "includes";
     static final String INCLUDES_FILES = "includes-files";
     static final String EXCLUDES = "excludes";

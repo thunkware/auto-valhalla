@@ -26,7 +26,7 @@ public final class ApplicationLoggerFlags {
 
     private ApplicationLoggerFlags() {}
 
-    /** Called from {@code AutoValhallaAgent} when {@code logging=application} is set. */
+    /** Called from {@code AutoValhallaAgent28} when {@code logging=application} is set. */
     public static void enableApplicationMode() {
         bridgeLoggerFactory.set(true);
     }

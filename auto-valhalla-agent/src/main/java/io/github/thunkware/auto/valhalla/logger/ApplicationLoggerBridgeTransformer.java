@@ -37,7 +37,7 @@ import java.util.List;
  *       once the backing library (Logback / Log4j2) is configured.</li>
  * </ul>
  *
- * <p>Only registered by {@code AutoValhallaAgent} when
+ * <p>Only registered by {@code AutoValhallaAgent28} when
  * {@code auto-valhalla.logging=application} is configured.
  */
 public final class ApplicationLoggerBridgeTransformer implements ClassFileTransformer {

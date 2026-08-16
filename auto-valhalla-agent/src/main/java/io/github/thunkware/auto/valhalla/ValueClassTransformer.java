@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  *
  * <p>{@code annotation-mode} narrows annotation-selected candidates and
  * {@code includes-mode} narrows includes-selected ones (see {@link Mode}).
- * For the full list of configuration options see {@link AutoValhallaAgent}.
+ * For the full list of configuration options see {@link AutoValhallaAgent28}.
  *
  * <p>A class selected by both the annotation and {@code includes} is treated as
  * annotation-selected only: its mode set and failure settings come from the
@@ -77,13 +77,13 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
         ClassName className = ClassName.of(classNameJvm);
         if (!loggers.log().isDebugEnabled()) {
-            return doTransform(module, loader, className, protectionDomain, classfileBuffer);
+            return doTransform(module, loader, className, classfileBuffer);
         }
 
         long startTime = System.nanoTime();
         byte[] result = null;
         try {
-            result = doTransform(module, loader, className, protectionDomain, classfileBuffer);
+            result = doTransform(module, loader, className, classfileBuffer);
             return result;
         } finally {
             long durationNano = System.nanoTime() - startTime;
@@ -96,8 +96,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
     }
 
-    private byte[] doTransform(Module module, ClassLoader loader, ClassName className,
-                               ProtectionDomain protectionDomain, byte[] classfileBuffer) {
+    private byte[] doTransform(Module module, ClassLoader loader, ClassName className, byte[] classfileBuffer) {
         if (isExcluded(className)) {
             return null;
         }
@@ -335,7 +334,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         String pkg = className.packageName();
         for (String p : patterns) {
             // patterns may be in dot form (e.g. from tests or config files) or
-            // already in slash form (e.g. after AutoValhallaAgent.normalizePattern)
+            // already in slash form (e.g. after AutoValhallaAgent28.normalizePattern)
             String norm = p.replace('.', '/');
             if (norm.equals("*")) {
                 return true;

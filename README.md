@@ -193,7 +193,7 @@ Named loggers available for fine-grained control:
 
 | Logger name | Default | What it covers |
 | --- | --- | --- |
-| `io.github.thunkware.auto.valhalla.AutoValhallaAgent` | `info` | Agent startup and configuration |
+| `io.github.thunkware.auto.valhalla.AutoValhallaAgent28` | `info` | Agent startup and configuration |
 | `io.github.thunkware.auto.valhalla.ValueClassTransformer` | `info` | Per-class transform decisions |
 | `auto-valhalla.synchronization-monitor` | `info` | Classes seen being `synchronized` on at runtime |
 

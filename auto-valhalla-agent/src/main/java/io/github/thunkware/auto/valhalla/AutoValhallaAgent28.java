@@ -97,9 +97,9 @@ import java.util.stream.Collectors;
  * {@code --enable-preview}, since the transformed class files use preview
  * class-file versions and the value-object semantics are preview features.
  */
-public final class AutoValhallaAgent {
+public final class AutoValhallaAgent28 {
 
-    private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent.class);
+    private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent28.class);
 
     /**
      * Whether the running JVM has Project Valhalla / value classes available.
@@ -111,7 +111,7 @@ public final class AutoValhallaAgent {
      */
     private static final boolean VALHALLA_AVAILABLE = valhallaAvailable();
 
-    private AutoValhallaAgent() {
+    private AutoValhallaAgent28() {
     }
 
     public static void premain(String agentArgs, Instrumentation inst) {

@@ -8,19 +8,19 @@ import java.lang.instrument.Instrumentation;
  * <p>This class is compiled with a real JDK 5 compiler so its class file is
  * version 49 and can be loaded on any JVM from JDK 5 upwards. It performs a
  * minimum-specification check and, when the running JVM is new enough, delegates
- * directly to {@link AutoValhallaAgent} (the real, JDK 28 implementation, which
- * is unpacked into the same jar and replaces this module's placeholder
- * {@link AutoValhallaAgent} at packaging time).
+ * directly to {@link AutoValhallaAgent28} (the real, JDK 28 implementation, which
+ * also ships in the jar and is linked lazily by name, so this shim stays
+ * loadable on JVMs too old to read the version-72 class).
  *
  * <p>When the JVM is too old (below {@link #MIN_JDK}), the agent prints a
  * warning and returns silently, leaving application classes untouched.
  */
-public final class AutoValhallaAgent5 {
+public final class AutoValhallaAgent {
 
     /** Minimum Java specification version required for real transformation. */
     private static final int MIN_JDK = 28;
 
-    private AutoValhallaAgent5() {
+    private AutoValhallaAgent() {
     }
 
     public static void premain(String args, Instrumentation instrumentation) {
@@ -28,7 +28,7 @@ public final class AutoValhallaAgent5 {
             warnUnsupported("premain");
             return;
         }
-        AutoValhallaAgent.premain(args, instrumentation);
+        AutoValhallaAgent28.premain(args, instrumentation);
     }
 
     public static void agentmain(String args, Instrumentation instrumentation) {
@@ -36,7 +36,7 @@ public final class AutoValhallaAgent5 {
             warnUnsupported("agentmain");
             return;
         }
-        AutoValhallaAgent.agentmain(args, instrumentation);
+        AutoValhallaAgent28.agentmain(args, instrumentation);
     }
 
     private static boolean isSupported() {

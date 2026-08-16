@@ -14,7 +14,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class AutoValhallaAgentTest {
+class AutoValhallaAgent28Test {
 
     /**
      * Sets system properties for the duration of a parse() call, then restores
@@ -29,7 +29,7 @@ class AutoValhallaAgentTest {
             System.setProperty(prop, keyValues[i + 1]);
         }
         try {
-            return AutoValhallaAgent.parse();
+            return AutoValhallaAgent28.parse();
         } finally {
             for (Map.Entry<String, String> e : saved.entrySet()) {
                 if (e.getValue() == null) {
@@ -43,17 +43,17 @@ class AutoValhallaAgentTest {
 
     @Test
     void bareWordPatternIsPackagePrefix() {
-        assertEquals("demo16/", AutoValhallaAgent.normalizePattern("demo16"));
-        assertEquals("com/Foo", AutoValhallaAgent.normalizePattern("com.Foo"));
-        assertEquals("com/Foo/", AutoValhallaAgent.normalizePattern("com.Foo."));
-        assertEquals("*", AutoValhallaAgent.normalizePattern("*"));
-        assertEquals("com/example/", AutoValhallaAgent.normalizePattern("com.example.*"));
-        assertEquals("com/example/", AutoValhallaAgent.normalizePattern("com/example/*"));
+        assertEquals("demo16/", AutoValhallaAgent28.normalizePattern("demo16"));
+        assertEquals("com/Foo", AutoValhallaAgent28.normalizePattern("com.Foo"));
+        assertEquals("com/Foo/", AutoValhallaAgent28.normalizePattern("com.Foo."));
+        assertEquals("*", AutoValhallaAgent28.normalizePattern("*"));
+        assertEquals("com/example/", AutoValhallaAgent28.normalizePattern("com.example.*"));
+        assertEquals("com/example/", AutoValhallaAgent28.normalizePattern("com/example/*"));
     }
 
     @Test
     void modeFlagsHaveDistinctDefaults() {
-        var cfg = AutoValhallaAgent.parse();
+        var cfg = AutoValhallaAgent28.parse();
         assertEquals(Mode.ANNOTATION_DEFAULT, cfg.annotationMode,
                 "annotation-mode must default to safe");
         assertEquals(Mode.INCLUDES_DEFAULT, cfg.includesMode,
@@ -67,7 +67,7 @@ class AutoValhallaAgentTest {
 
     @Test
     void onFailAppendToDefaultsToNull() {
-        var cfg = AutoValhallaAgent.parse();
+        var cfg = AutoValhallaAgent28.parse();
         assertNull(cfg.annotationOnFailAppendTo, "annotation.on-fail-append-to defaults to unset");
         assertNull(cfg.includesOnFailAppendTo, "includes.on-fail-append-to defaults to unset");
 
@@ -89,7 +89,7 @@ class AutoValhallaAgentTest {
 
     @Test
     void unknownSysPropsAreDetected() {
-        var unknown = AutoValhallaAgent.unknownSysProps(
+        var unknown = AutoValhallaAgent28.unknownSysProps(
                 Set.of("auto-valhalla.foo", "auto-valhalla.includes", "other.prop"));
         assertEquals(1, unknown.size());
         assertTrue(unknown.contains("auto-valhalla.foo"),
@@ -98,14 +98,14 @@ class AutoValhallaAgentTest {
 
     @Test
     void knownSysPropsAreNotFlagged() {
-        var unknown = AutoValhallaAgent.unknownSysProps(
+        var unknown = AutoValhallaAgent28.unknownSysProps(
                 Set.of("auto-valhalla.includes", "unrelated.prop"));
         assertTrue(unknown.isEmpty(), "no unknown props expected for known keys");
     }
 
     @Test
     void unknownEnvVarsAreDetected() {
-        var unknown = AutoValhallaAgent.unknownEnvVars(
+        var unknown = AutoValhallaAgent28.unknownEnvVars(
                 Set.of("AUTO_VALHALLA_FOO", "AUTO_VALHALLA_INCLUDES", "OTHER_VAR"));
         assertEquals(1, unknown.size());
         assertTrue(unknown.contains("AUTO_VALHALLA_FOO"),
@@ -114,7 +114,7 @@ class AutoValhallaAgentTest {
 
     @Test
     void knownEnvVarsAreNotFlagged() {
-        var unknown = AutoValhallaAgent.unknownEnvVars(
+        var unknown = AutoValhallaAgent28.unknownEnvVars(
                 Set.of("AUTO_VALHALLA_INCLUDES", "AUTO_VALHALLA_LOGGING", "UNRELATED"));
         assertTrue(unknown.isEmpty(), "no unknown vars expected for known keys");
     }
@@ -140,7 +140,7 @@ class AutoValhallaAgentTest {
 
     @Test
     void synchronizationMonitorAppendToHasDefaultValue() {
-        var cfg = AutoValhallaAgent.parse();
+        var cfg = AutoValhallaAgent28.parse();
         assertEquals("auto-valhalla.synchronization.txt", cfg.synchronizationMonitorAppendTo,
                 "synchronization-monitor.append-to defaults to auto-valhalla.synchronization.txt");
     }
@@ -160,7 +160,7 @@ class AutoValhallaAgentTest {
 
     @Test
     void loggingDefaultsToNull() {
-        var cfg = AutoValhallaAgent.parse();
+        var cfg = AutoValhallaAgent28.parse();
         assertNull(cfg.logging, "logging defaults to null (InternalLogger defaults to simple)");
     }
 
@@ -175,7 +175,7 @@ class AutoValhallaAgentTest {
     void loggingModeNoneSuppressesOutput() {
         // setMode(null) resets to SIMPLE; setMode("none") suppresses
         InternalLoggerFactory.setMode("none");
-        InternalLoggerFactory.getLogger(AutoValhallaAgentTest.class).info("this should be suppressed");
+        InternalLoggerFactory.getLogger(AutoValhallaAgent28Test.class).info("this should be suppressed");
         InternalLoggerFactory.setMode(null); // reset
     }
 
