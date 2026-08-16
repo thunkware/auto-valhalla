@@ -10,6 +10,16 @@ Valhalla-enabled JVM.
 
 Background: Project Valhalla JEP 401 (https://openjdk.org/jeps/401).
 
+## Table of contents
+
+- [Quick start](#quick-start)
+  - [1. Opt in with the annotation](#1-opt-in-with-the-annotation)
+  - [2. Opt in with `includes` flag](#2-opt-in-with-includes-flag)
+  - [3. Attach agent](#3-attach-agent)
+- [Synchronization monitor](#synchronization-monitor)
+- [Options](#options)
+- [Notes](#notes)
+
 ## Quick start
 
 ### 1. Opt in with the annotation
@@ -289,7 +299,7 @@ excludes=com.example.dto
 logging.level.auto-valhalla.includes.rejected=fatal
 ```
 
-### Feedback loop: `includes.on-fail-append-to` + `synchronization-monitor.append-to` + `excludes-files`
+### Feedback loop
 
 One or both of `includes.on-fail-append-to` and `synchronization-monitor.append-to` are designed
 to work together with `excludes-files`.

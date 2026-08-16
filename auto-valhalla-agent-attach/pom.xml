@@ -14,15 +14,10 @@
   <name>auto-valhalla agent attach</name>
 
   <description>
-    Attaches the auto-valhalla agent to an already running JVM
+    For attaching auto-valhalla agent to an already running JVM
   </description>
 
-  <properties>
-    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
-    <maven.compiler.source>28</maven.compiler.source>
-    <maven.compiler.target>28</maven.compiler.target>
-  </properties>
-
+  <!-- just setup dependencies; real code is in agent module -->
   <dependencies>
     <dependency>
       <groupId>net.bytebuddy</groupId>
@@ -36,14 +31,4 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
-      </plugin>
-    </plugins>
-  </build>
 </project>
