@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
 import java.lang.instrument.Instrumentation;
+import java.lang.management.ManagementFactory;
 
 /**
  * JDK 5 compatible agent entry point.
@@ -28,7 +29,7 @@ public final class AutoValhallaAgent {
             warnUnsupported("premain");
             return;
         }
-        AutoValhallaAgent28.premain(args, instrumentation);
+        install(instrumentation);
     }
 
     public static void agentmain(String args, Instrumentation instrumentation) {
@@ -36,11 +37,19 @@ public final class AutoValhallaAgent {
             warnUnsupported("agentmain");
             return;
         }
-        AutoValhallaAgent28.agentmain(args, instrumentation);
+        install(instrumentation);
     }
 
-    private static boolean isSupported() {
-        return jdkFeature() >= MIN_JDK;
+    public static void install(Instrumentation instrumentation) {
+        AutoValhallaAgent28.install(instrumentation);
+    }
+
+    public static boolean isSupported() {
+        return jdkFeature() >= MIN_JDK && isEnablePreview();
+    }
+
+    private static boolean isEnablePreview() {
+        return ManagementFactory.getRuntimeMXBean().getInputArguments().contains("--enable-preview");
     }
 
     private static int jdkFeature() {

@@ -17,11 +17,7 @@ public final class AutoValhallaAgent28 {
     private AutoValhallaAgent28() {
     }
 
-    public static void premain(String args, Instrumentation instrumentation) {
-        // Replaced by the real (JDK 28) AutoValhallaAgent28 at packaging time.
-    }
-
-    public static void agentmain(String args, Instrumentation instrumentation) {
+    static void install(Instrumentation instrumentation) {
         // Replaced by the real (JDK 28) AutoValhallaAgent28 at packaging time.
     }
 }

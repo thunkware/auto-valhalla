@@ -114,31 +114,7 @@ public final class AutoValhallaAgent28 {
     private AutoValhallaAgent28() {
     }
 
-    public static void premain(String agentArgs, Instrumentation inst) {
-        if (agentArgs != null && !agentArgs.isBlank()) {
-            LOG.warning("Agent arguments are no longer supported. "
-                    + "Use system properties (-Dauto-valhalla.key=value) or environment "
-                    + "variables instead. Ignoring: " + agentArgs);
-        }
-        install(inst);
-    }
-
-    public static void agentmain(String agentArgs, Instrumentation inst) {
-        if (agentArgs != null && !agentArgs.isBlank()) {
-            LOG.warning("Agent arguments are no longer supported. "
-                    + "Use system properties (-Dauto-valhalla.key=value) or environment "
-                    + "variables instead. Ignoring: " + agentArgs);
-        }
-        install(inst);
-    }
-
-    private static void install(Instrumentation inst) {
-        if (!VALHALLA_AVAILABLE) {
-            LOG.warning("Project Valhalla / value classes "
-                    + "are not available in this JVM (pass --enable-preview on JDK 28+). "
-                    + "The agent is disabled and classes are left as identity classes.");
-            return;
-        }
+    static void install(Instrumentation inst) {
         Config cfg = parse();
         initLogging(inst, cfg);
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);

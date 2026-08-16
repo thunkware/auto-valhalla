@@ -92,15 +92,24 @@
           </execution>
         </executions>
       </plugin>
-      <!-- Compile the JDK 5 shim (AutoValhallaAgent, class-file version 49)
-           with a real JDK 5 compiler so the published agent jar is
-           loadable/attachable on any JVM from JDK 5 upwards. The shim loads
-           first and, on a JVM older than JDK 28, warns and returns harmlessly;
-           on JDK 28+ it calls the real agent's entry point directly. The source
-           lives under src/main/agent5 (outside Maven's default root), so the
-           JDK 28 default compiler finds nothing to do; the shim is compiled to a
-           scratch directory and only AutoValhallaAgent.class is copied into
-           target/classes, leaving the real (JDK 28) AutoValhallaAgent28 untouched. -->
+      <!-- The JDK 5 shim (AutoValhallaAgent) must be class-file version 49 so
+           the published agent jar is loadable/attachable on any JVM from JDK 5
+           upwards. Its source lives in src/main/java like the rest of the agent,
+           but it is excluded from the JDK 28 compile so that AutoValhallaAgent.class
+           in target/classes is produced only by the JDK 5 javac step below
+           (guaranteed v49, no ordering race). The shim loads first and, on a JVM
+           older than JDK 28, warns and returns harmlessly; on JDK 28+ it calls
+           the real agent's entry point directly. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <excludes>
+            <exclude>**/AutoValhallaAgent.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
@@ -138,7 +147,7 @@
                 <argument>1.5</argument>
                 <argument>-d</argument>
                 <argument>${project.build.directory}/shim-classes</argument>
-                <argument>src/main/agent5/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent.java</argument>
+                <argument>src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent.java</argument>
                 <argument>src/main/agent5/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent28.java</argument>
               </arguments>
             </configuration>
