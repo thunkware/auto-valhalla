@@ -2,7 +2,6 @@ package io.github.thunkware.auto.valhalla;
 
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
-import io.github.thunkware.auto.valhalla.util.Failable;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +27,7 @@ public final class SynchronizationMonitor {
             InternalLoggerFactory.getLogger("auto-valhalla.synchronization-monitor");
     private static volatile BackgroundFileWriter writer;
     private static volatile boolean active = false;
-    private static final Set<String> seen = ConcurrentHashMap.newKeySet();
+    private static final Set<String> logSeen = ConcurrentHashMap.newKeySet();
 
     private SynchronizationMonitor() {}
 
@@ -50,16 +49,22 @@ public final class SynchronizationMonitor {
         if (o == null || !active) {
             return;
         }
-        // the monitor must never affect the synchronized block
-        Failable.runQuietly(() -> {
+        long startTime = System.nanoTime();
+        try {
             String name = o.getClass().getName();
             BackgroundFileWriter localWriter = writer;
             if (localWriter != null) {
                 localWriter.record(name);
             }
-            if (seen.add(name)) {
+            if (logSeen.add(name)) {
                 SYNC_LOG.info("Synchronized on: " + name);
             }
-        });
+        } catch (Throwable t) {
+            // the monitor must never affect the synchronized block
+            // don't even (debug) log the exception
+        } finally {
+            long duration = System.nanoTime() - startTime;
+            Stats.onSynchronized(duration);
+        }
     }
 }

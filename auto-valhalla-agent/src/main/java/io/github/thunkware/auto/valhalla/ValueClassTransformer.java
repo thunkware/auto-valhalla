@@ -2,6 +2,7 @@ package io.github.thunkware.auto.valhalla;
 
 import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.constantpool.ClassEntry;
@@ -15,7 +16,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAccumulator;
 import java.util.stream.Stream;
 
 /**
@@ -41,7 +41,6 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     private final ValueClassTransformerLoggers loggers = new ValueClassTransformerLoggers();
     private final Config config;
-    private final LongAccumulator totalDuration = new LongAccumulator(Long::sum, 0L);
     /** Internal names of classes we turned from non-final into final value
      *  classes, so a later subclass load can be reported by superclass name. */
     private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
@@ -70,30 +69,35 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     public byte[] transform(Module module, ClassLoader loader, String classNameJvm,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
-        if (!loggers.log().isDebugEnabled()) {
-            return doTransform(module, loader, classNameJvm, classBeingRedefined, protectionDomain, classfileBuffer);
-        }
-        long startTime = System.nanoTime();
-        byte[] result = doTransform(module, loader, classNameJvm, classBeingRedefined, protectionDomain, classfileBuffer);
-        long duration = System.nanoTime() - startTime;
-        totalDuration.accumulate(duration);
-        if (result != null) {
-            long ms = TimeUnit.MILLISECONDS.toNanos(1);
-            loggers.log().debug("Completed transforming " + classNameJvm.replace('/', '.')
-                    + " in " + duration / ms + "ms (total " + totalDuration.get() / ms + "ms)");
-        }
-        return result;
-    }
-
-    private byte[] doTransform(Module module, ClassLoader loader, String classNameJvm,
-            Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
-            byte[] classfileBuffer) {
         if (classNameJvm == null || classNameJvm.isEmpty() || classBeingRedefined != null) {
             // No name, or a retransform: changing class modifiers
             // (ACC_IDENTITY / ACC_FINAL) is not a legal redefinition.
             return null;
         }
+
         ClassName className = ClassName.of(classNameJvm);
+        if (!loggers.log().isDebugEnabled()) {
+            return doTransform(module, loader, className, protectionDomain, classfileBuffer);
+        }
+
+        long startTime = System.nanoTime();
+        byte[] result = null;
+        try {
+            result = doTransform(module, loader, className, protectionDomain, classfileBuffer);
+            return result;
+        } finally {
+            long durationNano = System.nanoTime() - startTime;
+            Stats.onValueClassTransform(durationNano);
+            if (result != null) {
+                long duration = TimeUnit.NANOSECONDS.toMillis(durationNano);
+                loggers.log().debug("Completed transforming " + className.java()
+                                            + " in " + duration + "ms (total " + Stats.transformTotalDurationMs() + "ms)");
+            }
+        }
+    }
+
+    private byte[] doTransform(Module module, ClassLoader loader, ClassName className,
+                               ProtectionDomain protectionDomain, byte[] classfileBuffer) {
         if (isExcluded(className)) {
             return null;
         }

@@ -69,7 +69,7 @@ final class BackgroundFileWriter {
 
         // Spawn a background virtual thread to read from queue and flush periodically
         this.writerThread = Thread.ofVirtual()
-                .name("BackgroundFileWriter-" + file.getFileName())
+                .name("auto-valhalla-BackgroundFileWriter-" + file.getFileName())
                 .start(() -> Failable.runQuietly(this::run));
     }
 
