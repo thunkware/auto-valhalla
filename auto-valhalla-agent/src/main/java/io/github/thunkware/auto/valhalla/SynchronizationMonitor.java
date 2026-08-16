@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class SynchronizationMonitor {
 
     private static final InternalLogger SYNC_LOG =
-            InternalLogger.getLogger("auto-valhalla.synchronization-monitor");
+            InternalLoggerFactory.getLogger("auto-valhalla.synchronization-monitor");
     private static volatile BackgroundFileWriter writer;
     private static volatile boolean active = false;
     private static final Set<String> seen = ConcurrentHashMap.newKeySet();

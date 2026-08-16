@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
 import java.util.EnumSet;
@@ -27,10 +27,10 @@ class DemoFixturesTest {
 
     @AfterEach
     void resetLoggerLevels() {
-        InternalLogger.setLevel("auto-valhalla.annotation.rejected", null);
-        InternalLogger.setLevel("auto-valhalla.annotation.fail", null);
-        InternalLogger.setLevel("auto-valhalla.includes.rejected", null);
-        InternalLogger.setLevel("auto-valhalla.includes.fail", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.annotation.rejected", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.annotation.fail", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.includes.rejected", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.includes.fail", null);
     }
 
     @Test
@@ -111,7 +111,7 @@ class DemoFixturesTest {
 
         // With annotation.rejected=debug it is instead left as an
         // identity class -- still never rewritten into a value class.
-        InternalLogger.setLevel("auto-valhalla.annotation.rejected", "debug");
+        InternalLoggerFactory.setLevel("auto-valhalla.annotation.rejected", "debug");
         Config quietCfg = new Config();
         quietCfg.includes = Set.of();
         quietCfg.excludes = Set.of();
@@ -200,7 +200,7 @@ class DemoFixturesTest {
         // Point is @AutoValhalla but not final. Under the default annotation-mode
         // (safe), non-final classes are not converted. logging.level=off must leave the
         // class as an identity class (null) without throwing.
-        InternalLogger.setLevel("auto-valhalla.annotation.rejected", "off");
+        InternalLoggerFactory.setLevel("auto-valhalla.annotation.rejected", "off");
         Config cfg = new Config();
         cfg.includes = Set.of();
         cfg.excludes = Set.of();

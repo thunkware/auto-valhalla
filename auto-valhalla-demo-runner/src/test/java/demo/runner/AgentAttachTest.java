@@ -31,7 +31,7 @@ public class AgentAttachTest {
 
     private static final String CANDIDATE_SOURCE =
             "package testattach;\n"
-            + "public class Candidate {\n"
+            + "public final class Candidate {\n"
             + "    private final int v;\n"
             + "    public Candidate(int v) { this.v = v; }\n"
             + "    public int v() { return v; }\n"
@@ -65,10 +65,12 @@ public class AgentAttachTest {
 
         String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
         VirtualMachine vm = VirtualMachine.attach(pid);
+        System.setProperty("auto-valhalla.includes", "testattach.");
         try {
-            vm.loadAgent(jar.toString(), "auto-valhalla.includes=testattach.");
+            vm.loadAgent(jar.toString(), null);
         } finally {
             vm.detach();
+            System.clearProperty("auto-valhalla.includes");
         }
 
         // Load Candidate AFTER attach, so the now-active transformer rewrites it.

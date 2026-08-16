@@ -3,6 +3,7 @@ package io.github.thunkware.auto.valhalla;
 import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerBridgeTransformer;
 import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags;
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import io.github.thunkware.auto.valhalla.logger.LoggingMode;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -96,7 +97,7 @@ import java.util.stream.Collectors;
  */
 public final class AutoValhallaAgent {
 
-    private static final InternalLogger LOG = InternalLogger.getLogger(AutoValhallaAgent.class);
+    private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent.class);
 
     /**
      * Whether the running JVM has Project Valhalla / value classes available.
@@ -144,9 +145,9 @@ public final class AutoValhallaAgent {
     }
 
     private static void initLogging(Instrumentation inst, Config cfg) {
-        InternalLogger.setLevel(cfg.loggerLevels.remove("root"));
-        cfg.loggerLevels.forEach(InternalLogger::setLevel);
-        InternalLogger.setMode(cfg.logging);
+        InternalLoggerFactory.setLevel(cfg.loggerLevels.remove("root"));
+        cfg.loggerLevels.forEach(InternalLoggerFactory::setLevel);
+        InternalLoggerFactory.setMode(cfg.logging);
         if (LoggingMode.findOrNull(cfg.logging) == LoggingMode.APPLICATION) {
             ApplicationLoggerFlags.enableApplicationMode();
             inst.addTransformer(new ApplicationLoggerBridgeTransformer(), false);
@@ -240,6 +241,7 @@ public final class AutoValhallaAgent {
                 default -> {
                     if (a[0].startsWith(Config.LOG_LEVEL_PREFIX)) {
                         String loggerName = a[0].substring(Config.LOG_LEVEL_PREFIX.length());
+                        loggerName = loggerName.equalsIgnoreCase("root") ? "root" : loggerName;
                         cfg.loggerLevels.put(loggerName, a[1].trim());
                     }
                 }

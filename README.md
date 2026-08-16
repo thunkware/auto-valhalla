@@ -167,7 +167,7 @@ Controlled via [per-logger level overrides](#diagnostics).
 | `auto-valhalla.includes.fail` | `debug` | If includes-selected classes hit an unexpected transform error, treat as debug.   |
 
 `fatal` causes a class load exception (the JVM rejects the class rather than silently keeping an identity class).
-Any other level (`error`, `warning`, `info`, `debug`, `off`) leaves the class as an identity class and logs at that level.
+Any other level (`error`, `warning`, `info`, `debug`, `trace`, `off`) leaves the class as an identity class and logs at that level.
 
 ### Recording
 
@@ -185,7 +185,7 @@ are not re-appended, and a missing file is treated as empty.
 
 | Option | Description                                                                                                   |
 | --- |---------------------------------------------------------------------------------------------------------------|
-| `logging.level.root` | Root logging verbosity: `off`, `fatal`, `error`, `warning`, `info`, `debug`. Default: `info`.             |
+| `logging.level.root` | Root logging verbosity: `off`, `fatal`, `error`, `warning`, `info`, `debug`, `trace`. Default: `info`.   |
 | `logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. |
 | `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below.                                    |
 

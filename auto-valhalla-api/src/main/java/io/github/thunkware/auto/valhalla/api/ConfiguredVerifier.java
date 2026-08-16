@@ -29,17 +29,23 @@ public final class ConfiguredVerifier {
         this.markFieldsFinal = markFieldsFinal;
     }
 
-    /** Returns a new verifier with {@code mark-class-final} enabled. */
+    /**
+     * Returns a new verifier with {@code mark-class-final} enabled.
+     */
     public ConfiguredVerifier markClassFinal() {
         return new ConfiguredVerifier(true, this.removeSynchronized, this.markFieldsFinal);
     }
 
-    /** Returns a new verifier with {@code remove-synchronized} enabled. */
+    /**
+     * Returns a new verifier with {@code remove-synchronized} enabled.
+     */
     public ConfiguredVerifier removeSynchronized() {
         return new ConfiguredVerifier(this.markClassFinal, true, this.markFieldsFinal);
     }
 
-    /** Returns a new verifier with {@code mark-fields-final} enabled. */
+    /**
+     * Returns a new verifier with {@code mark-fields-final} enabled.
+     */
     public ConfiguredVerifier markFieldsFinal() {
         return new ConfiguredVerifier(this.markClassFinal, this.removeSynchronized, true);
     }
@@ -76,39 +82,47 @@ public final class ConfiguredVerifier {
         throw new IllegalArgumentException(sb.toString());
     }
 
-    private List<String> check(Class<?> c) {
+    private List<String> check(Class<?> clazz) {
         List<String> problems = new ArrayList<String>();
 
-        if (c.isInterface()) {
+        if (clazz.isInterface()) {
             problems.add("is an interface; a value class cannot be an interface");
             return problems;
         }
-        if (c.isEnum()) {
+        if (clazz.isEnum()) {
             problems.add("is an enum; a value class cannot be an enum");
             return problems;
         }
-        if (c.isAnnotation()) {
+        if (clazz.isAnnotation()) {
             problems.add("is an annotation type; a value class cannot be an annotation type");
             return problems;
         }
 
-        int mods = c.getModifiers();
+        int mods = clazz.getModifiers();
 
         if (Modifier.isAbstract(mods)) {
             problems.add("is abstract; converting an abstract class is not yet supported");
         }
 
-        if (!markClassFinal && !Modifier.isFinal(mods) && !isRecord(c)) {
+        if (!markClassFinal && !Modifier.isFinal(mods) && !isRecord(clazz)) {
             problems.add("is not final; add 'final' or enable markClassFinal() mode");
         }
 
-        Class<?> sup = c.getSuperclass();
-        if (sup != null && sup != Object.class && !isRecord(c)) {
+        Class<?> sup = clazz.getSuperclass();
+        if (sup != null && sup != Object.class && !isRecord(clazz)) {
             problems.add("extends " + sup.getName()
-                    + "; a value class may only extend Object or Record");
+                                 + "; a value class may only extend Object or Record");
         }
 
-        Field[] fields = c.getDeclaredFields();
+        checkFields(clazz, problems);
+
+        checkRemoveSynchronized(clazz, problems);
+
+        return problems;
+    }
+
+    private static void checkFields(final Class<?> clazz, final List<String> problems) {
+        Field[] fields = clazz.getDeclaredFields();
         boolean hasInstanceField = false;
         List<String> openFields = new ArrayList<String>();
         for (Field f : fields) {
@@ -125,25 +139,26 @@ public final class ConfiguredVerifier {
         }
         if (!openFields.isEmpty()) {
             problems.add("has non-private mutable instance field(s) " + openFields
-                    + "; another class may write them, preventing conversion");
+                                 + "; another class may write them, preventing conversion");
         }
+    }
 
-        if (!removeSynchronized) {
-            Method[] methods = c.getDeclaredMethods();
-            List<String> syncMethods = new ArrayList<String>();
-            for (Method m : methods) {
-                int mmods = m.getModifiers();
-                if (!Modifier.isStatic(mmods) && Modifier.isSynchronized(mmods)) {
-                    syncMethods.add(m.getName());
-                }
-            }
-            if (!syncMethods.isEmpty()) {
-                problems.add("has synchronized instance method(s) " + syncMethods
-                        + "; remove the modifier or enable removeSynchronized() mode");
+    private void checkRemoveSynchronized(final Class<?> c, final List<String> problems) {
+        if (removeSynchronized) {
+            return;
+        }
+        Method[] methods = c.getDeclaredMethods();
+        List<String> syncMethods = new ArrayList<String>();
+        for (Method m : methods) {
+            int mmods = m.getModifiers();
+            if (!Modifier.isStatic(mmods) && Modifier.isSynchronized(mmods)) {
+                syncMethods.add(m.getName());
             }
         }
-
-        return problems;
+        if (!syncMethods.isEmpty()) {
+            problems.add("has synchronized instance method(s) " + syncMethods
+                                 + "; remove the modifier or enable removeSynchronized() mode");
+        }
     }
 
     private static boolean isRecord(Class<?> c) {

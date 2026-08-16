@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.EnumSet;
@@ -142,8 +142,8 @@ class AutoValhallaAgentTest {
     @Test
     void unknownLogLevelDefaultsToInfo() {
         // A bad log-level must not crash the agent — it should warn and fall back.
-        InternalLogger.setLevel("bogus");
-        InternalLogger.setLevel(null); // reset to info for other tests
+        InternalLoggerFactory.setLevel("bogus");
+        InternalLoggerFactory.setLevel(null); // reset to info for other tests
     }
 
     @Test
@@ -182,15 +182,15 @@ class AutoValhallaAgentTest {
     @Test
     void loggingModeNoneSuppressesOutput() {
         // setMode(null) resets to SIMPLE; setMode("none") suppresses
-        InternalLogger.setMode("none");
-        InternalLogger.getLogger(AutoValhallaAgentTest.class).info("this should be suppressed");
-        InternalLogger.setMode(null); // reset
+        InternalLoggerFactory.setMode("none");
+        InternalLoggerFactory.getLogger(AutoValhallaAgentTest.class).info("this should be suppressed");
+        InternalLoggerFactory.setMode(null); // reset
     }
 
     @Test
     void unknownLoggingModeDefaultsToSimple() {
         // Must not crash; warns and falls back to simple
-        InternalLogger.setMode("bogus-logging-mode");
-        InternalLogger.setMode(null); // reset
+        InternalLoggerFactory.setMode("bogus-logging-mode");
+        InternalLoggerFactory.setMode(null); // reset
     }
 }

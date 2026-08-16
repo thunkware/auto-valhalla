@@ -39,7 +39,7 @@ public final class ApplicationLoggerFlags {
      */
     public static void onLoggerFactoryInitializing() {
         if (bridgeLoggerFactory.get()) {
-            InternalLogger.startBuffering();
+            InternalLoggerFactory.startBuffering();
         }
     }
 
@@ -50,7 +50,7 @@ public final class ApplicationLoggerFlags {
      */
     public static void onLoggerFactoryReady() {
         if (bridgeLoggerFactory.compareAndSet(true, false)) {
-            InternalLogger.Slf4jBridge.reinstall();
+            InternalLoggerFactory.reinstall();
         }
     }
 
@@ -65,7 +65,7 @@ public final class ApplicationLoggerFlags {
     public static void onSpringBootLauncherSeen() {
         bridgeLoggerFactory.set(false);
         bridgeSpringBootLogging.set(true);
-        InternalLogger.startBuffering();
+        InternalLoggerFactory.startBuffering();
     }
 
     /**
@@ -79,7 +79,7 @@ public final class ApplicationLoggerFlags {
     public static void setSpringBootApp() {
         bridgeLoggerFactory.set(false);
         bridgeSpringBootLogging.set(true);
-        InternalLogger.startBuffering();
+        InternalLoggerFactory.startBuffering();
     }
 
     /**
@@ -90,7 +90,7 @@ public final class ApplicationLoggerFlags {
      */
     public static void onSpringLoggingInitializing() {
         if (bridgeSpringBootLogging.get()) {
-            InternalLogger.startBuffering();
+            InternalLoggerFactory.startBuffering();
         }
     }
 
@@ -101,7 +101,7 @@ public final class ApplicationLoggerFlags {
      */
     public static void onSpringLoggingReady() {
         if (bridgeSpringBootLogging.compareAndSet(true, false)) {
-            InternalLogger.Slf4jBridge.reinstall();
+            InternalLoggerFactory.reinstall();
         }
     }
 }

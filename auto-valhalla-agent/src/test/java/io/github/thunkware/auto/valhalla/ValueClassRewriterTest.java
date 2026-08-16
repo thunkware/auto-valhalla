@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
@@ -31,10 +31,10 @@ class ValueClassRewriterTest {
 
     @AfterEach
     void resetLoggerLevels() {
-        InternalLogger.setLevel("auto-valhalla.annotation.rejected", null);
-        InternalLogger.setLevel("auto-valhalla.annotation.fail", null);
-        InternalLogger.setLevel("auto-valhalla.includes.rejected", null);
-        InternalLogger.setLevel("auto-valhalla.includes.fail", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.annotation.rejected", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.annotation.fail", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.includes.rejected", null);
+        InternalLoggerFactory.setLevel("auto-valhalla.includes.fail", null);
     }
 
     @Test
@@ -556,7 +556,7 @@ class ValueClassRewriterTest {
 
         // includes.rejected=fatal surfaces the rejection loudly
         // (an unloadable class file, never a usable value class).
-        InternalLogger.setLevel("auto-valhalla.includes.rejected", "fatal");
+        InternalLoggerFactory.setLevel("auto-valhalla.includes.rejected", "fatal");
         Config loudCfg = new Config();
         loudCfg.includes = Set.of("sample.Mutable");
         loudCfg.excludes = Set.of();

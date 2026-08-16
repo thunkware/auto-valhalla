@@ -42,7 +42,7 @@ import java.util.List;
  */
 public final class ApplicationLoggerBridgeTransformer implements ClassFileTransformer {
 
-    private final InternalLogger log = InternalLogger.getLogger(ApplicationLoggerBridgeTransformer.class);
+    private final InternalLogger log = InternalLoggerFactory.getLogger(ApplicationLoggerBridgeTransformer.class);
 
     private static final String SLF4J_LOGGER_FACTORY   = "org/slf4j/LoggerFactory";
     private static final String SPRING_APPLICATION      = "org/springframework/boot/SpringApplication";
@@ -122,7 +122,7 @@ public final class ApplicationLoggerBridgeTransformer implements ClassFileTransf
             if (!errors.isEmpty()) {
                 log.debug("application-logger bridge: verify failed for "
                         + methodName + " in " + model.thisClass().asInternalName()
-                        + ": " + errors.get(0).getMessage());
+                        + ": " + errors.getFirst().getMessage());
                 return null;
             }
             return out;
