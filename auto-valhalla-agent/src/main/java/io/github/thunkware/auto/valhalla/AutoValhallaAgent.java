@@ -1,8 +1,9 @@
 package io.github.thunkware.auto.valhalla;
 
+import net.bytebuddy.agent.ByteBuddyAgent;
+
 import java.lang.instrument.Instrumentation;
 import java.lang.management.ManagementFactory;
-import net.bytebuddy.agent.ByteBuddyAgent;
 
 /**
  * JDK 5 compatible agent entry point.

@@ -362,6 +362,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                 || jvm.startsWith("javax/")
                 || jvm.startsWith("sun/")
                 || jvm.startsWith("com/sun/")
+                || jvm.startsWith("org/springframework/boot/loader")
                 || jvm.startsWith("jdk/")) {
             return true;
         }
