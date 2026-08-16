@@ -101,20 +101,16 @@ public final class AutoValhallaAgent28 {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent28.class);
 
-    /**
-     * Whether the running JVM has Project Valhalla / value classes available.
-     * Determined once from the JVM's input arguments: value classes are a preview
-     * feature, so the agent can only run when the JVM was started with
-     * {@code --enable-preview}. If it was not, the agent disables itself
-     * gracefully (otherwise it would hand the JVM preview class files it refuses
-     * to accept).
-     */
-    private static final boolean VALHALLA_AVAILABLE = valhallaAvailable();
+    private static boolean installAttempted;
 
     private AutoValhallaAgent28() {
     }
 
-    static void install(Instrumentation inst) {
+    static synchronized void install(Instrumentation inst) {
+        if (installAttempted) {
+            return;
+        }
+        installAttempted = true;
         Config cfg = parse();
         initLogging(inst, cfg);
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);

@@ -2,6 +2,7 @@ package io.github.thunkware.auto.valhalla;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.management.ManagementFactory;
+import net.bytebuddy.agent.ByteBuddyAgent;
 
 /**
  * JDK 5 compatible agent entry point.
@@ -29,7 +30,7 @@ public final class AutoValhallaAgent {
             warnUnsupported("premain");
             return;
         }
-        install(instrumentation);
+        AutoValhallaAgent28.install(instrumentation);
     }
 
     public static void agentmain(String args, Instrumentation instrumentation) {
@@ -37,14 +38,22 @@ public final class AutoValhallaAgent {
             warnUnsupported("agentmain");
             return;
         }
-        install(instrumentation);
-    }
-
-    public static void install(Instrumentation instrumentation) {
         AutoValhallaAgent28.install(instrumentation);
     }
 
-    public static boolean isSupported() {
+    static void attach() {
+        if (!isSupported()) {
+            String msg = "auto-valhalla agent started via attach"
+                    + " on an unsupported JVM (Java " + jdkFeature()
+                    + "). Project Valhalla requires JDK " + MIN_JDK
+                    + "+ with --enable-preview.";
+            throw new IllegalStateException(msg);
+        }
+        Instrumentation instrumentation = ByteBuddyAgent.install();
+        AutoValhallaAgent28.install(instrumentation);
+    }
+
+    static boolean isSupported() {
         return jdkFeature() >= MIN_JDK && isEnablePreview();
     }
 
@@ -66,7 +75,7 @@ public final class AutoValhallaAgent {
 
     private static void warnUnsupported(String entry) {
         System.err.println(
-                "[AutoValhalla] WARNING: agent started via " + entry
+                "[auto-valhalla] WARNING: agent started via " + entry
                         + " on an unsupported JVM (Java " + jdkFeature()
                         + "). Project Valhalla requires JDK " + MIN_JDK
                         + "+ with --enable-preview. The agent is disabled and"

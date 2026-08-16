@@ -68,13 +68,14 @@ echo "== 3. JDK 5 safety (agent must warn + return, app still runs) =="
 OUT=$( "$JAVA5_HOME/bin/java" -javaagent:"$AGENT_JAR" -cp "$RUNNER5_CLASSES:$DEMO5_JAR" demo5runner.Main 2>&1 )
 RC=$?
 echo "$OUT" | grep -q "unsupported JVM"; check $? "JDK 5 prints unsupported-JVM warning"
+echo "$OUT" | grep -q "attach not supported"; check $? "JDK 5 attach entry point reports unsupported"
 echo "$OUT" | grep -q "application executed without agent interference"; check $? "JDK 5 app runs to completion"
 [ "$RC" = "0" ]; check $? "JDK 5 exit code 0 [got $RC]"
 
 echo "== 3b. JDK 28 WITHOUT --enable-preview (agent must disable, not crash) =="
 OUT28=$( "$JAVA_HOME/bin/java" -javaagent:"$AGENT_JAR" -cp "$RUNNER5_CLASSES:$DEMO5_JAR" demo5runner.Main 2>&1 )
 RC28=$?
-echo "$OUT28" | grep -q "Project Valhalla / value classes are not available"; check $? "JDK 28 (no preview) prints disable warning"
+echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints disable warning"
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"
 
 echo "== 4. JDK 28 agent-attach integration test =="

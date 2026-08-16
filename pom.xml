@@ -25,6 +25,7 @@
   <modules>
     <module>auto-valhalla-api</module>
     <module>auto-valhalla-agent</module>
+    <module>auto-valhalla-agent-attach</module>
     <module>auto-valhalla-demo5</module>
     <module>auto-valhalla-demo16</module>
     <module>auto-valhalla-demo-runner</module>

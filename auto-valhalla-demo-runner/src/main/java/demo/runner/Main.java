@@ -1,13 +1,15 @@
 package demo.runner;
 
-import java.util.Objects;
-
-import demo5.annotation.Point;
-import demo5.includes.Circle;
-import demo5.includes.Square;
 import demo16.annotation.Money;
 import demo16.includes.Hsl;
 import demo16.includes.Pair;
+import demo5.annotation.Point;
+import demo5.includes.Circle;
+import demo5.includes.Square;
+
+import io.github.thunkware.auto.valhalla.AutoValhallaAttachAgent;
+
+import java.util.Objects;
 
 /**
  * Exercises the cross-version demos and verifies each class became a value
@@ -22,6 +24,11 @@ import demo16.includes.Pair;
 public class Main {
 
     static void main(String[] args) {
+        // attach the agent via a system property when not started with -javaagent
+        if (Boolean.getBoolean("auto-valhalla.attach")) {
+            AutoValhallaAttachAgent.attach();
+        }
+
         boolean expectValue = "value".equals(System.getProperty("auto-valhalla.expect", "identity"));
         System.out.println("=== auto-valhalla cross-version demo ===");
         System.out.println("expecting " + (expectValue ? "value" : "identity") + " classes");

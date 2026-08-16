@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-agent-attach</artifactId>
+  <name>auto-valhalla agent attach</name>
+
+  <description>
+    Attaches the auto-valhalla agent to an already running JVM
+  </description>
+
+  <properties>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+    <maven.compiler.source>28</maven.compiler.source>
+    <maven.compiler.target>28</maven.compiler.target>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>net.bytebuddy</groupId>
+      <artifactId>byte-buddy-agent</artifactId>
+      <version>1.18.11-jdk5</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-agent</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

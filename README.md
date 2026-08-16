@@ -34,7 +34,7 @@ public final class Point {
 public record Currency(String code) { }
 ```
 
-Then download the agent and launch:
+Then download the agent and run the app:
 
 ```bash
 java --enable-preview \
@@ -58,22 +58,46 @@ void test() {
 }
 ```
 
-### 2. Select by package or class with `includes`
+### 2. Opt in with `includes` flag
 
-Use `-Dauto-valhalla.includes` to convert classes if you cannot or do not
-want to edit the source code. A setting ending in `.` matches a package
-prefix; otherwise it is an exact class name:
+If you cannot or do not want to edit the source code, use `-Dauto-valhalla.includes` to convert to value classes.
 
 ```bash
 java --enable-preview \
-     -Dauto-valhalla.includes=com.example. \
+     -Dauto-valhalla.includes=com.example \
      -javaagent:auto-valhalla.jar \
      -jar myapp.jar
 ```
 
+### 3. Attach agent
+
+For some apps, it may be more convenient to attach the agent, which does not require changing the app startup scripts.
+
+Add `auto-valhalla-agent-attach` dependency, and add this to your app's startup:
+
+```java
+public class Main {
+    
+    static {
+        // init auto-valhalla agent as early as possible.
+        // if running on Valhalla-enabled JVM (i.e. JDK28 with preview) ...
+        if (AutoValhallaAttachAgent.isSupported()) {
+            System.setProperty("auto-valhalla.includes", "com.example"); // set options as needed
+            AutoValhallaAttachAgent.attach(); // ... then attach auto-valhalla agent
+        }
+    }
+    
+    private static final Logger logger = ...
+    
+    public static void main(String[] args) {
+        ...
+    }
+}
+```
+
 ## Synchronization monitor
 
-Before converting classes, it would be helpful to know if they are used in
+Before converting classes, it could be helpful to know if they are used in
 `synchronized` blocks. Converting those classes to value classes would cause
 `IdentityException` at every synchronization site.
 
@@ -248,7 +272,7 @@ env vars but can be overridden by explicit system properties set alongside it.
 
 ```bash
 # convert a whole package by prefix
--Dauto-valhalla.includes=com.example.
+-Dauto-valhalla.includes=com.example
 
 # convert only specific classes
 -Dauto-valhalla.includes=com.example.Foo,com.example.Bar
@@ -265,23 +289,31 @@ excludes=com.example.dto.
 logging.level.auto-valhalla.includes.rejected=fatal
 ```
 
-### Feedback loop: `includes.on-fail-append-to` + `excludes-files`
+### Feedback loop: `includes.on-fail-append-to` + `synchronization-monitor.append-to` + `excludes-files`
 
-`includes.on-fail-append-to` and `excludes-files` are designed to work
-together. Run once with the default `includes.rejected=debug` (quiet) and
-`includes.on-fail-append-to` pointing at a file; every class that could not
-be safely transformed is recorded there. Feed that file back as
-`excludes-files` on subsequent runs so those classes are skipped instead of
+One or both of `includes.on-fail-append-to` and `synchronization-monitor.append-to` are designed
+to work together with `excludes-files`.
+
+Run once with the default `includes.rejected=debug` (quiet) and `includes.on-fail-append-to` pointing at a file; every class that could not
+be safely transformed is recorded in the file. Similarly, run in `synchronization-monitor` mode and append to the file
+to find classes used in synchronization blocks.
+
+Feed the files back as `excludes-files` on subsequent runs so those classes are skipped instead of
 surfacing errors:
 
 ```bash
 # first pass: record anything that fails (includes.rejected defaults to debug)
--Dauto-valhalla.includes=com.example. \
--Dauto-valhalla.includes.on-fail-append-to=/var/tmp/auto-valhalla-failures.txt
+-Dauto-valhalla.includes=com.example \
+-Dauto-valhalla.includes.on-fail-append-to=/tmp/auto-valhalla-failures.txt
+
+# second pass: record classes used in synchronization blocks 
+-Dauto-valhalla.includes=com.example \
+-Dauto-valhalla.includes-mode=synchronization-monitor \
+-Dauto-valhalla.synchronization-monitor.append-to=/tmp/auto-valhalla-synchronization.txt
 
 # later passes: skip the classes that failed before
--Dauto-valhalla.includes=com.example. \
--Dauto-valhalla.excludes-files=/var/tmp/auto-valhalla-failures.txt
+-Dauto-valhalla.includes=com.example \
+-Dauto-valhalla.excludes-files=/tmp/auto-valhalla-failures.txt,/tmp/auto-valhalla-synchronization.txt
 ```
 
 The companion `includes.on-success-append-to` records the classes that *were*
@@ -292,7 +324,7 @@ explicit `includes-files` list:
 # record what a broad sweep actually converted
 -Dauto-valhalla.includes='*' \
 -Dauto-valhalla.includes-mode=safe \
--Dauto-valhalla.includes.on-success-append-to=/var/tmp/auto-valhalla-converted.txt
+-Dauto-valhalla.includes.on-success-append-to=/tmp/auto-valhalla-converted.txt
 ```
 
 ## Configuring with Environment Variables
@@ -311,7 +343,9 @@ and `auto-valhalla.includes-mode` converts to `AUTO_VALHALLA_INCLUDES_MODE`.
 System properties take precedence over environment variables when both are
 set.
 
-## Notes & limitations
+## Notes
+
+### Selection
 
 - If annotation-selected classes fail conversion, the class is rejected by default
   (`annotation.rejected` and `annotation.fail` default to `fatal`). Use
@@ -319,12 +353,18 @@ set.
 - If includes-selected classes fail conversion, the failure is logged at
   `debug` by default (`includes.rejected` and `includes.fail` default to `debug`). Use
   `-Dlogging.level.auto-valhalla.includes.rejected=fatal` to fail loudly.
+
+### Transformation
+
 - A converted class is `final`. If anything subclasses it, that subclass
   will fail class loading.
 - The agent rewrites identity records and final classes only. It never
   transforms JDK/system classes or its own support classes. Non-final classes
   are converted (as final) when the mode includes `mark-class-final`; any
   existing subclass then fails to load.
+
+### Warning
+
 - **Semantics change.** For a converted class, `==` becomes value equality
   (two instances with equal fields compare `==`), `equals`/`hashCode` of the
   two fields, `synchronized` methods no longer take a monitor, and
@@ -343,7 +383,7 @@ set.
   at runtime; classes loaded *after* the agent attaches (or from the start,
   when attached via `-javaagent`) are the ones rewritten.
 
-## Note on AI assistance
+## AI assistance
 
 This project was vibe-coded with an AI coding agent. Humans designed,
 directed, reviewed, and edited the work. The agent authored the bulk of the
