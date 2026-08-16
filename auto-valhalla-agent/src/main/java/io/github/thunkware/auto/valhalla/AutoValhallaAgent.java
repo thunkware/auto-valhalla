@@ -393,8 +393,9 @@ public final class AutoValhallaAgent {
 
     /** Returns {@code " label=value"}, or {@code ""} when value is null or an
      *  empty collection. Collections are formatted as {@code a,b,c} (no brackets). */
-    @SuppressWarnings({"rawtypes", "IfCanBeSwitch"})
+    @SuppressWarnings("rawtypes")
     private static String getLogString(String label, Object value) {
+        //noinspection IfCanBeSwitch
         if (value == null) {
             return "";
         }

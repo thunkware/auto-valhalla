@@ -1,7 +1,5 @@
 package io.github.thunkware.auto.valhalla;
 
-import static java.lang.classfile.Attributes.runtimeVisibleAnnotations;
-
 import java.lang.classfile.AccessFlags;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileVersion;
@@ -22,6 +20,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import static java.lang.classfile.Attributes.runtimeVisibleAnnotations;
 
 /**
  * Rewrites a loaded class file into a JEP 401 value class.
@@ -63,23 +63,16 @@ public final class ValueClassRewriter {
     private ValueClassRewriter() {}
 
     /**
-     * @return the rewritten value-class bytes, or {@code null} if the class
-     *         must remain an identity class
-     */
-    public static byte[] transform(ClassModel model, boolean keepIfInvalid,
-            boolean removeSynchronized, ClassLoader loader) {
-        return transform(model, keepIfInvalid, removeSynchronized, false, loader);
-    }
-
-    /**
-     * Like {@link #transform(ClassModel, boolean, boolean)} but, when
-     * {@code markClassFinal} is true, a class that is not already final is still
-     * accepted (it will be marked final, which breaks any existing subclasses).
-     * Abstract classes are never converted (see
+     * Rewrites the given class model into a value class. The class must already
+     * be final (or {@code markClassFinal} must be true), otherwise it is not
+     * converted. Abstract classes are never converted (see
      * {@link #suitabilityProblems(ClassModel, boolean, boolean)}): an
      * agent-converted abstract value class whose identity subclass is loaded
      * later triggers a duplicate class definition in the JVM, so abstract
      * classes are left as identity classes.
+     *
+     * @return the rewritten value-class bytes, or {@code null} if the class
+     *         must remain an identity class
      */
     public static byte[] transform(ClassModel model, boolean keepIfInvalid,
             boolean removeSynchronized, boolean markClassFinal, ClassLoader loader) {
@@ -93,6 +86,7 @@ public final class ValueClassRewriter {
         AtomicBoolean ctorFailed = new AtomicBoolean(false);
 
         ClassTransform versionAndFlags = (cb, ce) -> {
+            //noinspection IfCanBeSwitch
             if (ce instanceof ClassFileVersion) {
                 cb.withVersion(JAVA_28_MAJOR_VERSION, PREVIEW_MINOR_VERSION);
             } else if (ce instanceof AccessFlags af) {
@@ -201,23 +195,6 @@ public final class ValueClassRewriter {
         return isSuitable(model, false, false);
     }
 
-    /**
-     * Like {@link #isSuitable(ClassModel)} but, when {@code removeSynchronized} is
-     * true, a class with synchronized instance methods is still considered
-     * suitable (the caller is expected to strip them via
-     * {@link #transform(ClassModel, boolean, boolean, boolean)}); and when
-     * {@code markClassFinal} is true, a class that is neither final nor abstract
-     * is still considered suitable (it will be marked final, breaking any
-     * subclasses).
-     */
-    public static boolean isSuitable(ClassModel model, boolean removeSynchronized) {
-        return isSuitable(model, removeSynchronized, false);
-    }
-
-    /**
-     * The full structural check. See {@link #isSuitable(ClassModel, boolean)} for
-     * the meaning of the flags.
-     */
     public static boolean isSuitable(ClassModel model, boolean removeSynchronized,
             boolean markClassFinal) {
         return suitabilityProblems(model, removeSynchronized, markClassFinal).isEmpty();
