@@ -1,6 +1,6 @@
 package io.github.thunkware.auto.valhalla.logger;
 
-import io.github.thunkware.auto.valhalla.StringUtils;
+import io.github.thunkware.auto.valhalla.util.StringUtils;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Queue;

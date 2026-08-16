@@ -5,6 +5,8 @@ import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags;
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import io.github.thunkware.auto.valhalla.logger.LoggingMode;
+import io.github.thunkware.auto.valhalla.util.StringUtils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;

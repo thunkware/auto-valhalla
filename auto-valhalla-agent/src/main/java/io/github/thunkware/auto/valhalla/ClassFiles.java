@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.util.StringUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;

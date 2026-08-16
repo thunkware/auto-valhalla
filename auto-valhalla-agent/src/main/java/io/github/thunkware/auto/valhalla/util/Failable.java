@@ -1,14 +1,14 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.util;
 
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import java.util.concurrent.Callable;
 
-class Failable {
+public class Failable {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getLogger(Failable.class);
 
-    interface ThrowingRunnable {
+    public interface ThrowingRunnable {
         void run() throws Throwable;
     }
 

@@ -113,8 +113,7 @@ public enum Mode {
                 case "safe" -> set.add(Mode.SAFE);
                 case "yolo" -> set.add(Mode.YOLO);
                 case "markclassfinal" -> set.add(Mode.MARK_CLASS_FINAL);
-                case "removesynchronized" ->
-                        set.add(Mode.REMOVE_SYNCHRONIZED);
+                case "removesynchronized" -> set.add(Mode.REMOVE_SYNCHRONIZED);
                 case "markfieldsfinal" -> set.add(Mode.MARK_FIELDS_FINAL);
                 case "synchronizationmonitor" -> set.add(Mode.SYNCHRONIZATION_MONITOR);
                 default -> unknownTokens.add(tok);

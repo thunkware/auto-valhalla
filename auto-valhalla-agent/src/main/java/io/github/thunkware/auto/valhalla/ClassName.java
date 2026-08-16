@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.util.StringUtils;
+
 /**
  * A class name in both JVM (slash-separated) and Java (dot-separated) forms,
  * plus the JVM-form package name derived from the JVM name.

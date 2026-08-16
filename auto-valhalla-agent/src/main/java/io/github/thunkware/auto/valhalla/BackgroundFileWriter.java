@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.util.Failable;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;

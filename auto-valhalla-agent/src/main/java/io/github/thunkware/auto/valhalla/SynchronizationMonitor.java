@@ -2,6 +2,8 @@ package io.github.thunkware.auto.valhalla;
 
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
+import io.github.thunkware.auto.valhalla.util.Failable;
+
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
