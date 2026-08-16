@@ -1,14 +1,10 @@
 package io.github.thunkware.auto.valhalla;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
-import java.io.File;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.instruction.InvokeInstruction;
@@ -18,8 +14,13 @@ import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Exercises the constructor-rewrite path for category-2 (long / double) fields,
@@ -353,9 +354,8 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void identityExceptionGuardInstrumentedIntoMonitorenterClasses() throws Exception {
-        Path out = Files.createTempFile("auto-valhalla-identity", ".txt");
-        out.toFile().deleteOnExit();
+    void identityExceptionGuardInstrumentedIntoMonitorenterClasses(@TempDir Path dir) throws Exception {
+        Path out = dir.resolve("identity.txt");
 
         // SyncBlock synchronizes on this, so it is selected but unsuitable; with
         // identity-exception-append-to set, its monitorenter is instrumented.
@@ -384,11 +384,9 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void onSuccessAppendToRecordsConvertedClassWithoutDuplicates() throws Exception {
-        Path success = Files.createTempFile("auto-valhalla-success", ".txt");
-        Path fail = Files.createTempFile("auto-valhalla-fail", ".txt");
-        success.toFile().deleteOnExit();
-        fail.toFile().deleteOnExit();
+    void onSuccessAppendToRecordsConvertedClassWithoutDuplicates(@TempDir Path dir) throws Exception {
+        Path success = dir.resolve("success.txt");
+        Path fail = dir.resolve("fail.txt");
 
         // A name already present in the file must not be re-appended.
         Files.writeString(success, "sample.SampleX\n");
@@ -483,7 +481,7 @@ class ValueClassRewriterTest {
         List<String> syncProblems =
                 ValueClassRewriter.suitabilityProblems(cf.parse(sync), false, true);
         assertEquals(1, syncProblems.size(), "Sync violates only the synchronized rule");
-        String syncMsg = syncProblems.get(0);
+        String syncMsg = syncProblems.getFirst();
         assertTrue(syncMsg.contains("synchronized instance method(s) get, instance"),
                 "the synchronized problem must name the methods: " + syncMsg);
         assertTrue(syncMsg.contains("use remove-synchronized to strip it"), syncMsg);
@@ -603,50 +601,42 @@ class ValueClassRewriterTest {
     }
 
     @Test
-    void onFailAppendIsPerSelectionSource() throws Exception {
-        File ann = File.createTempFile("ann", ".log");
-        File inc = File.createTempFile("inc", ".log");
-        try {
-            // Selected by BOTH annotation and includes: the annotation settings
-            // win, so the failure is recorded in the annotation file only.
-            byte[] mp = readResource("/demo5/broken/MutablePoint.class");
-            Config bothCfg = new Config();
-            bothCfg.includes = Set.of("demo5");
-            bothCfg.excludes = Set.of();
-            bothCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
-            bothCfg.includesMode = Mode.INCLUDES_DEFAULT;
-            bothCfg.annotationOnFailAppendTo = ann.getAbsolutePath();
-            bothCfg.includesOnFailAppendTo = inc.getAbsolutePath();
-            ValueClassTransformer both = new ValueClassTransformer(bothCfg);
-            both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
-            BackgroundFileWriter.drain();
-            assertEquals("demo5.broken.MutablePoint\n", Files.readString(ann.toPath()),
-                    "a both-selected class is appended to the annotation file as a class name");
-            assertTrue(Files.readString(inc.toPath()).isEmpty(),
-                    "the includes file is untouched when the annotation settings win");
+    void onFailAppendIsPerSelectionSource(@TempDir Path dir) throws Exception {
+        Path ann = dir.resolve("ann.log");
+        Path inc = dir.resolve("inc.log");
 
-            // Includes-only selection appends to the includes file.
-            byte[] mutable = readResource("/sample/Mutable.class");
-            File inc2 = File.createTempFile("inc2", ".log");
-            try {
-                Config incCfg = new Config();
-                incCfg.includes = Set.of("sample.Mutable");
-                incCfg.excludes = Set.of();
-                incCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
-                incCfg.includesMode = Mode.INCLUDES_DEFAULT;
-                incCfg.includesOnFailAppendTo = inc2.getAbsolutePath();
-                ValueClassTransformer includesOnly = new ValueClassTransformer(incCfg);
-                includesOnly.transform(null, null, "sample/Mutable", null, null, mutable);
-                BackgroundFileWriter.drain();
-                assertEquals("sample.Mutable\n", Files.readString(inc2.toPath()),
-                        "an includes-only class is appended to the includes file as a class name");
-            } finally {
-                inc2.delete();
-            }
-        } finally {
-            ann.delete();
-            inc.delete();
-        }
+        // Selected by BOTH annotation and includes: the annotation settings
+        // win, so the failure is recorded in the annotation file only.
+        byte[] mp = readResource("/demo5/broken/MutablePoint.class");
+        Config bothCfg = new Config();
+        bothCfg.includes = Set.of("demo5");
+        bothCfg.excludes = Set.of();
+        bothCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        bothCfg.includesMode = Mode.INCLUDES_DEFAULT;
+        bothCfg.annotationOnFailAppendTo = ann.toString();
+        bothCfg.includesOnFailAppendTo = inc.toString();
+        ValueClassTransformer both = new ValueClassTransformer(bothCfg);
+        both.transform(null, null, "demo5/broken/MutablePoint", null, null, mp);
+        BackgroundFileWriter.drain();
+        assertEquals("demo5.broken.MutablePoint\n", Files.readString(ann),
+                "a both-selected class is appended to the annotation file as a class name");
+        assertTrue(Files.notExists(inc) || Files.readString(inc).isEmpty(),
+                "the includes file is untouched when the annotation settings win");
+
+        // Includes-only selection appends to the includes file.
+        byte[] mutable = readResource("/sample/Mutable.class");
+        Path inc2 = dir.resolve("inc2.log");
+        Config incCfg = new Config();
+        incCfg.includes = Set.of("sample.Mutable");
+        incCfg.excludes = Set.of();
+        incCfg.annotationMode = Mode.ANNOTATION_DEFAULT;
+        incCfg.includesMode = Mode.INCLUDES_DEFAULT;
+        incCfg.includesOnFailAppendTo = inc2.toString();
+        ValueClassTransformer includesOnly = new ValueClassTransformer(incCfg);
+        includesOnly.transform(null, null, "sample/Mutable", null, null, mutable);
+        BackgroundFileWriter.drain();
+        assertEquals("sample.Mutable\n", Files.readString(inc2),
+                "an includes-only class is appended to the includes file as a class name");
     }
 
     private byte[] readResource(String name) throws Exception {

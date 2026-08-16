@@ -1,11 +1,12 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.api.AutoValhallaVerifier;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import io.github.thunkware.auto.valhalla.api.AutoValhallaVerifier;
-import java.util.List;
-import org.junit.jupiter.api.Test;
 
 class AutoValhallaVerifierRecordTest {
 
@@ -42,15 +43,15 @@ class AutoValhallaVerifierRecordTest {
     void emptyRecordIsRejected() {
         List<String> v = AutoValhallaVerifier.safe().violations(EmptyRecord.class);
         assertEquals(1, v.size());
-        assertTrue(v.get(0).contains("no instance fields"));
+        assertTrue(v.getFirst().contains("no instance fields"));
     }
 
     @Test
     void recordWithSynchronizedMethodIsRejected() {
         List<String> v = AutoValhallaVerifier.safe().violations(SyncRecord.class);
         assertEquals(1, v.size());
-        assertTrue(v.get(0).contains("synchronized instance method(s)"));
-        assertTrue(v.get(0).contains("syncGet"));
+        assertTrue(v.getFirst().contains("synchronized instance method(s)"));
+        assertTrue(v.getFirst().contains("syncGet"));
     }
 
     @Test
@@ -64,6 +65,6 @@ class AutoValhallaVerifierRecordTest {
         List<String> v =
                 AutoValhallaVerifier.safe().violations(SimpleRecord.class, EmptyRecord.class);
         assertEquals(1, v.size());
-        assertTrue(v.get(0).startsWith(EmptyRecord.class.getName() + ": "));
+        assertTrue(v.getFirst().startsWith(EmptyRecord.class.getName() + ": "));
     }
 }

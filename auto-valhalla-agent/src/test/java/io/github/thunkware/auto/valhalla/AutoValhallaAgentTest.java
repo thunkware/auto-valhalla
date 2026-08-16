@@ -5,13 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
-import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class AutoValhallaAgentTest {
 
@@ -78,16 +79,12 @@ class AutoValhallaAgentTest {
     }
 
     @Test
-    void includesAndIncludesFileMerge() throws Exception {
-        File f = File.createTempFile("inc", ".txt");
-        Files.writeString(f.toPath(), "com.B\n");
-        try {
-            var cfg = parseWith("includes", "a.", "includes-files", f.getAbsolutePath());
-            assertTrue(cfg.includes.contains("a/"), "explicit includes retained");
-            assertTrue(cfg.includes.contains("com/B"), "includes-files patterns merged in");
-        } finally {
-            f.delete();
-        }
+    void includesAndIncludesFileMerge(@TempDir Path dir) throws Exception {
+        Path f = dir.resolve("inc.txt");
+        Files.writeString(f, "com.B\n");
+        var cfg = parseWith("includes", "a.", "includes-files", f.toString());
+        assertTrue(cfg.includes.contains("a/"), "explicit includes retained");
+        assertTrue(cfg.includes.contains("com/B"), "includes-files patterns merged in");
     }
 
     @Test
@@ -123,20 +120,15 @@ class AutoValhallaAgentTest {
     }
 
     @Test
-    void includesFilesSupportsMultipleFiles() throws Exception {
-        File f1 = File.createTempFile("inc1", ".txt");
-        File f2 = File.createTempFile("inc2", ".txt");
-        Files.writeString(f1.toPath(), "com.A\n");
-        Files.writeString(f2.toPath(), "com.B\n");
-        try {
-            var bySemicolon = parseWith(
-                    "includes-files", f1.getAbsolutePath() + ";" + f2.getAbsolutePath());
-            assertTrue(bySemicolon.includes.contains("com/A"), "first file loaded (semicolon)");
-            assertTrue(bySemicolon.includes.contains("com/B"), "second file loaded (semicolon)");
-        } finally {
-            f1.delete();
-            f2.delete();
-        }
+    void includesFilesSupportsMultipleFiles(@TempDir Path dir) throws Exception {
+        Path f1 = dir.resolve("inc1.txt");
+        Path f2 = dir.resolve("inc2.txt");
+        Files.writeString(f1, "com.A\n");
+        Files.writeString(f2, "com.B\n");
+        var bySemicolon = parseWith(
+                "includes-files", f1.toString() + ";" + f2.toString());
+        assertTrue(bySemicolon.includes.contains("com/A"), "first file loaded (semicolon)");
+        assertTrue(bySemicolon.includes.contains("com/B"), "second file loaded (semicolon)");
     }
 
     @Test

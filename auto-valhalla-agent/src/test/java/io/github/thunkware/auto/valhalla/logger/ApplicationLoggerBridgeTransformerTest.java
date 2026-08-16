@@ -1,19 +1,21 @@
-package io.github.thunkware.auto.valhalla;
+package io.github.thunkware.auto.valhalla.logger;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
-import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerBridgeTransformer;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
+import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 import java.lang.reflect.AccessFlag;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApplicationLoggerBridgeTransformerTest {
 
@@ -34,7 +36,7 @@ class ApplicationLoggerBridgeTransformerTest {
         return cf.build(owner, classBuilder ->
             classBuilder.withMethod(methodName,
                     MethodTypeDesc.of(ConstantDescs.CD_void), flags,
-                    mb -> mb.withCode(code -> code.return_())));
+                    mb -> mb.withCode(CodeBuilder::return_)));
     }
 
     private static byte[] transform(String internalName, byte[] bytes) {
@@ -128,8 +130,7 @@ class ApplicationLoggerBridgeTransformerTest {
         // The class IS rebuilt (it matches by class name) but no injection target found
         // so the output contains no call to onLoggerFactoryReady.
         if (out != null) {
-            assertTrue(!containsCallTo(out, "onLoggerFactoryReady"),
-                    "no injection when target method is absent");
+            assertFalse(containsCallTo(out, "onLoggerFactoryReady"), "no injection when target method is absent");
         }
     }
 }
