@@ -53,7 +53,9 @@ public enum Mode {
      *  {@link IllegalArgumentException}. */
     SYNCHRONIZATION_MONITOR("synchronization-monitor");
 
-    public final String flag;
+    private final String flag;
+
+    private static final Set<Mode> VALUES = Collections.unmodifiableSet(EnumSet.allOf(Mode.class));
 
     /** The default set for {@code annotation-mode} (classes selected by the
      *  {@code @AutoValhalla} annotation): {@code safe} — only classes that are
@@ -77,7 +79,7 @@ public enum Mode {
             Collections.unmodifiableSet(EnumSet.of(MARK_CLASS_FINAL, REMOVE_SYNCHRONIZED, MARK_FIELDS_FINAL));
 
     Mode(String flag) {
-        this.flag = flag;
+        this.flag = normalize(flag);
     }
 
     @Override
@@ -89,6 +91,11 @@ public enum Mode {
      *  {@link #INCLUDES_DEFAULT} as the default. */
     public static Set<Mode> parse(String s) {
         return parse(s, INCLUDES_DEFAULT);
+    }
+
+    private static String normalize(String s) {
+        return s.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "");
     }
 
     /** Parses a mode string into a set of {@link Mode}s. A {@code null}, blank or
@@ -105,18 +112,20 @@ public enum Mode {
         }
         Set<String> unknownTokens = new HashSet<>();
         for (String tok : s.split(",")) {
-            tok = tok.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+            tok = normalize(tok.trim());
             if (tok.isEmpty()) {
                 continue;
             }
-            switch (tok) {
-                case "safe" -> set.add(Mode.SAFE);
-                case "yolo" -> set.add(Mode.YOLO);
-                case "markclassfinal" -> set.add(Mode.MARK_CLASS_FINAL);
-                case "removesynchronized" -> set.add(Mode.REMOVE_SYNCHRONIZED);
-                case "markfieldsfinal" -> set.add(Mode.MARK_FIELDS_FINAL);
-                case "synchronizationmonitor" -> set.add(Mode.SYNCHRONIZATION_MONITOR);
-                default -> unknownTokens.add(tok);
+            boolean added = false;
+            for (Mode mode: Mode.VALUES) {
+                if (mode.flag.equals(tok)) {
+                    set.add(mode);
+                    added = true;
+                    break;
+                }
+            }
+            if (!added) {
+                unknownTokens.add(tok);
             }
         }
         if (!unknownTokens.isEmpty()) {

@@ -2,7 +2,6 @@ package io.github.thunkware.auto.valhalla.util;
 
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
-import java.util.concurrent.Callable;
 
 public class Failable {
 
@@ -20,13 +19,20 @@ public class Failable {
         }
     }
 
-    public static <T> T callQuietly(Callable<T> callable) {
+    public interface ThrowingCallable<T> {
+        T call() throws Throwable;
+    }
+
+    public static <T> T callQuietly(ThrowingCallable<T> callable) {
+        return callQuietly(callable, null);
+    }
+
+    public static <T> T callQuietly(ThrowingCallable<T> callable, T defaultValue) {
         try {
             return callable.call();
         } catch (Throwable t) {
             LOG.debug("", t);
-            return null;
+            return defaultValue;
         }
     }
-
 }

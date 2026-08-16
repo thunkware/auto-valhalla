@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla.logger;
 
+import io.github.thunkware.auto.valhalla.util.Failable;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -110,42 +112,42 @@ final class Slf4jInternalLogger extends AbstractInternalLogger {
     }
 
     private boolean invoke(Level level, String msg, Throwable t) {
+        return Failable.callQuietly(() -> tryInvoke(level, msg, t), false);
+    }
+
+    private boolean tryInvoke(Level level, String msg, Throwable t) throws Throwable {
         Object logger = slf4jLogger();
         if (logger == null) {
             return false;
         }
-        try {
-            MethodHandle handle;
-            if (t != null) {
-                handle = switch (level) {
-                    case FATAL, ERROR -> errorWithCauseHandle;
-                    case WARN -> warnWithCauseHandle;
-                    case DEBUG -> debugWithCauseHandle;
-                    case TRACE -> traceWithCauseHandle;
-                    default -> null;
-                };
-                if (handle == null) {
-                    return false;
-                }
-                handle.invokeWithArguments(logger, msg, t);
-            } else {
-                handle = switch (level) {
-                    case FATAL, ERROR -> errorHandle;
-                    case WARN -> warnHandle;
-                    case INFO -> infoHandle;
-                    case DEBUG -> debugHandle;
-                    case TRACE -> traceHandle;
-                    default -> null;
-                };
-                if (handle == null) {
-                    return false;
-                }
-                handle.invokeWithArguments(logger, msg);
+        MethodHandle handle;
+        if (t != null) {
+            handle = switch (level) {
+                case FATAL, ERROR -> errorWithCauseHandle;
+                case WARN -> warnWithCauseHandle;
+                case DEBUG -> debugWithCauseHandle;
+                case TRACE -> traceWithCauseHandle;
+                default -> null;
+            };
+            if (handle == null) {
+                return false;
             }
-            return true;
-        } catch (Throwable e) {
-            return false;
+            handle.invokeWithArguments(logger, msg, t);
+        } else {
+            handle = switch (level) {
+                case FATAL, ERROR -> errorHandle;
+                case WARN -> warnHandle;
+                case INFO -> infoHandle;
+                case DEBUG -> debugHandle;
+                case TRACE -> traceHandle;
+                default -> null;
+            };
+            if (handle == null) {
+                return false;
+            }
+            handle.invokeWithArguments(logger, msg);
         }
+        return true;
     }
 
     private static Object getLoggerInstance(String name) {
@@ -155,11 +157,7 @@ final class Slf4jInternalLogger extends AbstractInternalLogger {
         if (getLoggerMethod == null) {
             return null;
         }
-        try {
-            return getLoggerMethod.invoke(null, name);
-        } catch (Throwable e) {
-            return null;
-        }
+        return Failable.callQuietly(() -> getLoggerMethod.invoke(null, name));
     }
 
     /**
