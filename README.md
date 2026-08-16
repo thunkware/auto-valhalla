@@ -393,6 +393,27 @@ set.
   at runtime; classes loaded *after* the agent attaches (or from the start,
   when attached via `-javaagent`) are the ones rewritten.
 
+### Synchronization
+
+JFR can also be used to find classes used for synchronization:
+
+```bash
+java -XX:StartFlightRecording=filename=locks.jfr \
+     -XX:FlightRecorderOptions=stackdepth=0 \
+     -XX:StartFlightRecording:jdk.JavaMonitorEnter#threshold=0ms \
+     -XX:StartFlightRecording:jdk.JavaMonitorWait#threshold=0ms \
+     -jar myapp.jar
+
+jfr print --json --events jdk.JavaMonitorEnter locks.jfr | \
+    jq '.recording.events.[].values.monitorClass.name' | \
+    sort | uniq | tr -d '"' | tr '/' '.'
+```
+
+Note that JFR is intended to find lock contention. Because it performs sampling, 
+it will miss many classes used in synchronization. In comparison, this agent's
+synchronization-monitor mode does not sample but instead instruments all classes
+to attempt to find all classes used in synchronization.
+
 ## AI assistance
 
 This project was vibe-coded with an AI coding agent. Humans designed,
