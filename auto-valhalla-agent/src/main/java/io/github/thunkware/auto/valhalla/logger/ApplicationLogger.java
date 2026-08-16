@@ -21,7 +21,7 @@ import java.time.ZonedDateTime;
  * framework is confirmed ready, so early startup messages are not permanently
  * bound to a substitute or NOP logger.
  */
-final class Slf4jInternalLogger extends AbstractInternalLogger {
+final class ApplicationLogger extends AbstractInternalLogger {
 
     private static volatile int version = 0;
     private static volatile boolean attempted;
@@ -44,7 +44,7 @@ final class Slf4jInternalLogger extends AbstractInternalLogger {
     private volatile Object slf4jLogger;
     private volatile int slf4jVersion = -1;
 
-    Slf4jInternalLogger(String name) {
+    ApplicationLogger(String name) {
         super(name);
     }
 
@@ -183,7 +183,7 @@ final class Slf4jInternalLogger extends AbstractInternalLogger {
         isWarnEnabledHandle = null;
         isErrorEnabledHandle = null;
         attempted = false;
-        version++; // triggers lazy re-acquire in all Slf4jInternalLogger instances
+        version++; // triggers lazy re-acquire in all ApplicationLogger instances
         init();    // reentrant: same thread holds the lock
     }
 

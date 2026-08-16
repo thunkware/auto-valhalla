@@ -7,14 +7,14 @@ import java.time.ZonedDateTime;
  * resolves its effective level hierarchically via
  * {@link InternalLoggerFactory#effectiveLevel(String)}. In
  * {@link LoggingMode#APPLICATION} mode it delegates to a
- * {@link Slf4jInternalLogger} so agent messages flow through the application's
+ * {@link ApplicationLogger} so agent messages flow through the application's
  * logging framework.
  */
-final class SimpleInternalLogger extends AbstractInternalLogger {
+final class SimpleLogger extends AbstractInternalLogger {
 
-    private volatile Slf4jInternalLogger slf4j;
+    private volatile ApplicationLogger slf4j;
 
-    SimpleInternalLogger(String name) {
+    SimpleLogger(String name) {
         super(name);
     }
 
@@ -30,7 +30,7 @@ final class SimpleInternalLogger extends AbstractInternalLogger {
             }
             case APPLICATION -> {
                 if (slf4j == null) {
-                    slf4j = new Slf4jInternalLogger(name);
+                    slf4j = new ApplicationLogger(name);
                 }
                 slf4j.logDirect(lv, msg, t, timestamp);
             }

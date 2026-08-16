@@ -1,12 +1,11 @@
 package io.github.thunkware.auto.valhalla;
 
-import io.github.thunkware.auto.valhalla.api.AutoValhallaVerifier;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.github.thunkware.auto.valhalla.api.AutoValhallaVerifier;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class AutoValhallaVerifierRecordTest {
 

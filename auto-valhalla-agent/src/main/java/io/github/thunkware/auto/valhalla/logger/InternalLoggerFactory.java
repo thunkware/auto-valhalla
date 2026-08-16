@@ -47,8 +47,8 @@ public final class InternalLoggerFactory {
         // The mode is typically set after loggers are first obtained (static
         // initializers run before AutoValhallaAgent.install), so the default
         // implementation re-checks the mode at log time; in APPLICATION mode it
-        // delegates to a Slf4jInternalLogger.
-        return new SimpleInternalLogger(name);
+        // delegates to a ApplicationLogger.
+        return new SimpleLogger(name);
     }
 
     /**
@@ -131,7 +131,7 @@ public final class InternalLoggerFactory {
      * Called once the application's logging framework is ready.
      */
     public static void reinstall() {
-        Slf4jInternalLogger.reinstall();
+        ApplicationLogger.reinstall();
         flushBuffer();
     }
 
@@ -158,7 +158,8 @@ public final class InternalLoggerFactory {
     }
 
     static String timestamp(ZonedDateTime timestamp) {
-        return (timestamp != null ? timestamp : ZonedDateTime.now()).format(TIMESTAMP_FORMAT);
+        final var now = timestamp != null ? timestamp : ZonedDateTime.now();
+        return now.format(TIMESTAMP_FORMAT);
     }
 
     /**
