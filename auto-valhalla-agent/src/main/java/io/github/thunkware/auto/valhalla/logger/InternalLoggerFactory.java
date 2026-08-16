@@ -97,11 +97,8 @@ public final class InternalLoggerFactory {
      * Sets a per-logger level override only when no override is currently present.
      * Used to install defaults that user config (applied before calling this) takes precedence over.
      */
-    public static void setLevelIfAbsent(String loggerName, Level level) {
-        if (loggerName == null || loggerName.isBlank()) {
-            return;
-        }
-        loggerLevels.putIfAbsent(loggerName, level);
+    public static void setLevelIfAbsent(InternalLogger logger, Level level) {
+        loggerLevels.putIfAbsent(logger.getName(), level);
     }
 
     /**

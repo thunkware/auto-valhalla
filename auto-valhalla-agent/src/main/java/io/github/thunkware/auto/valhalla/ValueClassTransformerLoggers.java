@@ -24,10 +24,10 @@ final class ValueClassTransformerLoggers {
             InternalLoggerFactory.getLogger("auto-valhalla.includes.fail");
 
     ValueClassTransformerLoggers() {
-        InternalLoggerFactory.setLevelIfAbsent(annotationRejected.getName(), Level.FATAL);
-        InternalLoggerFactory.setLevelIfAbsent(annotationFail.getName(), Level.FATAL);
-        InternalLoggerFactory.setLevelIfAbsent(includesRejected.getName(), Level.DEBUG);
-        InternalLoggerFactory.setLevelIfAbsent(includesFail.getName(), Level.DEBUG);
+        InternalLoggerFactory.setLevelIfAbsent(annotationRejected, Level.FATAL);
+        InternalLoggerFactory.setLevelIfAbsent(annotationFail, Level.FATAL);
+        InternalLoggerFactory.setLevelIfAbsent(includesRejected, Level.DEBUG);
+        InternalLoggerFactory.setLevelIfAbsent(includesFail, Level.DEBUG);
     }
 
     InternalLogger log() {
