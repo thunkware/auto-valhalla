@@ -42,7 +42,7 @@ public final class ClassFiles {
             if (d.length() < 3 || d.charAt(0) != 'L') {
                 return null; // primitive or array — no .class resource
             }
-            String resource = d.substring(1, d.length() - 1) + ".class";
+            String resource = StringUtils.substringBetween(d, "L", ";") + ".class";
             try (InputStream is = cl.getResourceAsStream(resource)) {
                 if (is == null) {
                     return null;

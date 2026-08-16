@@ -18,8 +18,7 @@ record ClassName(String jvm, String java) {
     /** JVM-form package name ({@code com/example} for {@code com/example/Foo};
      *  empty string for a default-package class). */
     String packageName() {
-        int slash = jvm.lastIndexOf('/');
-        return slash < 0 ? "" : jvm.substring(0, slash);
+        return jvm.indexOf('/') < 0 ? "" : StringUtils.substringBeforeLast(jvm, "/");
     }
 
 }

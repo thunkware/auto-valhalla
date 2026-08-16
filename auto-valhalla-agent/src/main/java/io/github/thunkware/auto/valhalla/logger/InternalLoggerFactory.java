@@ -1,5 +1,6 @@
 package io.github.thunkware.auto.valhalla.logger;
 
+import io.github.thunkware.auto.valhalla.StringUtils;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Queue;
@@ -179,7 +180,7 @@ public final class InternalLoggerFactory {
                 Level root = loggerLevels.get("root");
                 return root != null ? root : level;
             }
-            key = key.substring(0, dot);
+            key = StringUtils.substringBeforeLast(key, ".");
         }
     }
 }

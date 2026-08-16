@@ -176,7 +176,7 @@ public final class AutoValhallaAgent {
         // These are not in Config.KNOWN (the suffix is a logger name, not a fixed key).
         for (String prop : System.getProperties().stringPropertyNames()) {
             if (prop.startsWith(Config.LOG_LEVEL_PREFIX)) {
-                String loggerName = prop.substring(Config.LOG_LEVEL_PREFIX.length());
+                String loggerName = StringUtils.substringAfter(prop, Config.LOG_LEVEL_PREFIX);
                 if (!loggerName.isEmpty()) {
                     String v = System.getProperty(prop);
                     if (v != null) {
@@ -240,7 +240,7 @@ public final class AutoValhallaAgent {
                 case Config.LOGGING -> cfg.logging = a[1].trim();
                 default -> {
                     if (a[0].startsWith(Config.LOG_LEVEL_PREFIX)) {
-                        String loggerName = a[0].substring(Config.LOG_LEVEL_PREFIX.length());
+                        String loggerName = StringUtils.substringAfter(a[0], Config.LOG_LEVEL_PREFIX);
                         loggerName = loggerName.equalsIgnoreCase("root") ? "root" : loggerName;
                         cfg.loggerLevels.put(loggerName, a[1].trim());
                     }
@@ -312,7 +312,7 @@ public final class AutoValhallaAgent {
             for (String rawKey : props.stringPropertyNames()) {
                 String s = rawKey.trim();
                 if (s.startsWith("auto-valhalla.")) {
-                    s = s.substring("auto-valhalla.".length());
+                    s = StringUtils.substringAfter(s, "auto-valhalla.");
                 }
                 boolean isKnown = Config.KNOWN.contains(s) && !s.equals(Config.CONFIG);
                 boolean isLogLevelOverride = s.startsWith(Config.LOG_LEVEL_PREFIX);
@@ -341,11 +341,14 @@ public final class AutoValhallaAgent {
         if (t.equals("*")) {
             return "*";
         }
-        if (t.endsWith(".*") || t.endsWith("/*")) {
-            return t.substring(0, t.length() - 2).replace('.', '/') + "/";
+        if (t.endsWith(".*")) {
+            return StringUtils.substringBeforeLast(t, ".*").replace('.', '/') + "/";
+        }
+        if (t.endsWith("/*")) {
+            return StringUtils.substringBeforeLast(t, "/*").replace('.', '/') + "/";
         }
         if (t.endsWith(".")) {
-            return t.substring(0, t.length() - 1).replace('.', '/') + "/";
+            return StringUtils.substringBeforeLast(t, ".").replace('.', '/') + "/";
         }
         if (t.indexOf('.') >= 0) {
             return t.replace('.', '/');
@@ -416,7 +419,7 @@ public final class AutoValhallaAgent {
         List<String> result = new ArrayList<>();
         for (String prop : propNames) {
             if (prop.startsWith(prefix)) {
-                String suffix = prop.substring(prefix.length());
+                String suffix = StringUtils.substringAfter(prop, prefix);
                 if (!known.contains(suffix)) {
                     result.add(prop);
                 }
@@ -444,9 +447,9 @@ public final class AutoValhallaAgent {
     private static String envName(String prop) {
         String body;
         if (prop.startsWith("auto-valhalla.")) {
-            body = "AUTO_VALHALLA_" + prop.substring("auto-valhalla.".length()).replace('-', '_').replace('.', '_');
+            body = "AUTO_VALHALLA_" + StringUtils.substringAfter(prop, "auto-valhalla.").replace('-', '_').replace('.', '_');
         } else if (prop.startsWith("autovalhalla.")) {
-            body = "AUTO_VALHALLA_" + prop.substring("autovalhalla.".length()).replace('-', '_').replace('.', '_');
+            body = "AUTO_VALHALLA_" + StringUtils.substringAfter(prop, "autovalhalla.").replace('-', '_').replace('.', '_');
         } else {
             body = prop.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
         }
