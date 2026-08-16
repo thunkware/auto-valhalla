@@ -121,9 +121,16 @@ public final class InternalLoggerFactory {
         }
     }
 
-    /** Starts buffering log output in memory. Flushed by {@link #reinstall()}. */
+    /**
+     * Starts buffering log output in memory. Flushed by {@link #reinstall()}.
+     * Buffering only engages in {@link LoggingMode#APPLICATION} mode (where the
+     * SLF4J bridge is installed and will eventually flush); in any other mode
+     * this is a no-op so messages are never held and lost.
+     */
     public static void startBuffering() {
-        buffering = true;
+        if (loggingMode == LoggingMode.APPLICATION) {
+            buffering = true;
+        }
     }
 
     /**
