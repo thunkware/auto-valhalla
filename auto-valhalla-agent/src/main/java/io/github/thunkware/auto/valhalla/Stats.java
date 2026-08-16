@@ -52,10 +52,12 @@ final class Stats {
     private static void logStats() {
         while (!Thread.currentThread().isInterrupted()) {
             Failable.runQuietly(() -> TimeUnit.MINUTES.sleep(1));
-            log.debug(String.format("Stats: transformTotalDuration=%s transformTotalCount=%s " +
-                                            "synchronizedOverheadDuration=%s synchronizedCount=%s",
-                                    transformTotalDurationMs(), transformTotalCount(),
-                                    synchronizedOverheadDurationMs(), synchronizedCount.get()));
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Stats: transformTotalDuration=%s transformTotalCount=%s " +
+                                                "synchronizedOverheadDuration=%s synchronizedCount=%s",
+                                        transformTotalDurationMs(), transformTotalCount(),
+                                        synchronizedOverheadDurationMs(), synchronizedCount.get()));
+            }
         }
     }
 }
