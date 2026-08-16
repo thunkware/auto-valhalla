@@ -409,7 +409,7 @@ jfr print --json --events jdk.JavaMonitorEnter locks.jfr | \
     sort | uniq | tr -d '"' | tr '/' '.'
 ```
 
-Note that JFR is intended to find lock contention. Because it performs sampling, 
+However, because JFR is intended to find lock contention and because it performs sampling, 
 it will miss many classes used in synchronization. In comparison, this agent's
 synchronization-monitor mode does not sample but instead instruments all classes
 to attempt to find all classes used in synchronization.

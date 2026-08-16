@@ -20,17 +20,9 @@
   </description>
 
   <properties>
-    <!-- The attach entry point (AutoValhallaAttachAgent) must be class-file
-         version 49 so it is safely callable on any JVM from JDK 5 upwards. -->
-    <java5.home>${env.JAVA5_HOME}</java5.home>
-    <!-- The JDK 5 build of ByteBuddyAgent, whose class file the JDK 5 javac
-         must be able to read. -->
+    <!-- The JDK 5 build of ByteBuddyAgent, whose classes the shade plugin
+         relocates into the internal package. -->
     <net.bytebuddy.version>1.18.11-jdk5</net.bytebuddy.version>
-    <!-- ByteBuddyAgent references @SuppressFBWarnings; the annotation jar must
-         be class-file version 49 or older (hence version 3.0.1u2, not the
-         v52 spotbugs-annotations) so the JDK 5 javac can read it. -->
-    <findbugs.annotations.version>3.0.1u2</findbugs.annotations.version>
-    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
   </properties>
 
   <dependencies>
@@ -41,12 +33,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
-      <version>${findbugs.annotations.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>io.github.thunkware</groupId>
       <artifactId>auto-valhalla-agent</artifactId>
       <version>${project.version}</version>
@@ -55,50 +41,6 @@
 
   <build>
     <plugins>
-      <!-- AutoValhallaAttachAgent is compiled to class-file version 49 by the
-           JDK 5 javac step below, so exclude it from the JDK 28 compile. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
-        <configuration>
-          <excludes>
-            <exclude>**/AutoValhallaAttachAgent.java</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-      <!-- Compile AutoValhallaAttachAgent with the real JDK 5 javac so its class
-           file is version 49 and can be loaded on any JVM from JDK 5 upwards. -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>3.5.0</version>
-        <executions>
-          <execution>
-            <id>compile-jdk5</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>${java5.home}/bin/javac</executable>
-              <arguments>
-                <argument>-source</argument>
-                <argument>1.5</argument>
-                <argument>-target</argument>
-                <argument>1.5</argument>
-                <argument>-d</argument>
-                <argument>${project.build.outputDirectory}</argument>
-                <!-- AutoValhallaAgent (v49) lives in the agent jar; ByteBuddyAgent
-                     (and its @SuppressFBWarnings annotation) back the attach call. -->
-                <argument>-classpath</argument>
-                <argument>${project.basedir}/../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${net.bytebuddy.version}/byte-buddy-agent-${net.bytebuddy.version}.jar:${settings.localRepository}/com/google/code/findbugs/annotations/${findbugs.annotations.version}/annotations-${findbugs.annotations.version}.jar</argument>
-                <argument>src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaAttachAgent.java</argument>
-              </arguments>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!-- Shade (relocate) Byte Buddy into an internal package so it does not
            leak onto the application classpath. auto-valhalla-agent stays a
            normal dependency (its v72 classes are too new for the shade plugin

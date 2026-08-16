@@ -100,6 +100,8 @@
         <configuration>
           <excludes>
             <exclude>**/AutoValhallaAgent.java</exclude>
+            <exclude>**/AutoValhallaAttachAgent.java</exclude>
+            <exclude>**/ByteBuddyAgent.java</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -141,6 +143,8 @@
                 <argument>-d</argument>
                 <argument>${project.build.directory}/shim-classes</argument>
                 <argument>src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent.java</argument>
+                <argument>src/main/java/io/github/thunkware/auto/valhalla/AutoValhallaAttachAgent.java</argument>
+                <argument>src/main/agent5/java/io/github/thunkware/auto/valhalla/internal/bytebuddy/agent/ByteBuddyAgent.java</argument>
                 <argument>src/main/agent5/java/io/github/thunkware/auto/valhalla/AutoValhallaAgent28.java</argument>
               </arguments>
             </configuration>
@@ -155,6 +159,7 @@
               <executable>/bin/cp</executable>
               <arguments>
                 <argument>${project.build.directory}/shim-classes/io/github/thunkware/auto/valhalla/AutoValhallaAgent.class</argument>
+                <argument>${project.build.directory}/shim-classes/io/github/thunkware/auto/valhalla/AutoValhallaAttachAgent.class</argument>
                 <argument>${project.build.outputDirectory}/io/github/thunkware/auto/valhalla/</argument>
               </arguments>
             </configuration>

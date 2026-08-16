@@ -1,7 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.internal.bytebuddy.agent.ByteBuddyAgent;
 import java.lang.instrument.Instrumentation;
-import net.bytebuddy.agent.ByteBuddyAgent;
 
 /**
  * Programmatic entry point for attaching the auto-valhalla agent to an
@@ -9,14 +9,7 @@ import net.bytebuddy.agent.ByteBuddyAgent;
  * {@code -javaagent}.
  *
  * <p>This class is compiled with a real JDK 5 compiler (class-file version 49)
- * so it can be loaded on any JVM from JDK 5 upwards. It installs the
- * {@code ByteBuddyAgent} to obtain an {@link Instrumentation} and then delegates
- * to {@link AutoValhallaAgent#agentmain} to install the value-class transformer.
- *
- * <p>Byte Buddy is shaded (relocated to
- * {@code io.github.thunkware.auto.valhalla.internal.bytebuddy}) inside this
- * module's jar, so {@code net.bytebuddy} never leaks onto the application
- * classpath and cannot conflict with another Byte Buddy version.
+ * so it can be loaded on any JVM from JDK 5 upwards.
  *
  * <p>Add the {@code auto-valhalla-agent-attach} dependency and call
  * {@link #attach()} as early as possible at startup, e.g. from a static initializer.
