@@ -49,6 +49,18 @@ public final class AutoValhallaAgent {
                     + "+ with --enable-preview.";
             throw new IllegalStateException(msg);
         }
+        System.out.println("ByteBuddyAgent.LATENT_RESOLVE.length");
+        try {
+            //noinspection ResultOfMethodCallIgnored
+            ByteBuddyAgent.getInstrumentation();
+        } catch (RuntimeException ignore) {
+        } catch (Error t) {
+            String msg = "Cannot load byte-buddy-agent. Verify that byte-buddy-agent dependency is defined and its scope is 'compile' ";
+            throw new IllegalStateException(msg, t);
+        }
+
+        System.out.println("ByteBuddyAgent.LATENT_RESOLVE.length ok");
+
         Instrumentation instrumentation = ByteBuddyAgent.install();
         AutoValhallaAgent28.install(instrumentation);
     }

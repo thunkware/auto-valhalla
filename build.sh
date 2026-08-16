@@ -5,7 +5,7 @@
 #      annotation = 49, exactly one AutoValhallaAgent28)
 #   3. JDK 5 safety: the agent must warn and return on an ancient JVM
 #   4. JDK 28 agent-attach integration test (real transformation path)
-#   5. end-to-end demo (with vs without the agent) (./run-demo.sh)
+#   5. end-to-end demo (with vs without the agent) (./test/run-demo.sh)
 #
 # Requires JAVA_HOME (JDK 28+) and JAVA5_HOME.
 set -uo pipefail
@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 export JAVA_HOME
 export JAVA5_HOME
 
-RUNNER5_CLASSES=auto-valhalla-demo-runner5/target/classes
+RUNNER5_CLASSES=test/auto-valhalla-demo-runner5/target/classes
 # agent / demo5 jars follow Maven's artifactId-version convention; resolved after the build
 AGENT_JAR=""
 DEMO5_JAR=""
@@ -52,7 +52,7 @@ check "$RC" "mvn install (annotation=JDK8, agent=JDK28)"
 [ "$RC" -eq 0 ] || { echo "FATAL: mvn install failed (see /tmp/avv-build.log); aborting."; exit 1; }
 
 AGENT_JAR=$(ls auto-valhalla-agent/target/auto-valhalla-agent-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
-DEMO5_JAR=$(ls auto-valhalla-demo5/target/auto-valhalla-demo5-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+DEMO5_JAR=$(ls test/auto-valhalla-demo5/target/auto-valhalla-demo5-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 
 echo "== 2. agent jar class-file audit =="
 SHIM=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent.class)
@@ -79,11 +79,11 @@ echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints 
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"
 
 echo "== 4. JDK 28 agent-attach integration test =="
-mvn -q -pl auto-valhalla-demo-runner test >/tmp/avv-test.log 2>&1
+mvn -q -pl test/auto-valhalla-demo-runner test >/tmp/avv-test.log 2>&1
 check $? "demo-runner AgentAttachTest"
 
 echo "== 5. end-to-end demo =="
-./run-demo.sh >/tmp/avv-demo.log 2>&1
+./test/run-demo.sh >/tmp/avv-demo.log 2>&1
 check $? "run-demo.sh (with and without agent)"
 
 echo

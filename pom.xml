@@ -26,10 +26,10 @@
     <module>auto-valhalla-api</module>
     <module>auto-valhalla-agent</module>
     <module>auto-valhalla-agent-attach</module>
-    <module>auto-valhalla-demo5</module>
-    <module>auto-valhalla-demo16</module>
-    <module>auto-valhalla-demo-runner</module>
-    <module>auto-valhalla-demo-runner5</module>
+    <module>test/auto-valhalla-demo5</module>
+    <module>test/auto-valhalla-demo16</module>
+    <module>test/auto-valhalla-demo-runner</module>
+    <module>test/auto-valhalla-demo-runner5</module>
   </modules>
 
   <properties>

@@ -8,6 +8,7 @@
     <groupId>io.github.thunkware</groupId>
     <artifactId>auto-valhalla</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <artifactId>auto-valhalla-demo-runner5</artifactId>
@@ -27,7 +28,7 @@
       <version>${project.version}</version>
     </dependency>
     <!-- Ensures the agent JAR is packaged before the run-on-jdk5 exec tries to
-         load it via -javaagent:../auto-valhalla-agent/target/... -->
+         load it via -javaagent:../../auto-valhalla-agent/target/... -->
     <dependency>
       <groupId>io.github.thunkware</groupId>
       <artifactId>auto-valhalla-agent-attach</artifactId>
@@ -60,7 +61,7 @@
                 <argument>-target</argument>
                 <argument>1.5</argument>
                 <argument>-cp</argument>
-                <argument>../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+                <argument>../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>src/main/jdk5/demo5runner/Main.java</argument>
@@ -79,9 +80,9 @@
             <configuration>
               <executable>${java5.home}/bin/java</executable>
               <arguments>
-                <argument>-javaagent:../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+                <argument>-javaagent:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
                 <argument>-cp</argument>
-                <argument>${project.build.outputDirectory}:../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+                <argument>${project.build.outputDirectory}:../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
                 <argument>demo5runner.Main</argument>
               </arguments>
             </configuration>

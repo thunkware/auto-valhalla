@@ -9,10 +9,10 @@ read [README.md](README.md) instead.
 | --- | --- |
 | `auto-valhalla-api` | The `@AutoValhalla` annotation and `AutoValhallaVerifier`. Compiled with a **real JDK 5** to genuine Java 5 bytecode (major 49) so it is loadable everywhere. |
 | `auto-valhalla-agent` | The real agent (`AutoValhallaAgent28`, `ValueClassTransformer`, `ValueClassRewriter`, `ConstructorRewriter`). Compiled **without** preview so it loads even when preview is off; embeds the annotation and the JDK 5 shim (`AutoValhallaAgent`). |
-| `auto-valhalla-demo5` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files. |
-| `auto-valhalla-demo16` | Candidates compiled to Java 16 bytecode (a record is included to show records are rewritten by the agent). |
-| `auto-valhalla-demo-runner` | Runs the demos with `Objects.hasIdentity` to report value-ness, and holds the agent-attach integration test. |
-| `auto-valhalla-demo-runner5` | A JDK 5 app used to prove the agent is safe to attach on a pre-Valhalla JVM (it must only warn and return). |
+| `test/auto-valhalla-demo5` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files. |
+| `test/auto-valhalla-demo16` | Candidates compiled to Java 16 bytecode (a record is included to show records are rewritten by the agent). |
+| `test/auto-valhalla-demo-runner` | Runs the demos with `Objects.hasIdentity` to report value-ness, and holds the agent-attach integration test. |
+| `test/auto-valhalla-demo-runner5` | A JDK 5 app used to prove the agent is safe to attach on a pre-Valhalla JVM (it must only warn and return). |
 
 ## Building
 
@@ -46,8 +46,8 @@ reject.
 ## Running the demos
 
 ```bash
-./run-demo.sh          # both with and without the agent (needs JAVA_HOME set)
-./run-demo.sh debug     # with verbose logging
+./test/run-demo.sh          # both with and without the agent (needs JAVA_HOME set)
+./test/run-demo.sh debug     # with verbose logging
 ```
 
 Each demo class prints `hasIdentity(...)`; with the agent it becomes `false`
@@ -62,7 +62,7 @@ build with `mvn install` (or `mvn package`) before running the test:
 
 ```bash
 mvn -DskipTests install
-mvn -pl auto-valhalla-demo-runner test
+mvn -pl test/auto-valhalla-demo-runner test
 ```
 
 The test is skipped automatically if
