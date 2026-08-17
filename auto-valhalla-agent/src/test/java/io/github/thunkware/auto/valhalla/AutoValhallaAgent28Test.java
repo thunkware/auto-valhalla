@@ -73,6 +73,28 @@ class AutoValhallaAgent28Test {
     }
 
     @Test
+    void patternOptionsAreReplacedNotAccumulated(@TempDir Path dir) throws Exception {
+        Path fromConfig = dir.resolve("from-config.txt");
+        Path fromProp = dir.resolve("from-prop.txt");
+        Files.writeString(fromConfig, "com.FromConfigFile\n");
+        Files.writeString(fromProp, "com.FromSysProp\n");
+        Path config = dir.resolve("av.properties");
+        Files.writeString(config, "auto-valhalla.includes=com.config\n"
+                + "auto-valhalla.excludes=com.config.excluded\n"
+                + "auto-valhalla.includes-files=" + fromConfig + "\n");
+
+        var cfg = parseWith("config", config.toString(),
+                "includes", "com.sysprop",
+                "excludes", "com.sysprop.excluded",
+                "includes-files", fromProp.toString());
+
+        assertEquals(Set.of("com/sysprop", "com/FromSysProp"), cfg.includes,
+                "the config file's includes and includes-files are replaced, not extended");
+        assertEquals(Set.of("com/sysprop/excluded"), cfg.excludes,
+                "the config file's excludes is replaced, not extended");
+    }
+
+    @Test
     void normalizePatternDoesNotRequireTrailingDot() {
         assertEquals("demo16", AutoValhallaAgent28.normalizePattern("demo16"));
         assertEquals("com/Foo", AutoValhallaAgent28.normalizePattern("com.Foo"));

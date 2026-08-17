@@ -47,8 +47,8 @@ import java.util.stream.Collectors;
  *       matching classes (takes precedence over includes and the annotation).</li>
  *   <li>{@code auto-valhalla.includes-files} / {@code auto-valhalla.excludes-files}
  *       — path to a file with one pattern per line (blank lines and {@code #}
- *       comments ignored). Multiple files may be separated by {@code ;} or
- *       {@code ,}; each option may also be repeated and all files are merged.</li>
+ *       comments ignored). One value may name several files, separated by
+ *       {@code ;} or {@code ,}, and their patterns are merged.</li>
  *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
  *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
  *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
@@ -89,6 +89,12 @@ import java.util.stream.Collectors;
  * A class selected by both the annotation and {@code includes} follows the
  * annotation settings for failure handling (an explicit in-source opt-in is
  * the stronger statement).
+ *
+ * <p>Each option is set by exactly one source, the highest-precedence one that
+ * supplies it: {@code includes} and {@code excludes} are replaced wholesale, not
+ * extended, so a system property does not add to what the config file said.
+ * Patterns from {@code includes} and {@code includes-files} do combine, though —
+ * they are separate options.
  *
  * <p>The same options may also be set as environment variables using the
  * {@code AUTO_VALHALLA_*} convention: the canonical key (without the
@@ -173,8 +179,10 @@ public final class AutoValhallaAgent28 {
     }
 
     static Config parse() {
-        // Ordered list of [canonicalKey, value] assignments. Later entries win
-        // for scalar options; include/exclude sets accumulate across sources.
+        // Ordered list of [canonicalKey, value] assignments, lowest precedence
+        // first. A later entry wins outright: an option is set by exactly one
+        // source, including the pattern options, whose value replaces rather than
+        // extends what a lower-precedence source said.
         List<String[]> assigns = new ArrayList<>();
 
         // Lowest precedence first: the config file, so that a system property or
@@ -217,26 +225,22 @@ public final class AutoValhallaAgent28 {
 
         for (String[] a : assigns) {
             switch (a[0]) {
-                case Config.INCLUDES -> cfg.includes.addAll(parsePatternSet(a[1]));
+                case Config.INCLUDES -> {
+                    cfg.includes.clear();
+                    cfg.includes.addAll(parsePatternSet(a[1]));
+                }
                 case Config.EXCLUDES -> {
+                    cfg.excludes.clear();
                     cfg.excludes.addAll(parsePatternSet(a[1]));
                     userSuppliedExcludes = true;
                 }
                 case Config.INCLUDES_FILES -> {
-                    for (String p : a[1].split("[;,]")) {
-                        String t = p.trim();
-                        if (!t.isEmpty()) {
-                            cfg.includesFiles.add(t);
-                        }
-                    }
+                    cfg.includesFiles.clear();
+                    cfg.includesFiles.addAll(parsePathList(a[1]));
                 }
                 case Config.EXCLUDES_FILES -> {
-                    for (String p : a[1].split("[;,]")) {
-                        String t = p.trim();
-                        if (!t.isEmpty()) {
-                            cfg.excludesFiles.add(t);
-                        }
-                    }
+                    cfg.excludesFiles.clear();
+                    cfg.excludesFiles.addAll(parsePathList(a[1]));
                     userSuppliedExcludes = true;
                 }
                 case Config.ANNOTATION_MODE -> cfg.annotationMode = Mode.parse(a[1], Mode.ANNOTATION_DEFAULT);
@@ -396,6 +400,19 @@ public final class AutoValhallaAgent28 {
             return StringUtils.substringBeforeLast(t, "/*").replace('.', '/') + "/";
         }
         return t.replace('.', '/');
+    }
+
+    /** Splits one {@code *-files} option value, which may name several files
+     *  separated by {@code ;} or {@code ,}. */
+    private static List<String> parsePathList(String value) {
+        List<String> paths = new ArrayList<>();
+        for (String p : value.split("[;,]")) {
+            String t = p.trim();
+            if (!t.isEmpty()) {
+                paths.add(t);
+            }
+        }
+        return paths;
     }
 
     private static Set<String> parsePatternSet(String value) {

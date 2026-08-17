@@ -316,7 +316,8 @@ logging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
 | `auto-valhalla.config` | Path to a Java properties file supplying any of the options. |
 
 Config file entries are applied first, so an environment variable or system
-property set alongside the file overrides it.
+property set alongside the file overrides it — including `includes` and
+`excludes`, which are replaced wholesale rather than merged.
 
 Each key is spelled exactly as the system property it stands for — options keep
 their `auto-valhalla.` prefix, and per-logger levels their `logging.level.`
