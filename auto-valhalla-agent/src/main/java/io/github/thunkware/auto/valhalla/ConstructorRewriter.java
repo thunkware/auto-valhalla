@@ -134,7 +134,7 @@ final class ConstructorRewriter {
             for (int k = 0; k < r.movable.size(); k++) {
                 CodeElement e = r.movable.get(k);
                 if (isThisLoad(e)) {
-                    CodeElement nxt = (k + 1 < r.movable.size()) ? r.movable.get(k + 1) : null;
+                    CodeElement nxt = nextInstruction(r.movable, k);
                     if (nxt instanceof FieldInstruction fi && fi.opcode() == Opcode.GETFIELD
                             && fi.owner().asInternalName().equals(self)
                             && fieldLocal.containsKey(fi.name().stringValue())) {
@@ -196,6 +196,18 @@ final class ConstructorRewriter {
             return true;
         }
 
+        /** The first real instruction after index {@code k}, skipping pseudo-elements
+         *  such as line numbers, or {@code null} if there is none. */
+        private static CodeElement nextInstruction(List<CodeElement> elems, int k) {
+            for (int i = k + 1; i < elems.size(); i++) {
+                CodeElement e = elems.get(i);
+                if (e instanceof Instruction) {
+                    return e;
+                }
+            }
+            return null;
+        }
+
         /** True if {@code e} loads {@code this} ({@code aload_0}). */
         private static boolean isThisLoad(CodeElement e) {
             return e instanceof LoadInstruction li
@@ -225,9 +237,16 @@ final class ConstructorRewriter {
             int i = 0;
             for (; i < post.size(); i++) {
                 CodeElement e = post.get(i);
-                if (e instanceof LineNumber || e instanceof LocalVariable) {
-                    // Line numbers are preserved but are not instructions: they
-                    // must not stop the relocation scan.
+                if (e instanceof LocalVariable) {
+                    // Local-variable ranges are bound to the original bytecode
+                    // offsets, so they cannot survive the relocation.
+                    continue;
+                }
+                if (e instanceof LineNumber) {
+                    // A line number is not an instruction, so it must not stop the
+                    // relocation scan; buffer it with the block it belongs to so
+                    // the rewritten constructor keeps its line-number table.
+                    block.add(e);
                     continue;
                 }
                 if (!(e instanceof Instruction ins)) {
