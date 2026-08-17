@@ -8,6 +8,8 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Creates {@link InternalLogger} instances and holds the shared logging
@@ -28,8 +30,20 @@ public final class InternalLoggerFactory {
     private static final ConcurrentMap<String, Level> loggerLevels = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, InternalLogger> instances = new ConcurrentHashMap<>();
 
-    private static volatile boolean buffering = false;
+    private static final AtomicBoolean buffering = new AtomicBoolean(false);
     private static final Queue<LogEntry> pendingLogs = new ConcurrentLinkedQueue<>();
+    private static final AtomicInteger pendingCount = new AtomicInteger();
+
+    /** Undocumented safety valves for {@link #startBuffering()}: buffering is
+     *  abandoned (and everything held is emitted) after this many messages or
+     *  this many milliseconds, whichever comes first, so a bridge that never
+     *  becomes ready cannot swallow the agent's output. A non-positive
+     *  {@code maxBufferMillis} disables the time limit. Not final so tests can
+     *  shrink them. */
+    static int maxBufferedLogs =
+            Integer.getInteger(InternalLoggerFactory.class.getName() + ".maxBufferedLogs", 1_000);
+    static long maxBufferMillis =
+            Long.getLong(InternalLoggerFactory.class.getName() + ".maxBufferMillis", 60_000L);
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
@@ -127,11 +141,38 @@ public final class InternalLoggerFactory {
      * Buffering only engages in {@link LoggingSystem#APPLICATION} mode (where the
      * SLF4J bridge is installed and will eventually flush); in any other mode
      * this is a no-op so messages are never held and lost.
+     *
+     * <p>Buffering is bounded: it is abandoned after {@code maxBufferedLogs}
+     * messages or {@code maxBufferMillis} (see the fields of the same name), so an
+     * application that never reaches the point where the bridge is installed —
+     * a Spring Boot fat jar started through a custom main, say — still gets the
+     * agent's messages on stderr instead of losing them.
      */
     public static void startBuffering() {
-        if (loggingSystem == LoggingSystem.APPLICATION) {
-            buffering = true;
+        if (loggingSystem == LoggingSystem.APPLICATION && buffering.compareAndSet(false, true)) {
+            startBufferDeadline();
         }
+    }
+
+    /** Abandons buffering once {@link #maxBufferMillis} has passed, unless it has
+     *  already been flushed by then. */
+    private static void startBufferDeadline() {
+        if (maxBufferMillis <= 0) {
+            return;
+        }
+        Thread.ofVirtual()
+              .name("auto-valhalla-InternalLoggerFactory-BufferDeadline")
+              .start(() -> {
+                  try {
+                      Thread.sleep(maxBufferMillis);
+                  } catch (InterruptedException e) {
+                      Thread.currentThread().interrupt();
+                      return;
+                  }
+                  if (buffering.get()) {
+                      flushBuffer();
+                  }
+              });
     }
 
     /**
@@ -148,15 +189,21 @@ public final class InternalLoggerFactory {
     }
 
     static boolean isBuffering() {
-        return buffering;
+        return buffering.get();
     }
 
     static void buffer(LogEntry entry) {
         pendingLogs.add(entry);
+        if (pendingCount.incrementAndGet() >= maxBufferedLogs) {
+            // The bridge is taking too many messages to appear; give up on it and
+            // emit what we have rather than growing without bound.
+            flushBuffer();
+        }
     }
 
     static void flushBuffer() {
-        buffering = false;
+        buffering.set(false);
+        pendingCount.set(0);
         LogEntry entry;
         while ((entry = pendingLogs.poll()) != null) {
             InternalLogger logger = getLogger(entry.name());
