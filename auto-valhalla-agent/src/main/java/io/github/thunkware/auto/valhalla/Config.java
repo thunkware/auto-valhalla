@@ -28,7 +28,7 @@ class Config {
     String logging;
 
     /** Canonical option keys (without the {@code auto-valhalla.} prefix), also
-     *  used by {@link AutoValhallaAgent28#parse(String)} switch. */
+     *  used by the {@link AutoValhallaAgent28#parse()} switch. */
     static final String INCLUDES = "includes";
     static final String INCLUDES_FILES = "includes-files";
     static final String EXCLUDES = "excludes";
@@ -46,9 +46,11 @@ class Config {
     static final String LOGGING = "logging";
     static final String CONFIG = "config";
 
-    /** Canonical option keys (without the {@code auto-valhalla.} prefix), in
-     *  precedence order: system properties / environment variables are looked up
-     *  in this order. */
+    /** Every canonical option key (without the {@code auto-valhalla.} prefix).
+     *  Used to look up system properties / environment variables, to validate
+     *  config-file keys, and to warn about unknown {@code auto-valhalla.*}
+     *  settings. {@link #CONFIG} is applied before all of them, so an explicit
+     *  system property or environment variable overrides the config file. */
     static final List<String> KNOWN = List.of(
             INCLUDES, INCLUDES_FILES, EXCLUDES, EXCLUDES_FILES,
             ANNOTATION_MODE, INCLUDES_MODE,

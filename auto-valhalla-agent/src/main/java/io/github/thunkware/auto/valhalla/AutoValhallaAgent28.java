@@ -159,18 +159,24 @@ public final class AutoValhallaAgent28 {
 
     static Config parse() {
         // Ordered list of [canonicalKey, value] assignments. Later entries win
-        // for scalar options; include/exclude sets are replaced wholesale.
+        // for scalar options; include/exclude sets accumulate across sources.
         List<String[]> assigns = new ArrayList<>();
+
+        // Lowest precedence first: the config file, so that a system property or
+        // environment variable set alongside it overrides the file.
+        String configFile = propertyOrEnv("auto-valhalla." + Config.CONFIG);
+        if (configFile != null) {
+            emitConfigFile(assigns, configFile);
+        }
 
         // System properties take precedence over environment variables.
         for (String key : Config.KNOWN) {
-            String full = "auto-valhalla." + key;
-            String v = System.getProperty(full);
-            if (v == null) {
-                v = System.getenv(envName(full));
+            if (key.equals(Config.CONFIG)) {
+                continue;
             }
+            String v = propertyOrEnv("auto-valhalla." + key);
             if (v != null) {
-                emit(assigns, key, v);
+                assigns.add(new String[]{key, v});
             }
         }
 
@@ -302,23 +308,40 @@ public final class AutoValhallaAgent28 {
         }
     }
 
-    private static void emit(List<String[]> assigns, String key, String value) {
-        if (!key.equals(Config.CONFIG)) {
-            assigns.add(new String[]{key, value});
-            return;
-        }
-        // expand the referenced properties file in place
+    /** System property, or the corresponding environment variable when no system
+     *  property is set. */
+    private static String propertyOrEnv(String fullKey) {
+        String v = System.getProperty(fullKey);
+        return v != null ? v : System.getenv(envName(fullKey));
+    }
+
+    /**
+     * Expands the properties file named by {@code auto-valhalla.config} into
+     * {@code assigns}. Keys may be written in canonical form ({@code includes})
+     * or with the {@code auto-valhalla.} prefix ({@code auto-valhalla.includes});
+     * {@code logging.level.<logger>} entries are honoured too. A nested
+     * {@code config} key is ignored, and an unrecognized key is reported rather
+     * than silently dropped.
+     */
+    private static void emitConfigFile(List<String[]> assigns, String value) {
         Properties props = new Properties();
         Path file = Path.of(value.trim());
         Failable.run(() -> loadProperties(file.toUri().toURL(), props),
                      t -> LOG.error("cannot read config file " + value, t));
         for (String rawKey : props.stringPropertyNames()) {
-            String s = rawKey.trim();
-            boolean isKnown = Config.KNOWN.contains(s) && !s.equals(Config.CONFIG);
-            if (!isKnown) {
+            String key = rawKey.trim();
+            if (key.startsWith("auto-valhalla.")) {
+                key = StringUtils.substringAfter(key, "auto-valhalla.");
+            }
+            if (key.equals(Config.CONFIG)) {
+                LOG.warning("Nested " + Config.CONFIG + " key ignored in config file " + value);
                 continue;
             }
-            emit(assigns, s, props.getProperty(rawKey));
+            if (!Config.KNOWN.contains(key) && !key.startsWith(Config.LOG_LEVEL_PREFIX)) {
+                LOG.warning("Unknown key ignored in config file " + value + ": " + rawKey);
+                continue;
+            }
+            assigns.add(new String[]{key, props.getProperty(rawKey)});
         }
     }
 

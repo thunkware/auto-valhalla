@@ -313,12 +313,18 @@ logging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
 | --- | --- |
 | `auto-valhalla.config` | Path to a Java properties file supplying any of the options. |
 
-When `auto-valhalla.config` is set, config file entries are applied after
-env vars but can be overridden by explicit system properties set alongside it.
+Config file entries are applied first, so an environment variable or system
+property set alongside the file overrides it. Keys may be written with or
+without the `auto-valhalla.` prefix, and `logging.level.*` entries are honoured;
+an unrecognized key is logged as a warning.
+
+`includes` / `excludes` accumulate across sources rather than replacing each
+other: a pattern listed in the config file still applies when
+`-Dauto-valhalla.includes` is also given.
 
 ```properties
 auto-valhalla.includes=com.example
-auto-valhalla.excludes=com.example.dto
+excludes=com.example.dto
 logging.level.auto-valhalla.includes.rejected=FATAL
 ```
 
