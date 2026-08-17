@@ -114,6 +114,34 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.6</version>
       </plugin>
+      <!-- Replace the pom.xml that gets installed and deployed with a
+           flattened, self-contained version (parent resolved away). -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>${flatten-maven-plugin.version}</version>
+        <configuration>
+          <flattenMode>oss</flattenMode>
+          <flattenedPomFilename>${project.artifactId}-${project.version}.pom</flattenedPomFilename>
+          <outputDirectory>${project.build.directory}</outputDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>flatten-clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 

@@ -108,6 +108,35 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Run AFTER the shade plugin (same phase) so the flattened POM is
+           derived from the dependency-reduced-pom.xml (byte-buddy removed);
+           the reduced POM itself is never flattened upstream. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>${flatten-maven-plugin.version}</version>
+        <configuration>
+          <flattenMode>oss</flattenMode>
+          <flattenedPomFilename>${project.artifactId}-${project.version}.pom</flattenedPomFilename>
+          <outputDirectory>${project.build.directory}</outputDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id>
+            <phase>package</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>flatten-clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>
