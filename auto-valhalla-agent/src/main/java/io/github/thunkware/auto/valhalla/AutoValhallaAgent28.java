@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
  *
  * <h2>Options</h2>
  * Flags may be supplied as system properties or environment variables.
- * System properties take precedence over environment variables. The
- * canonical, hyphenated form is used everywhere; a {@code .config} file
- * may also supply options.
+ * System properties take precedence over environment variables, and both take
+ * precedence over the {@code auto-valhalla.config} file. The canonical,
+ * hyphenated form is used everywhere.
  * <ul>
  *   <li>{@code auto-valhalla.includes} — comma-separated classes or packages to
  *       convert. A pattern {@code X} matches a class named {@code X}, or a
@@ -49,11 +49,12 @@ import java.util.stream.Collectors;
  *       — path to a file with one pattern per line (blank lines and {@code #}
  *       comments ignored). Multiple files may be separated by {@code ;} or
  *       {@code ,}; each option may also be repeated and all files are merged.</li>
-     *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
-     *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
-     *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
-     *       selected by {@code includes} (default {@code yolo} =
-     *       {@code mark-class-final,remove-synchronized,mark-fields-final}).</li>
+ *   <li>{@code auto-valhalla.annotation-mode} — modes narrowing classes
+ *       selected by {@code @AutoValhalla} (default {@code safe}).</li>
+ *   <li>{@code auto-valhalla.includes-mode} — modes narrowing classes
+ *       selected by {@code includes} (default {@code safe}; {@code yolo} is the
+ *       shorthand for
+ *       {@code mark-class-final,remove-synchronized,mark-fields-final}).</li>
  *   <li>{@code logging.level.root} — root logging level: {@code off}, {@code error},
  *       {@code warning}, {@code info} (default), {@code debug}. Controls verbosity
  *       of messages to stderr. Use {@code logging.level.<name>} for per-logger overrides.</li>
@@ -81,20 +82,23 @@ import java.util.stream.Collectors;
  *       allowing logged failures and problematic classes to be skipped in future
  *       runs. Supplying any explicit excludes disables these defaults entirely.</li>
  *   <li>{@code auto-valhalla.config=file} — read options from a Java properties
- *       file (keys may omit the {@code auto-valhalla.} prefix).</li>
+ *       file. Keys may be written with or without the {@code auto-valhalla.}
+ *       prefix, {@code logging.level.<name>} entries are honoured, and unknown
+ *       keys are logged as warnings.</li>
  * </ul>
  * A class selected by both the annotation and {@code includes} follows the
  * annotation settings for failure handling (an explicit in-source opt-in is
- * the stronger statement). Every class annotated with {@code @AutoValhalla} is
- * always converted.
+ * the stronger statement).
  *
  * <p>The same options may also be set as environment variables using the
  * {@code AUTO_VALHALLA_*} convention: the canonical key (without the
  * {@code auto-valhalla.} prefix) is upper-cased and has its dashes turned into
  * underscores, e.g. {@code auto-valhalla.includes} becomes
- * {@code AUTO_VALHALLA_INCLUDES}. Environment variables have the lowest
- * precedence (agent arguments beat system properties, which beat environment
- * variables).
+ * {@code AUTO_VALHALLA_INCLUDES}. Precedence, highest first: system properties,
+ * environment variables, then the {@code auto-valhalla.config} file. The
+ * {@code premain}/{@code agentmain} argument string is not used for options.
+ * Per-logger levels ({@code logging.level.<name>}) are read from system
+ * properties and the config file only, not from the environment.
  *
  * <p>The agent jar must be built for and run on a JDK 28 (or later) with
  * {@code --enable-preview}, since the transformed class files use preview

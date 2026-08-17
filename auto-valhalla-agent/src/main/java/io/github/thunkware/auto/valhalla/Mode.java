@@ -101,8 +101,9 @@ public enum Mode {
                 .replaceAll("[^a-z0-9]", "");
     }
 
-    /** Parses a mode string into a set of {@link Mode}s. A {@code null}, blank or
-     *  unknown value yields {@code dflt}. {@code yolo} is stored as-is; it is
+    /** Parses a mode string into a set of {@link Mode}s. A {@code null} or blank
+     *  value yields {@code dflt}, as does a value with no recognizable token (for
+     *  example a lone separator). {@code yolo} is stored as-is; it is
      *  expanded to the three constituent modes only when a
      *  {@link ValueClassTransformer.Selection} is created. {@code SYNCHRONIZATION_MONITOR}
      *  cannot be combined with other modes; if present and other modes are also
