@@ -278,13 +278,14 @@ public final class ValueClassTransformer implements ClassFileTransformer {
     private byte[] onRejected(ClassName className, String reason, Selection selection) {
         appendOnFail(className, selection.onFailAppendTo());
         String base = className.java() + ": " + reason;
-        InternalLogger rejectedLog =
-                loggers.rejected(selection);
+        InternalLogger rejectedLog = loggers.rejected(selection);
         if (rejectedLog.isFatal()) {
+            // Reported through the transformer's own logger: the rejected logger is
+            // at FATAL, which filters out anything less severe, so logging the
+            // explanation through it would emit nothing.
             loggers.log().error(base + "; the JVM will reject it rather than silently keep an identity class.");
             // A ClassFileTransformer exception would be swallowed by the JVM, so
             // hand back a class file that fails to load, surfacing the failure loudly.
-            rejectedLog.warning(base + "; the JVM will reject it");
             return brokenClass();
         }
         rejectedLog.logAtEffectiveLevel(base + ", leaving as identity class");
