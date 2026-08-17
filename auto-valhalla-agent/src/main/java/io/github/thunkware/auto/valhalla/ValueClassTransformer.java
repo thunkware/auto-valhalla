@@ -11,10 +11,12 @@ import java.lang.reflect.AccessFlag;
 import java.security.ProtectionDomain;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -41,9 +43,12 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     private final ValueClassTransformerLoggers loggers = new ValueClassTransformerLoggers();
     private final Config config;
-    /** Internal names of classes we turned from non-final into final value
-     *  classes, so a later subclass load can be reported by superclass name. */
-    private final Set<String> transformedToFinal = ConcurrentHashMap.newKeySet();
+    /** Internal names of the classes we turned from non-final into final value
+     *  classes, so a later subclass load can be reported by superclass name.
+     *  Grouped by defining class loader, because two loaders may define unrelated
+     *  classes with the same name and only one of them may have been rewritten.
+     *  Weak keys so recording a class here never keeps its loader alive. */
+    private final Map<ClassLoader, Set<String>> transformedToFinal = new WeakHashMap<>();
 
     ValueClassTransformer(Config cfg) {
         this.config = cfg;
@@ -104,7 +109,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         Selection selection = Selection.empty();
         try {
             ClassModel model = ClassFile.of().parse(classfileBuffer);
-            selection = select(className, model);
+            selection = select(className, model, loader);
             if (selection == null) {
                 return null;
             }
@@ -151,9 +156,9 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      * was previously rewritten into a final value class, since this class cannot
      * be loaded at all.
      */
-    private Selection select(ClassName className, ClassModel model) {
+    private Selection select(ClassName className, ClassModel model, ClassLoader loader) {
         String sup = model.superclass().map(ClassEntry::asInternalName).orElse(null);
-        if (sup != null && transformedToFinal.contains(sup)) {
+        if (sup != null && wasTransformedToFinal(loader, sup)) {
             throw new LinkageError("auto-valhalla: class " + className.java()
                     + " cannot be loaded: it extends " + sup
                     + " which was rewritten into a final value class");
@@ -220,7 +225,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // them: a non-final class becomes a final value class (its subclasses
         // stop loading). Abstract classes are never converted.
         if (!model.flags().has(AccessFlag.FINAL)) {
-            transformedToFinal.add(className.jvm());
+            recordTransformedToFinal(loader, className.jvm());
         }
         appendTo(selection.onSuccessAppendTo(), className);
         String successMsg = "Transformed to value class: " + className.java();
@@ -284,6 +289,37 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
         rejectedLog.logAtEffectiveLevel(base + ", leaving as identity class");
         return null;
+    }
+
+    private void recordTransformedToFinal(ClassLoader loader, String internalName) {
+        synchronized (transformedToFinal) {
+            transformedToFinal.computeIfAbsent(loader, l -> new HashSet<>()).add(internalName);
+        }
+    }
+
+    /**
+     * True if {@code internalName} was rewritten into a final value class by
+     * {@code loader} or by one of the loaders it delegates to (its parent chain and
+     * the bootstrap loader), which are the loaders that can supply its superclass.
+     */
+    private boolean wasTransformedToFinal(ClassLoader loader, String internalName) {
+        synchronized (transformedToFinal) {
+            if (transformedToFinal.isEmpty()) {
+                return false;
+            }
+            for (ClassLoader l = loader; l != null; l = l.getParent()) {
+                if (containsFor(l, internalName)) {
+                    return true;
+                }
+            }
+            // The bootstrap loader is represented by a null key.
+            return containsFor(null, internalName);
+        }
+    }
+
+    private boolean containsFor(ClassLoader loader, String internalName) {
+        Set<String> names = transformedToFinal.get(loader);
+        return names != null && names.contains(internalName);
     }
 
     private void appendOnFail(ClassName className, String onFailAppendTo) {
