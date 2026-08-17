@@ -45,6 +45,11 @@ public final class ConfiguredVerifier {
 
     /**
      * Returns a new verifier with {@code mark-fields-final} enabled.
+     *
+     * <p>Has no effect on the checks: deciding whether a non-{@code final} field is
+     * written outside a constructor needs the bytecode, which reflection cannot
+     * see. The agent applies that rule at load time in every mode, so a class that
+     * passes here can still be rejected for a mutable private field.
      */
     public ConfiguredVerifier markFieldsFinal() {
         return new ConfiguredVerifier(this.markClassFinal, this.removeSynchronized, true);

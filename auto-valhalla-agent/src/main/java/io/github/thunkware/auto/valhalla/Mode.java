@@ -39,10 +39,13 @@ public enum Mode {
      *  {@link ValueClassRewriter#suitabilityProblems(java.lang.classfile.ClassModel, boolean, boolean)}). */
     MARK_CLASS_FINAL("mark-class-final"),
 
-    /** If instance fields are non-{@code final} yet written only once in a
-     *  constructor, mark them {@code final}. Candidates where a non-{@code final}
-     *  field is written elsewhere (or more than once) are rejected, since a value
-     *  class cannot have a mutable field. */
+    /** Non-{@code final} instance fields that are written in every constructor and
+     *  nowhere else are marked {@code final}. This happens in every mode — the
+     *  rewrite has to mark all instance fields {@code final strict} — so the mode
+     *  is accepted for compatibility and as documentation of intent; a candidate
+     *  whose non-{@code final} field is written elsewhere (or left unwritten by a
+     *  constructor) is rejected regardless of it. See
+     *  {@link ValueClassRewriter#fieldsSafeToMarkFinal(java.lang.classfile.ClassModel)}. */
     MARK_FIELDS_FINAL("mark-fields-final"),
 
     /** Instrument selected classes to monitor synchronization attempts (calls to

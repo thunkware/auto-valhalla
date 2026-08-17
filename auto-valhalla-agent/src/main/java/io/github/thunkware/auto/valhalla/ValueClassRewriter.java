@@ -300,6 +300,17 @@ public final class ValueClassRewriter {
             problems.add("it has non-private mutable field(s) " + openFields
                     + "; another class may write them, so they cannot be marked final");
         }
+        // The rewrite marks every instance field final and strict, in every mode, so
+        // a non-final field that some method also writes (or that a constructor
+        // leaves unset) can never be converted: the rewritten class fails
+        // verification, and the write would fail with IllegalAccessError. Reported
+        // here so the user sees which rule was broken instead of a bare "could not
+        // be safely transformed".
+        if (!fieldsSafeToMarkFinal(model)) {
+            problems.add("it has a non-final instance field that is written outside a"
+                    + " constructor, or that some constructor leaves unwritten; such a"
+                    + " field cannot be marked final");
+        }
         return problems;
     }
 

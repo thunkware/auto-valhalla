@@ -210,12 +210,6 @@ public final class ValueClassTransformer implements ClassFileTransformer {
             return onRejected(className, "is selected for value-class transformation but is not"
                     + " suitable: " + String.join("; ", problems), selection);
         }
-        if (selection.hasMode(Mode.MARK_FIELDS_FINAL)
-                && !ValueClassRewriter.fieldsSafeToMarkFinal(model)) {
-            return onRejected(className,
-                    "is selected for value-class transformation but has a non-final field"
-                    + " not written in every constructor (mode=mark-fields-final)", selection);
-        }
         byte[] out = ValueClassRewriter.transform(model, ignoreSync, markClassFinal, loader);
         if (out == null) {
             return onRejected(className,
