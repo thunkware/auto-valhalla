@@ -50,6 +50,15 @@ public class AutoValhallaVerifierTest {
         static final int CONSTANT = 0;
     }
 
+    // final, but its private field is not: conversion would have to mark it final
+    static final class PrivateMutableField {
+        private int x;
+
+        PrivateMutableField(int x) {
+            this.x = x;
+        }
+    }
+
     // non-private mutable instance field
     static final class PublicMutableField {
         public int x;
@@ -128,6 +137,29 @@ public class AutoValhallaVerifierTest {
         List<String> v = AutoValhallaVerifier.safe().violations(NoInstanceFields.class);
         assertEquals(1, v.size());
         assertTrue(v.get(0).contains("no instance fields"));
+    }
+
+    @Test
+    public void safeRejectsNonFinalPrivateField() {
+        List<String> v = AutoValhallaVerifier.safe().violations(PrivateMutableField.class);
+        assertEquals(1, v.size());
+        assertTrue(v.get(0).contains("non-final instance field(s)"));
+        assertTrue(v.get(0).contains("x"));
+        assertTrue(v.get(0).contains("markFieldsFinal()"));
+    }
+
+    @Test
+    public void markFieldsFinalAcceptsNonFinalPrivateField() {
+        AutoValhallaVerifier.safe().markFieldsFinal().verify(PrivateMutableField.class);
+        AutoValhallaVerifier.markFieldsFinal().verify(PrivateMutableField.class);
+    }
+
+    @Test
+    public void markFieldsFinalDoesNotExcuseANonPrivateField() {
+        // another class can write it, so no mode makes it convertible
+        List<String> v = AutoValhallaVerifier.markFieldsFinal().violations(PublicMutableField.class);
+        assertEquals(1, v.size());
+        assertTrue(v.get(0).contains("non-private mutable"));
     }
 
     @Test

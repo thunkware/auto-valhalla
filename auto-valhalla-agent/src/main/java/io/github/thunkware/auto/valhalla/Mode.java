@@ -18,9 +18,11 @@ import java.util.Set;
  * combined with other modes; doing so throws {@link IllegalArgumentException}.
  */
 public enum Mode {
-    /** Narrow selection to classes that are <em>already final</em> ({@code safe}).
-     *  Non-final candidates are not converted; whether that is a silent skip or
-     *  a loud failure depends on the configured {@code on-fail} setting. */
+    /** Narrow selection to classes that need no structural change at all
+     *  ({@code safe}): the class is <em>already final</em> and every instance field
+     *  is <em>already final</em>. Other candidates are not converted; whether that
+     *  is a silent skip or a loud failure depends on the configured
+     *  {@code on-fail} setting. */
     SAFE("safe"),
 
     /** Shorthand for
@@ -36,15 +38,15 @@ public enum Mode {
      *  that subclasses will fail to load with an
      *  {@link java.lang.IncompatibleClassChangeError}). Abstract candidates are
      *  never converted (see
-     *  {@link ValueClassRewriter#suitabilityProblems(java.lang.classfile.ClassModel, boolean, boolean)}). */
+     *  {@link ValueClassRewriter#suitabilityProblems(java.lang.classfile.ClassModel, java.util.Set)}). */
     MARK_CLASS_FINAL("mark-class-final"),
 
-    /** Non-{@code final} instance fields that are written in every constructor and
-     *  nowhere else are marked {@code final}. This happens in every mode — the
-     *  rewrite has to mark all instance fields {@code final strict} — so the mode
-     *  is accepted for compatibility and as documentation of intent; a candidate
-     *  whose non-{@code final} field is written elsewhere (or left unwritten by a
-     *  constructor) is rejected regardless of it. See
+    /** Allow candidates with non-{@code final} instance fields to be converted by
+     *  marking those fields {@code final}. Without this mode a candidate must
+     *  already have none, since conversion always makes every instance field
+     *  {@code final strict}. Even with it, a candidate whose non-{@code final}
+     *  field is written outside a constructor, or left unwritten by one, is
+     *  rejected: such a field cannot be made {@code final}. See
      *  {@link ValueClassRewriter#fieldsSafeToMarkFinal(java.lang.classfile.ClassModel)}. */
     MARK_FIELDS_FINAL("mark-fields-final"),
 
@@ -83,6 +85,18 @@ public enum Mode {
 
     Mode(String flag) {
         this.flag = normalize(flag);
+    }
+
+    /** Returns {@code modes} with {@link #YOLO} replaced by the three modes it
+     *  stands for, so callers can test for a concrete mode without repeating the
+     *  expansion. */
+    public static Set<Mode> expand(Set<Mode> modes) {
+        EnumSet<Mode> expanded = modes.isEmpty()
+                ? EnumSet.noneOf(Mode.class) : EnumSet.copyOf(modes);
+        if (expanded.remove(YOLO)) {
+            expanded.addAll(YOLO_DEFAULT);
+        }
+        return expanded;
     }
 
     @Override

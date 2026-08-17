@@ -228,10 +228,10 @@ under the active mode, that is a failure; see [Success and failure handling](#su
 
 | Mode | Effect                                                                                                                                                                                                                           |
 | --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `safe` | Convert only classes that can safely be converted.                                                                                                                                                                               |
+| `safe` | Convert only classes that already need no structural change: the class is `final` and every instance field is `final`.                                                                                                            |
 | `remove-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed.                                                                                                                                   |
 | `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                                                                           |
-| `mark-fields-final` | Non-`final` instance fields written in every constructor and nowhere else are marked `final`. This is what conversion always does, so the mode is accepted for compatibility; in every mode a candidate whose non-`final` field is written elsewhere (or left unwritten by a constructor) is rejected. |
+| `mark-fields-final` | Also convert candidates with non-`final` private instance fields, by marking those fields `final`. A candidate whose non-`final` field is written outside a constructor, or left unwritten by one, is still rejected — it cannot be made `final`. Non-`private` mutable fields are rejected in every mode, since another class may write them. |
 | `yolo` | Shorthand for `remove-synchronized,mark-class-final,mark-fields-final`.                                                                                                                                                          |
 | `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. Optionally also records them to a file via `synchronization-monitor.append-to`. **Cannot be combined with other modes.** |
 
@@ -243,7 +243,7 @@ accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and
 
 Controlled via [per-logger level overrides](#log-levels).
 
-- **rejected** — class was selected but did not meet suitability requirements (e.g. not final, mutable fields).
+- **rejected** — class was selected but did not meet suitability requirements (e.g. not final, non-final fields).
 - **fail** — class passed suitability checks but hit an unexpected error during transformation.
 - **success** — class was selected, passed checks, and was successfully transformed to a value class.
 

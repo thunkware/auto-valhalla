@@ -17,8 +17,9 @@ import java.lang.annotation.Target;
  *   <li>Extends only {@code java.lang.Object} or {@code java.lang.Record}
  *       — not another class.</li>
  *   <li>Has at least one instance field.</li>
- *   <li>All non-{@code static}, non-{@code final} instance fields are
- *       {@code private}.</li>
+ *   <li>All instance fields are {@code final} — conversion makes them
+ *       {@code final} either way, and {@code mark-fields-final} is what opts in
+ *       to that.</li>
  *   <li>Has no {@code synchronized} instance methods.</li>
  *   <li>Has no {@code synchronized} blocks ({@code monitorenter} bytecode) in
  *       any of its methods (more conservative than checking for

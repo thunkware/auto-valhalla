@@ -44,12 +44,13 @@ public final class ConfiguredVerifier {
     }
 
     /**
-     * Returns a new verifier with {@code mark-fields-final} enabled.
+     * Returns a new verifier with {@code mark-fields-final} enabled, which accepts
+     * non-{@code final} private instance fields.
      *
-     * <p>Has no effect on the checks: deciding whether a non-{@code final} field is
-     * written outside a constructor needs the bytecode, which reflection cannot
-     * see. The agent applies that rule at load time in every mode, so a class that
-     * passes here can still be rejected for a mutable private field.
+     * <p>Whether such a field can actually be made {@code final} — every
+     * constructor writes it and nothing else does — needs the bytecode, which
+     * reflection cannot see, so the agent decides that at load time. A class that
+     * passes here can still be rejected there.
      */
     public ConfiguredVerifier markFieldsFinal() {
         return new ConfiguredVerifier(this.markClassFinal, this.removeSynchronized, true);
@@ -126,16 +127,21 @@ public final class ConfiguredVerifier {
         return problems;
     }
 
-    private static void checkFields(final Class<?> clazz, final List<String> problems) {
+    private void checkFields(final Class<?> clazz, final List<String> problems) {
         Field[] fields = clazz.getDeclaredFields();
         boolean hasInstanceField = false;
         List<String> openFields = new ArrayList<String>();
+        List<String> nonFinalFields = new ArrayList<String>();
         for (Field f : fields) {
             int fmods = f.getModifiers();
             if (!Modifier.isStatic(fmods)) {
                 hasInstanceField = true;
-                if (!Modifier.isFinal(fmods) && !Modifier.isPrivate(fmods)) {
-                    openFields.add(f.getName());
+                if (!Modifier.isFinal(fmods)) {
+                    if (Modifier.isPrivate(fmods)) {
+                        nonFinalFields.add(f.getName());
+                    } else {
+                        openFields.add(f.getName());
+                    }
                 }
             }
         }
@@ -145,6 +151,11 @@ public final class ConfiguredVerifier {
         if (!openFields.isEmpty()) {
             problems.add("has non-private mutable instance field(s) " + openFields
                                  + "; another class may write them, preventing conversion");
+        }
+        if (!nonFinalFields.isEmpty() && !markFieldsFinal) {
+            problems.add("has non-final instance field(s) " + nonFinalFields
+                                 + "; a value class has only final fields (add 'final' or"
+                                 + " enable markFieldsFinal() mode)");
         }
     }
 

@@ -19,6 +19,7 @@ import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.reflect.AccessFlag;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,8 +39,7 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>clears {@code ACC_IDENTITY} and sets {@code ACC_FINAL} (concrete
  *       classes; abstract classes are never converted and stay identity
- *       classes — see {@link #suitabilityProblems(ClassModel, boolean,
- *       boolean)});</li>
+ *       classes — see {@link #suitabilityProblems(ClassModel, Set)});</li>
  *   <li>sets {@code ACC_FINAL} and {@code ACC_STRICT} on instance fields;</li>
  *   <li>reorders constructor bodies (see {@link ConstructorRewriter});</li>
  *   <li>bumps the class-file version to the JDK 28 preview version so the JVM
@@ -68,25 +68,28 @@ public final class ValueClassRewriter {
 
     /**
      * Rewrites the given class model into a value class. The class must already
-     * be final (or {@code markClassFinal} must be true), otherwise it is not
-     * converted. Abstract classes are never converted (see
-     * {@link #suitabilityProblems(ClassModel, boolean, boolean)}): an
-     * agent-converted abstract value class whose identity subclass is loaded
-     * later triggers a duplicate class definition in the JVM, so abstract
-     * classes are left as identity classes.
+     * be final (or {@code modes} must contain {@link Mode#MARK_CLASS_FINAL}),
+     * otherwise it is not converted. Abstract classes are never converted (see
+     * {@link #suitabilityProblems(ClassModel, Set)}): an agent-converted abstract
+     * value class whose identity subclass is loaded later triggers a duplicate
+     * class definition in the JVM, so abstract classes are left as identity
+     * classes.
      *
+     * @param modes the effective mode set; {@link Mode#YOLO} is expanded here, so
+     *              callers may pass it as-is
      * @return the rewritten value-class bytes, or {@code null} if the class
      *         must remain an identity class
      */
-    public static byte[] transform(ClassModel model,
-            boolean removeSynchronized, boolean markClassFinal, ClassLoader loader) {
-        if (!isSuitable(model, removeSynchronized, markClassFinal)) {
+    public static byte[] transform(ClassModel model, Set<Mode> modes, ClassLoader loader) {
+        Set<Mode> effective = Mode.expand(modes);
+        if (!isSuitable(model, effective)) {
             return null;
         }
         if (alreadyValue(model)) {
             return null;
         }
 
+        boolean removeSynchronized = effective.contains(Mode.REMOVE_SYNCHRONIZED);
         AtomicBoolean ctorFailed = new AtomicBoolean(false);
 
         ClassTransform versionAndFlags = (cb, ce) -> {
@@ -195,28 +198,37 @@ public final class ValueClassRewriter {
      *       class;</li>
      *   <li>no non-static (instance) method carries {@code ACC_SYNCHRONIZED} — a
      *       value class cannot declare a synchronized instance method (unless
-     *       {@code removeSynchronized} is set, in which case it is stripped);</li>
-     *   <li>the class is final (made final below).</li>
+     *       {@link Mode#REMOVE_SYNCHRONIZED} is set, in which case it is
+     *       stripped);</li>
+     *   <li>the class is final, or {@link Mode#MARK_CLASS_FINAL} allows making it
+     *       final;</li>
+     *   <li>every instance field is final, or {@link Mode#MARK_FIELDS_FINAL} allows
+     *       making them final.</li>
      * </ul>
      */
     public static boolean isSuitable(ClassModel model) {
-        return isSuitable(model, false, false);
+        return isSuitable(model, Collections.emptySet());
     }
 
-    public static boolean isSuitable(ClassModel model, boolean removeSynchronized,
-            boolean markClassFinal) {
-        return suitabilityProblems(model, removeSynchronized, markClassFinal).isEmpty();
+    public static boolean isSuitable(ClassModel model, Set<Mode> modes) {
+        return suitabilityProblems(model, modes).isEmpty();
     }
 
     /**
      * Reports, as targeted messages, every JEP 401 structural rule the class
      * violates, so callers can surface <em>only</em> the actual problem(s)
      * instead of a blanket "not suitable". Empty when the class is a suitable
-     * value-class candidate (see {@link #isSuitable(ClassModel, boolean, boolean)}
-     * for what the {@code ignore*} flags mean).
+     * value-class candidate.
+     *
+     * @param modes the effective mode set, which decides how much the rewrite is
+     *              allowed to change (see {@link Mode}); {@link Mode#YOLO} is
+     *              expanded here, so callers may pass it as-is
      */
-    public static List<String> suitabilityProblems(ClassModel model,
-            boolean removeSynchronized, boolean markClassFinal) {
+    public static List<String> suitabilityProblems(ClassModel model, Set<Mode> modes) {
+        Set<Mode> effective = Mode.expand(modes);
+        boolean removeSynchronized = effective.contains(Mode.REMOVE_SYNCHRONIZED);
+        boolean markClassFinal = effective.contains(Mode.MARK_CLASS_FINAL);
+        boolean markFieldsFinal = effective.contains(Mode.MARK_FIELDS_FINAL);
         List<String> problems = new ArrayList<>();
         AccessFlags flags = model.flags();
         if (flags.has(AccessFlag.INTERFACE)) {
@@ -285,33 +297,46 @@ public final class ValueClassRewriter {
                     + "; a value object has no identity, so synchronizing on it"
                     + " throws IdentityException at runtime");
         }
-        // The rewrite marks every non-static field final and strict. That is only
-        // safe if no other class can write the field: a non-private (public /
-        // protected / package-private) field may be mutated by sibling classes,
-        // which would then fail with IllegalAccessError (e.g. H2's
-        // org.h2.mvstore.CursorPos.index written by org.h2.mvstore.Cursor).
-        String openFields = model.fields().stream()
-                .filter(f -> !f.flags().has(AccessFlag.STATIC)
-                        && !f.flags().has(AccessFlag.FINAL)
-                        && !f.flags().has(AccessFlag.PRIVATE))
-                .map(f -> f.fieldName().stringValue())
-                .collect(Collectors.joining(", "));
+        // A value class has only final fields, so the rewrite marks every instance
+        // field final and strict. Which non-final fields that is allowed to touch
+        // depends on the mode.
+        //
+        // A non-private (public / protected / package-private) field is never
+        // allowed: a sibling class may write it and would then fail with
+        // IllegalAccessError (e.g. H2's org.h2.mvstore.CursorPos.index written by
+        // org.h2.mvstore.Cursor).
+        String openFields = nonFinalInstanceFields(model, false);
         if (!openFields.isEmpty()) {
             problems.add("it has non-private mutable field(s) " + openFields
                     + "; another class may write them, so they cannot be marked final");
         }
-        // The rewrite marks every instance field final and strict, in every mode, so
-        // a non-final field that some method also writes (or that a constructor
-        // leaves unset) can never be converted: the rewritten class fails
-        // verification, and the write would fail with IllegalAccessError. Reported
-        // here so the user sees which rule was broken instead of a bare "could not
-        // be safely transformed".
-        if (!fieldsSafeToMarkFinal(model)) {
-            problems.add("it has a non-final instance field that is written outside a"
-                    + " constructor, or that some constructor leaves unwritten; such a"
-                    + " field cannot be marked final");
+        // A private one only with mark-fields-final, and then only if every
+        // constructor writes it and nothing else does — otherwise the write would
+        // fail with IllegalAccessError and the rewritten class does not even verify.
+        String hiddenFields = nonFinalInstanceFields(model, true);
+        if (!hiddenFields.isEmpty()) {
+            if (!markFieldsFinal) {
+                problems.add("it has non-final instance field(s) " + hiddenFields
+                        + "; a value class has only final fields (use mark-fields-final"
+                        + " to mark them final)");
+            } else if (!fieldsSafeToMarkFinal(model)) {
+                problems.add("it has a non-final instance field that is written outside a"
+                        + " constructor, or that some constructor leaves unwritten; such a"
+                        + " field cannot be marked final (mode=mark-fields-final)");
+            }
         }
         return problems;
+    }
+
+    /** The comma-separated names of the non-{@code final} instance fields that are
+     *  {@code private} ({@code privateOnes}) or not ({@code !privateOnes}). */
+    private static String nonFinalInstanceFields(ClassModel model, boolean privateOnes) {
+        return model.fields().stream()
+                .filter(f -> !f.flags().has(AccessFlag.STATIC)
+                        && !f.flags().has(AccessFlag.FINAL)
+                        && f.flags().has(AccessFlag.PRIVATE) == privateOnes)
+                .map(f -> f.fieldName().stringValue())
+                .collect(Collectors.joining(", "));
     }
 
     /** True if the class file already describes a value class. */

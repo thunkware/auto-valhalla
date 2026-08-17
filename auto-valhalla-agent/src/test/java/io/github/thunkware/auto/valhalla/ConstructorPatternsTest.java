@@ -11,16 +11,20 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Integration coverage for {@link ConstructorRewriter}: ordinary constructors that
  * the hand-rolled stack model must not under-run (and therefore silently drop as
- * identity classes). Each fixture is selected the way annotation/includes are
- * (mark-class-final + remove-synchronized) and must rewrite and verify.
+ * identity classes). Each fixture is a plain non-final class with private
+ * non-final fields, so they are converted under {@code yolo} and must rewrite and
+ * verify.
  */
 class ConstructorPatternsTest {
+
+    private static final Set<Mode> YOLO = Set.of(Mode.YOLO);
 
     private byte[] read(String name) throws Exception {
         try (InputStream in = getClass().getResourceAsStream(name)) {
@@ -33,9 +37,9 @@ class ConstructorPatternsTest {
         assertNotNull(original, internal + " must be on the test classpath");
         ClassFile cf = ClassFile.of();
         var model = cf.parse(original);
-        assertTrue(ValueClassRewriter.isSuitable(model, true, true),
-                internal + " must be suitable (mark-class-final + remove-synchronized)");
-        byte[] out = ValueClassRewriter.transform(model, true, true, null);
+        assertTrue(ValueClassRewriter.isSuitable(model, YOLO),
+                internal + " must be suitable under yolo");
+        byte[] out = ValueClassRewriter.transform(model, YOLO, null);
         assertNotNull(out, internal + " must be rewritten into a value class");
         var outModel = cf.parse(out);
         assertTrue(ValueClassRewriter.alreadyValue(outModel),
@@ -48,9 +52,9 @@ class ConstructorPatternsTest {
         assertNotNull(original, internal + " must be on the test classpath");
         ClassFile cf = ClassFile.of();
         var model = cf.parse(original);
-        assertTrue(ValueClassRewriter.isSuitable(model, true, true),
+        assertTrue(ValueClassRewriter.isSuitable(model, YOLO),
                 internal + " must be structurally suitable");
-        byte[] out = ValueClassRewriter.transform(model, true, true, null);
+        byte[] out = ValueClassRewriter.transform(model, YOLO, null);
         assertNull(out, internal
                 + " must be left as an identity class (relocating its constructor"
                 + " would produce illegal early-phase bytecode)");
@@ -99,7 +103,7 @@ class ConstructorPatternsTest {
         assertNotNull(original, internal + " must be on the test classpath");
 
         ClassFile cf = ClassFile.of();
-        byte[] out = ValueClassRewriter.transform(cf.parse(original), true, true, null);
+        byte[] out = ValueClassRewriter.transform(cf.parse(original), YOLO, null);
         assertNotNull(out, internal + " must be rewritten into a value class");
         assertTrue(ValueClassRewriter.alreadyValue(cf.parse(out)),
                 internal + " must encode a value class");

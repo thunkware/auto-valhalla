@@ -75,7 +75,7 @@ class ValueClassRewriterTest {
 
         ClassFile cf = ClassFile.of();
         var model = cf.parse(original);
-        assertFalse(ValueClassRewriter.isSuitable(model, false, false),
+        assertFalse(ValueClassRewriter.isSuitable(model, Set.of()),
                 "class with a synchronized instance method is not value-class suitable"
                         + " without remove-synchronized");
 
@@ -102,11 +102,12 @@ class ValueClassRewriterTest {
         var model = cf.parse(original);
         // mode=safe (or remove-synchronized alone) only converts already-final
         // classes, so a non-final class with synchronized methods is rejected...
-        assertFalse(ValueClassRewriter.isSuitable(model, false, false),
+        assertFalse(ValueClassRewriter.isSuitable(model, Set.of()),
                 "rejected without mark-class-final");
         // ...but the equivalent of annotation/includes (mark-class-final +
         // remove-synchronized) makes it suitable and rewrites it successfully.
-        assertTrue(ValueClassRewriter.isSuitable(model, true, true),
+        assertTrue(ValueClassRewriter.isSuitable(model,
+                        EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.REMOVE_SYNCHRONIZED)),
                 "suitable with mark-class-final + remove-synchronized");
 
         Config cfg = new Config();
@@ -213,6 +214,41 @@ class ValueClassRewriterTest {
     }
 
     @Test
+    void safeModeRequiresFieldsToBeFinalAlready() throws Exception {
+        // Once is final-field-free: its private fields are written only in the
+        // constructor, so they *could* be marked final, but conversion always makes
+        // every instance field final and safe mode does not sign up for that.
+        byte[] once = readResource("/sample/Once.class");
+        assertNotNull(once, "Once on classpath");
+        ClassFile cf = ClassFile.of();
+
+        List<String> safeProblems = ValueClassRewriter.suitabilityProblems(
+                cf.parse(once), EnumSet.of(Mode.MARK_CLASS_FINAL));
+        assertTrue(safeProblems.stream().anyMatch(p -> p.contains("non-final instance field(s) a, b")),
+                "safe mode must name the non-final fields: " + safeProblems);
+        assertTrue(safeProblems.stream().anyMatch(p -> p.contains("use mark-fields-final")),
+                "the message must point at the mode that allows it: " + safeProblems);
+        assertNull(ValueClassRewriter.transform(cf.parse(once),
+                        EnumSet.of(Mode.MARK_CLASS_FINAL), null),
+                "safe mode must leave a class with non-final fields alone");
+
+        // mark-fields-final opts in, and then it converts.
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(once),
+                        EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL)).isEmpty(),
+                "mark-fields-final clears the non-final-field problem");
+        assertNotNull(ValueClassRewriter.transform(cf.parse(once),
+                        EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL), null),
+                "mark-fields-final converts it");
+
+        // A class whose fields are already final needs neither mode.
+        byte[] sampleX = readResource("/sample/SampleX.class");
+        assertNotNull(sampleX, "SampleX on classpath");
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sampleX),
+                        EnumSet.of(Mode.MARK_CLASS_FINAL)).isEmpty(),
+                "already-final fields are suitable under safe");
+    }
+
+    @Test
     void markFieldsFinalModeRequiresPerConstructorWrites() throws Exception {
         byte[] once = readResource("/sample/Once.class");
         byte[] twoCtors = readResource("/sample/TwoCtors.class");
@@ -264,7 +300,9 @@ class ValueClassRewriterTest {
         cfg.includes = Set.of("sample.Base");
         cfg.excludes = Set.of();
         cfg.annotationMode = EnumSet.noneOf(Mode.class);
-        cfg.includesMode = EnumSet.of(Mode.MARK_CLASS_FINAL);
+        // Base is neither final nor has final fields, so both marking modes are
+        // needed to convert it at all.
+        cfg.includesMode = EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.MARK_FIELDS_FINAL);
         ValueClassTransformer t = new ValueClassTransformer(cfg);
         assertNotNull(t.transform(null, null, "sample/Base", null, null, base),
                 "Base rewrites (made final)");
@@ -294,7 +332,7 @@ class ValueClassRewriterTest {
         // An abstract class is never converted: an agent-converted abstract
         // value class whose identity subclass loads later triggers a duplicate
         // class definition in the JVM, so abstract classes stay identity.
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(absBase), false, false)
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(absBase), Set.of())
                         .stream().anyMatch(p -> p.contains("abstract")),
                 "an abstract class must be reported as not suitable");
 
@@ -304,7 +342,7 @@ class ValueClassRewriterTest {
         // Its concrete subclass now extends an identity class, so it is not a
         // value-class candidate either (a value class may extend only
         // java.lang.Object or java.lang.Record).
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(absSub), false, false)
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(absSub), Set.of())
                         .stream().anyMatch(p -> p.contains("extends the identity class sample/AbstractBase")),
                 "AbstractSub extends the identity class AbstractBase, so it is not suitable");
 
@@ -320,10 +358,11 @@ class ValueClassRewriterTest {
 
         // monitorenter cannot be stripped, so the class is rejected even when
         // remove-synchronized is set (which only strips ACC_SYNCHRONIZED).
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock), false, true)
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock), Set.of(Mode.MARK_CLASS_FINAL))
                         .stream().anyMatch(p -> p.contains("synchronized block")),
                 "a synchronized block must be reported as not suitable");
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock), true, true)
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(syncBlock),
+                        EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.REMOVE_SYNCHRONIZED))
                         .stream().anyMatch(p -> p.contains("synchronized block")),
                 "remove-synchronized must not make a synchronized block suitable");
     }
@@ -336,7 +375,7 @@ class ValueClassRewriterTest {
 
         // A final class with a public mutable field can still be written by
         // sibling classes, so marking the field final would break them.
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(publicField), false, true)
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(publicField), Set.of(Mode.MARK_CLASS_FINAL))
                         .stream().anyMatch(p -> p.contains("non-private mutable field")),
                 "a non-private mutable field must be reported as not suitable");
     }
@@ -347,7 +386,7 @@ class ValueClassRewriterTest {
         assertNotNull(noFields, "NoFields on classpath");
         ClassFile cf = ClassFile.of();
 
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(noFields), false, true)
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(noFields), Set.of(Mode.MARK_CLASS_FINAL))
                         .stream().anyMatch(p -> p.contains("no instance fields")),
                 "a class with no instance fields must be reported as not suitable");
     }
@@ -466,7 +505,7 @@ class ValueClassRewriterTest {
         // Sub: an identity superclass AND not final -> both problems are listed,
         // each targeted at its own condition.
         List<String> subProblems =
-                ValueClassRewriter.suitabilityProblems(cf.parse(sub), false, false);
+                ValueClassRewriter.suitabilityProblems(cf.parse(sub), Set.of());
         assertEquals(2, subProblems.size(), "Sub violates exactly two rules: " + subProblems);
         assertTrue(subProblems.stream().anyMatch(p -> p.contains("extends the identity class sample/Base")),
                 "the superclass problem must name the identity class: " + subProblems);
@@ -478,7 +517,7 @@ class ValueClassRewriterTest {
         // message must mention only that (naming the methods), not finals or
         // superclasses.
         List<String> syncProblems =
-                ValueClassRewriter.suitabilityProblems(cf.parse(sync), false, true);
+                ValueClassRewriter.suitabilityProblems(cf.parse(sync), Set.of(Mode.MARK_CLASS_FINAL));
         assertEquals(1, syncProblems.size(), "Sync violates only the synchronized rule");
         String syncMsg = syncProblems.getFirst();
         assertTrue(syncMsg.contains("synchronized instance method(s) get, instance"),
@@ -489,10 +528,11 @@ class ValueClassRewriterTest {
                 "sync-only message must not mention the superclass: " + syncMsg);
 
         // Once the flags address the violations, no problems remain.
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sub), false, true).stream()
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sub), Set.of(Mode.MARK_CLASS_FINAL)).stream()
                 .noneMatch(p -> p.contains("not final")),
                 "mark-class-final clears the final problem");
-        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sync), true, true).isEmpty(),
+        assertTrue(ValueClassRewriter.suitabilityProblems(cf.parse(sync),
+                        EnumSet.of(Mode.MARK_CLASS_FINAL, Mode.REMOVE_SYNCHRONIZED)).isEmpty(),
                 "remove-synchronized + mark-class-final clears all problems");
     }
 

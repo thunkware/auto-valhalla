@@ -177,18 +177,15 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         // append-to paths come from the annotation settings.
         String onFailAppendTo;
         String onSuccessAppendTo;
-        EnumSet<Mode> effective = EnumSet.noneOf(Mode.class);
+        Set<Mode> effective;
         if (annotated) {
-            effective.addAll(config.annotationMode);
+            effective = Mode.expand(config.annotationMode);
             onFailAppendTo = config.annotationOnFailAppendTo;
             onSuccessAppendTo = config.annotationOnSuccessAppendTo;
         } else {
-            effective.addAll(config.includesMode);
+            effective = Mode.expand(config.includesMode);
             onFailAppendTo = config.includesOnFailAppendTo;
             onSuccessAppendTo = config.includesOnSuccessAppendTo;
-        }
-        if (effective.remove(Mode.YOLO)) {
-            effective.addAll(Mode.YOLO_DEFAULT);
         }
         // SYNCHRONIZATION_MONITOR cannot be used in combination with other modes
         if (effective.contains(Mode.SYNCHRONIZATION_MONITOR) && effective.size() > 1) {
@@ -207,15 +204,13 @@ public final class ValueClassTransformer implements ClassFileTransformer {
      */
     private byte[] rewrite(ClassName className, ClassModel model, Selection selection,
             ClassLoader loader) {
-        boolean ignoreSync = selection.hasMode(Mode.REMOVE_SYNCHRONIZED);
-        boolean markClassFinal = selection.hasMode(Mode.MARK_CLASS_FINAL);
-        List<String> problems = ValueClassRewriter.suitabilityProblems(
-                model, ignoreSync, markClassFinal);
+        Set<Mode> modes = selection.effective();
+        List<String> problems = ValueClassRewriter.suitabilityProblems(model, modes);
         if (!problems.isEmpty()) {
             return onRejected(className, "is selected for value-class transformation but is not"
                     + " suitable: " + String.join("; ", problems), selection);
         }
-        byte[] out = ValueClassRewriter.transform(model, ignoreSync, markClassFinal, loader);
+        byte[] out = ValueClassRewriter.transform(model, modes, loader);
         if (out == null) {
             return onRejected(className,
                     "is selected for value-class transformation but could not be safely"

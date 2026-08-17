@@ -9,7 +9,8 @@ import java.util.List;
  * <p>Entry points:
  * <ul>
  *   <li>{@link #safe()} — returns a {@link ConfiguredVerifier} for {@code safe} mode
- *       (class must already be {@code final}). Chain builder methods before calling
+ *       (the class and its instance fields must already be {@code final}). Chain
+ *       builder methods before calling
  *       {@link ConfiguredVerifier#verify verify} or {@link ConfiguredVerifier#violations violations}.
  *   <li>{@link #verify(Class[])} — shorthand for {@code safe().verify(classes)}.
  *   <li>{@link #violations(Class[])} — shorthand for {@code safe().violations(classes)}.
@@ -33,7 +34,8 @@ public final class AutoValhallaVerifier {
 
     private AutoValhallaVerifier() {}
 
-    /** Returns a {@link ConfiguredVerifier} for {@code safe} mode (class must already be {@code final}). */
+    /** Returns a {@link ConfiguredVerifier} for {@code safe} mode (the class and its
+     *  instance fields must already be {@code final}). */
     public static ConfiguredVerifier safe() {
         return new ConfiguredVerifier(false, false, false);
     }

@@ -139,7 +139,7 @@ class DemoFixturesTest {
         // unsuitable, and the targeted message names exactly those methods.
         assertTrue(ValueClassRewriter.fieldsSafeToMarkFinal(model),
                 "SyncPoint fields are immutable");
-        List<String> problems = ValueClassRewriter.suitabilityProblems(model, false, true);
+        List<String> problems = ValueClassRewriter.suitabilityProblems(model, Set.of(Mode.MARK_CLASS_FINAL));
         assertTrue(problems.stream().anyMatch(p -> p.contains("synchronized instance method(s) sum, dot")),
                 "the synchronized problem must name the methods: " + problems);
 
