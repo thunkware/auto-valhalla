@@ -136,7 +136,7 @@
           <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
           <dateFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</dateFormat>
           <generateGitPropertiesFile>true</generateGitPropertiesFile>
-          <generateGitPropertiesFilename>${project.build.outputDirectory}/git-${artifactId}.properties</generateGitPropertiesFilename>
+          <generateGitPropertiesFilename>${project.build.outputDirectory}/git-${project.artifactId}.properties</generateGitPropertiesFilename>
           <failOnNoGitDirectory>false</failOnNoGitDirectory>
           <includeOnlyProperties>
             <includeOnlyProperty>^git.branch$</includeOnlyProperty>
