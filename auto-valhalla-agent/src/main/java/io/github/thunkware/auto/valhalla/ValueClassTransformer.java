@@ -76,10 +76,6 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
 
         ClassName className = ClassName.of(classNameJvm);
-        if (!loggers.log().isDebugEnabled()) {
-            return doTransform(loader, className, classfileBuffer);
-        }
-
         long startTime = System.nanoTime();
         byte[] result = null;
         try {
@@ -88,7 +84,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         } finally {
             long durationNano = System.nanoTime() - startTime;
             Stats.onValueClassTransform(durationNano);
-            if (result != null) {
+            if (result != null && loggers.log().isDebugEnabled()) {
                 long duration = TimeUnit.NANOSECONDS.toMillis(durationNano);
                 loggers.log().debug("Completed transforming " + className.java()
                                             + " in " + duration + "ms (total " + Stats.transformTotalDurationMs() + "ms)");
