@@ -104,17 +104,22 @@ import java.util.stream.Collectors;
 public final class AutoValhallaAgent28 {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent28.class);
-
-    private static boolean installAttempted;
+    public static final String INSTALL_ATTEMPTED = AutoValhallaAgent28.class.getSimpleName() + ".installAttempted";
 
     private AutoValhallaAgent28() {
     }
 
-    static synchronized void install(Instrumentation inst) {
-        if (installAttempted) {
+    static boolean installAttempted() {
+        return Boolean.getBoolean(INSTALL_ATTEMPTED);
+    }
+
+    static void install(Instrumentation inst) {
+        if (installAttempted()) {
             return;
         }
-        installAttempted = true;
+        // get-around classloader problems in case -javaagent is mixed with attach mechanism in uber jars
+        System.setProperty(INSTALL_ATTEMPTED, "true");
+
         Config cfg = parse();
         initLogging(inst, cfg);
         Stats.accept(cfg);

@@ -1,13 +1,12 @@
 package io.github.thunkware.auto.valhalla;
 
+import static io.github.thunkware.auto.valhalla.Mode.SYNCHRONIZATION_MONITOR;
+
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import io.github.thunkware.auto.valhalla.util.Failable;
-
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAccumulator;
-
-import static io.github.thunkware.auto.valhalla.Mode.SYNCHRONIZATION_MONITOR;
 
 final class Stats {
 

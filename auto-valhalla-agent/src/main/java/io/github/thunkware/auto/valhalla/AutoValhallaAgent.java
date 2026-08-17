@@ -60,7 +60,7 @@ public final class AutoValhallaAgent {
         }
     }
 
-    private static void warnUnsupported(String entry) {
+    static void warnUnsupported(String entry) {
         System.err.println(
                 "[auto-valhalla] WARNING: agent started via " + entry
                         + " on an unsupported JVM (Java " + jdkFeature()

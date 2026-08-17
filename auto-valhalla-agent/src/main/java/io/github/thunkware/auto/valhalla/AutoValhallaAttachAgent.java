@@ -37,8 +37,11 @@ public final class AutoValhallaAttachAgent {
                     "auto-valhalla agent attach is not supported on this JVM. "
                             + "Project Valhalla requires JDK 28+ with --enable-preview.");
         }
+        if (AutoValhallaAgent28.installAttempted()) {
+            return;
+        }
         Instrumentation instrumentation = ByteBuddyAgent.install();
-        AutoValhallaAgent.agentmain(null, instrumentation);
+        AutoValhallaAgent28.install(instrumentation);
     }
 
     /**
