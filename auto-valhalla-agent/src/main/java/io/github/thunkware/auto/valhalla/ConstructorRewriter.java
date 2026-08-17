@@ -251,6 +251,12 @@ final class ConstructorRewriter {
                     block.add(e);
                 }
             }
+            // Whatever is still buffered in `block` sits between the last
+            // relocated own-field store and post.get(i), so it must be emitted
+            // *before* the rest of the body — appending it after `late` would
+            // move it past the method's return, silently dropping the side
+            // effects of statements such as a trailing method call.
+            late.addAll(block);
             for (; i < post.size(); i++) {
                 CodeElement e = post.get(i);
                 if (e instanceof LocalVariable) {
@@ -258,7 +264,6 @@ final class ConstructorRewriter {
                 }
                 late.add(e);
             }
-            late.addAll(block);
 
             if (hasOwnPutfield(late)) {
                 return new Result(prefix, null, elems.get(s), late, true, false);

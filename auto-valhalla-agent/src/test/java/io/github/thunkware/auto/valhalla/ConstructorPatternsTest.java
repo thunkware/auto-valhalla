@@ -1,12 +1,18 @@
 package io.github.thunkware.auto.valhalla;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.InputStream;
 import java.lang.classfile.ClassFile;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Integration coverage for {@link ConstructorRewriter}: ordinary constructors that
@@ -78,5 +84,38 @@ class ConstructorPatternsTest {
     @Test
     void stringConcatIndy() throws Exception {
         assertConverts("sample/Concat");
+    }
+
+    /**
+     * A rewritten constructor must keep doing everything the original did.
+     * Verifying the bytecode is not enough: code left over between the last
+     * relocated field store and the end of the body used to be emitted after the
+     * return, where it verifies but never runs.
+     */
+    @Test
+    void constructorSideEffectsSurviveRelocation(@TempDir Path dir) throws Exception {
+        String internal = "sample/SideEffect";
+        byte[] original = read("/" + internal + ".class");
+        assertNotNull(original, internal + " must be on the test classpath");
+
+        ClassFile cf = ClassFile.of();
+        byte[] out = ValueClassRewriter.transform(cf.parse(original), false, true, true, null);
+        assertNotNull(out, internal + " must be rewritten into a value class");
+        assertTrue(ValueClassRewriter.alreadyValue(cf.parse(out)),
+                internal + " must encode a value class");
+        assertTrue(cf.verify(out).isEmpty(), internal + " must verify");
+
+        // Load the rewritten class in an isolated loader and run it: the
+        // constructor must set the field AND call bump().
+        Path pkg = Files.createDirectories(dir.resolve("sample"));
+        Files.write(pkg.resolve("SideEffect.class"), out);
+        try (URLClassLoader loader = new URLClassLoader(new URL[] { dir.toUri().toURL() }, null)) {
+            Class<?> cls = loader.loadClass("sample.SideEffect");
+            Object instance = cls.getConstructor(int.class).newInstance(7);
+            assertEquals(7, cls.getMethod("x").invoke(instance),
+                    "the relocated field store must still assign the field");
+            assertEquals(1, cls.getField("calls").getInt(null),
+                    "the constructor's trailing bump() call must still run");
+        }
     }
 }
