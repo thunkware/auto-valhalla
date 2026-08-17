@@ -300,12 +300,15 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
     /** Appends the Java name of {@code className} to the file at {@code path}
      *  (unless it is already recorded there), deduplicating across runs by reading
-     *  the file at start-up. Uses {@link BackgroundFileWriter} for non-blocking I/O. */
+     *  the file at start-up. Uses {@link BackgroundFileWriter} for non-blocking I/O.
+     *  Recording is best-effort: an unusable path yields a null writer (reported
+     *  once by {@link BackgroundFileWriter#forFile}) and is skipped, since failing
+     *  here would also swallow the diagnostics the caller is about to log. */
     private void appendTo(String path, ClassName className) {
-        if (path == null || path.isEmpty()) {
-            return;
+        BackgroundFileWriter writer = BackgroundFileWriter.forFile(path);
+        if (writer != null) {
+            writer.record(className.java());
         }
-        BackgroundFileWriter.forFile(path).record(className.java());
     }
 
     /**

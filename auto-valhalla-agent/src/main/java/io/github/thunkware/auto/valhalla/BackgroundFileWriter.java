@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import io.github.thunkware.auto.valhalla.util.Failable;
 
 import java.io.BufferedWriter;
@@ -26,7 +28,12 @@ import java.util.concurrent.TimeUnit;
  */
 final class BackgroundFileWriter {
 
+    private static final InternalLogger LOG = InternalLoggerFactory.getLogger(BackgroundFileWriter.class);
+
     private static final Map<String, BackgroundFileWriter> WRITERS = new ConcurrentHashMap<>();
+    /** Paths that could not be opened; remembered so the failure is reported once
+     *  instead of on every class that wants to be recorded. */
+    private static final Set<String> UNUSABLE = ConcurrentHashMap.newKeySet();
     private static final long FLUSH_INTERVAL_MS = 1000;
 
     private final Object lock = new Object();
@@ -45,12 +52,30 @@ final class BackgroundFileWriter {
      * Returns or creates the async writer for the given file path. Each unique
      * path gets a single shared instance with its own queue and background thread.
      * The file is read once so names already present are not appended again.
+     *
+     * @return {@code null} when {@code path} is null/empty or the file cannot be
+     *         opened (e.g. it is a directory, or is not readable). Callers must
+     *         tolerate {@code null} — recording is best-effort and must never
+     *         break class loading.
      */
     static BackgroundFileWriter forFile(String path) {
-        if (path == null || path.isEmpty()) {
+        if (path == null || path.isEmpty() || UNUSABLE.contains(path)) {
             return null;
         }
-        return WRITERS.computeIfAbsent(path, p -> Failable.callQuietly(() -> new BackgroundFileWriter(p)));
+        BackgroundFileWriter writer = WRITERS.computeIfAbsent(path, BackgroundFileWriter::create);
+        if (writer == null) {
+            UNUSABLE.add(path);
+        }
+        return writer;
+    }
+
+    private static BackgroundFileWriter create(String path) {
+        try {
+            return new BackgroundFileWriter(path);
+        } catch (Exception e) {
+            LOG.warning("cannot record to file " + path + ", recording disabled for it: " + e);
+            return null;
+        }
     }
 
     private BackgroundFileWriter(String path) throws IOException {
@@ -74,8 +99,9 @@ final class BackgroundFileWriter {
     }
 
     /**
-     * Records a name to this file if it has not been seen before. Non-blocking;
-     * adds to queue or silently drops if queue is full (should rarely happen).
+     * Records a name to this file if it has not been seen before. Non-blocking:
+     * the name is handed to an unbounded queue that the background thread drains,
+     * so this never waits on I/O.
      */
     void record(String name) {
         if (name == null || name.isEmpty()) {
