@@ -61,17 +61,14 @@ final class BackgroundFileWriter {
         if (path == null || path.isEmpty() || UNUSABLE.contains(path)) {
             return null;
         }
-        BackgroundFileWriter writer = WRITERS.computeIfAbsent(path, BackgroundFileWriter::create);
-        if (writer == null) {
-            UNUSABLE.add(path);
-        }
-        return writer;
+        return WRITERS.computeIfAbsent(path, BackgroundFileWriter::create);
     }
 
     private static BackgroundFileWriter create(String path) {
         try {
             return new BackgroundFileWriter(path);
         } catch (Exception e) {
+            UNUSABLE.add(path);
             LOG.warning("cannot record to file " + path + ", recording disabled for it: " + e);
             return null;
         }

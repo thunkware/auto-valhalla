@@ -178,13 +178,15 @@ java --enable-preview \
     -jar myapp.jar
 ```
 
-This will instrument all classes (because of `includes='*'`) and log class
-names that are synchronized on. See log output in the console or in
-`auto-valhalla.synchronization.txt`.
+Instead of converting to value classes, this will instrument all classes 
+(because of `includes='*'`) and log class names that are synchronized on.
+See log output in the console or in `auto-valhalla.synchronization.txt`.
 
 You can use the file to:
   - more confidently apply `@AutoValhalla` annotation to classes, or
   - feed back as `excludes-files` in a later run to avoid converting those classes.
+
+This mode cannot be combined with other modes.
 
 | Option | Description |
 | --- | --- |
@@ -226,14 +228,14 @@ under the active mode, that is a failure; see [Success and failure handling](#su
 
 #### Mode values
 
-| Mode | Effect                                                                                                                                                                                                                           |
-| --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `safe` | Convert only classes that already need no structural change: the class is `final` and every instance field is `final`.                                                                                                            |
-| `remove-synchronized` | Allow candidates with synchronized instance methods; their `synchronized` modifier is removed.                                                                                                                                   |
-| `mark-class-final` | Also convert non-final candidates by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                                                                           |
-| `mark-fields-final` | Also convert candidates with non-`final` private instance fields, by marking those fields `final`. A candidate whose non-`final` field is written outside a constructor, or left unwritten by one, is still rejected — it cannot be made `final`. Non-`private` mutable fields are rejected in every mode, since another class may write them. |
-| `yolo` | Shorthand for `remove-synchronized,mark-class-final,mark-fields-final`.                                                                                                                                                          |
-| `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. Optionally also records them to a file via `synchronization-monitor.append-to`. **Cannot be combined with other modes.** |
+| Mode | Effect                                                                                                                                                          |
+| --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `safe` | Convert only classes that can safely be converted: `final` class with `final` instance fields.                                                          |
+| `remove-synchronized` | Allow classes with synchronized instance methods by removing `synchronized` modifier.                                                                           |
+| `mark-class-final` | Allow non-final classes by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                    |
+| `mark-fields-final` | Allow classes with non-`final` instance fields if those fields written only once in a constructor. The fields are marked `final`.                               |
+| `yolo` | Shorthand for `remove-synchronized,mark-class-final,mark-fields-final`.                                                                                         |
+| `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. See [Synchronization Monitor](#synchronization-monitor) |
 
 Multiple modes are comma-separated. Mode names are case-insensitive and
 accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and

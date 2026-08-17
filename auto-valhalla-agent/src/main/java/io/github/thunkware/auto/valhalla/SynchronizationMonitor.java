@@ -35,18 +35,13 @@ import java.util.concurrent.TimeUnit;
  * bundles, some application-server and plugin loaders — where entering a
  * synchronized block would fail with {@code NoClassDefFoundError}.
  *
- * <p>For those setups, start the JVM with the undocumented flag
+ * <p>For those setups, try starting the JVM with the undocumented flag
  * <pre>{@code
  * -Dio.github.thunkware.auto.valhalla.SynchronizationMonitor.appendToBootstrapClassLoaderSearch=true
  * }</pre>
  * which makes {@code AutoValhallaAgent} add the agent jar to the bootstrap class
  * loader search before any other agent class is loaded, so every loader can see
- * this class. It is off by default because it loads the whole agent from the
- * bootstrap loader, which cannot be undone for the lifetime of the JVM, and
- * because appending to the bootstrap class path makes the JVM fall back to
- * boot-loader-only class-data sharing ("Sharing is only supported for boot loader
- * classes because bootstrap classpath has been appended"), which costs start-up
- * time. See {@code AutoValhallaAgent.appendAgentJarToBootstrap}.
+ * this class.
  */
 public final class SynchronizationMonitor {
 
