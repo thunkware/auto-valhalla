@@ -126,15 +126,8 @@ final class ConstructorRewriter {
                 return;
             }
 
-            if (r.movable.isEmpty()) {
-                // No own field initializers to relocate. A value class must not
-                // invoke super(), so drop the prologue (the leading this-load and
-                // the invokespecial Object.<init>) entirely; the remaining body is
-                // valid on its own (typically just a return).
-                r.late.forEach(cb);
-                return;
-            }
-
+            // reorder() only reports changed == true when it found something to
+            // relocate, so r.movable is non-empty from here on.
             r.prefix.forEach(cb);
             Map<String, Integer> fieldLocal = new HashMap<>();
             String self = owner.thisClass().asInternalName();
