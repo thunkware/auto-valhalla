@@ -6,7 +6,7 @@ import java.time.ZonedDateTime;
  * The default {@link InternalLogger} implementation: writes to stderr and
  * resolves its effective level hierarchically via
  * {@link InternalLoggerFactory#effectiveLevel(String)}. In
- * {@link LoggingMode#APPLICATION} mode it delegates to a
+ * {@link LoggingSystem#APPLICATION} mode it delegates to a
  * {@link ApplicationLogger} so agent messages flow through the application's
  * logging framework.
  */
@@ -25,7 +25,7 @@ final class SimpleLogger extends AbstractInternalLogger {
 
     @Override
     void logDirect(Level lv, String msg, Throwable t, ZonedDateTime timestamp) {
-        switch (InternalLoggerFactory.mode()) {
+        switch (InternalLoggerFactory.system()) {
             case NONE -> {
             }
             case APPLICATION -> {

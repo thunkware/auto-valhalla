@@ -5,7 +5,7 @@ package io.github.thunkware.auto.valhalla.logger;
  *
  * <p>Obtain a logger via {@link InternalLoggerFactory#getLogger(Class)} or
  * {@link InternalLoggerFactory#getLogger(String)}. The global level, per-logger
- * overrides, and logging mode are configured on {@link InternalLoggerFactory}.
+ * overrides, and logging system are configured on {@link InternalLoggerFactory}.
  *
  * <p>Supported levels: {@code OFF}, {@code FATAL}, {@code ERROR}, {@code WARN},
  * {@code INFO}, {@code DEBUG}. {@code FATAL} logs at {@code WARN} and always throws.

@@ -21,13 +21,13 @@ class ApplicationLoggerTest {
         originalErr = System.err;
         captured = new ByteArrayOutputStream();
         System.setErr(new PrintStream(captured, true));
-        InternalLoggerFactory.setMode(LoggingMode.APPLICATION.name());
+        InternalLoggerFactory.setSystem(LoggingSystem.APPLICATION.name());
         InternalLoggerFactory.reinstall();
     }
 
     @AfterEach
     void tearDown() {
-        InternalLoggerFactory.setMode(LoggingMode.SIMPLE.name());
+        InternalLoggerFactory.setSystem(LoggingSystem.SIMPLE.name());
         System.setErr(originalErr);
     }
 

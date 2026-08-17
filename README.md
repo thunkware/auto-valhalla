@@ -215,65 +215,46 @@ are not re-appended, and a missing file is treated as empty.
 | `auto-valhalla.annotation.on-fail-append-to` | Appends the class name of each annotation-selected class that fails to convert. |
 | `auto-valhalla.includes.on-fail-append-to` | Same, for includes-selected classes. |
 
-### Diagnostics
+### Logging
 
-| Option | Description                                                                                                   |
-| --- |---------------------------------------------------------------------------------------------------------------|
-| `logging.level.root` | Root logging verbosity: `off`, `fatal`, `error`, `warning`, `info`, `debug`, `trace`. Default: `info`.   |
-| `logging.level.<logger-name>` | Per-logger level override. Overrides the root level for the named logger only. |
-| `auto-valhalla.logging` | Logging output mode: `simple` (default), `none`, `application`. See below.                                    |
+| Option | Description                                                                                            |
+| --- |--------------------------------------------------------------------------------------------------------|
+| `auto-valhalla.logging` | Logging system: `simple` (default), `none`, `application`. See below.                                  |
+| `logging.level.<logger-name>` | Log level for the logger. `off`, `fatal`, `error`, `warning`, `info`, `debug`, `trace`. Default: `info` |
 
-Named loggers available for fine-grained control:
+#### Logging System
 
-| Logger name | Default | What it covers |
-| --- | --- | --- |
-| `io.github.thunkware.auto.valhalla.AutoValhallaAgent28` | `info` | Agent startup and configuration |
-| `io.github.thunkware.auto.valhalla.ValueClassTransformer` | `info` | Per-class transform decisions |
-| `auto-valhalla.synchronization-monitor` | `info` | Classes seen being `synchronized` on at runtime |
+`auto-valhalla.logging` controls the agent’s logging System. The following 3 are supported:
+  * `simple`: The agent will print out its logs using the standard error stream. Only INFO or higher logs will be printed. This is the default Java agent logging mode.
+  * `none`: The agent will not log anything.
+  * `application`: The agent will attempt to redirect its own logs to the instrumented application's slf4j logger. This 
+   works the best for simple one-jar applications that do not use multiple classloaders; Spring Boot apps are supported 
+   as well. The Java agent output logs can be further configured using the instrumented application's logging 
+   configuration (e.g. logback.xml or log4j2.xml). Make sure to test that this mode works for your application before 
+   running it in a production environment.
 
-Example — silence the synchronization monitor while keeping everything else at `info`:
+#### Log levels
 
+Log levels can be controlled by `logging.level.<logger-name>=<level>` where level is one of TRACE, DEBUG, INFO, WARN, 
+ERROR, FATAL, or OFF. FATAL will cause passed-in or a new exception to be thrown. The root logger can be configured by 
+using logging.level.root.
+
+Example:
 ```
--Dlogging.level.auto-valhalla.synchronization-monitor=off
+logging.level.root=WARN
+
+# Agent startup and configuration
+logging.level.io.github.thunkware.auto.valhalla.AutoValhallaAgent28=INFO
+
+# Classes used in `synchronized` when synchronization-monitor mode is enabled
+logging.level.auto-valhalla.synchronization-monitor=INFO
 ```
-
-Per-logger overrides may also be set in a [config file](#config-file):
-
-```properties
-logging.level.auto-valhalla.annotation.success=debug
-logging.level.auto-valhalla.synchronization-monitor=off
-```
-
-#### Logging modes
-
-`simple` is the default and prints messages to stderr with a timestamp prefix.
-
-`none` suppresses all agent logging.
-
-`application` redirects agent logs to the instrumented application's SLF4J
-loggers (one per named logger above). The agent instruments two points
-in the application's class loading to detect when the logging system is ready:
-
-- **Non-Spring apps**: the bridge is installed once
-  `org.slf4j.LoggerFactory.getILoggerFactory()` returns, which signals that
-  SLF4J is initialized.
-- **Spring Boot apps**: `SpringApplication`'s static initializer is detected
-  first, which switches the trigger to
-  `LoggingApplicationListener.initialize()` — the point at which Logback or
-  Log4j2 is actually configured.
-
-If SLF4J is not on the classpath the agent falls back to `simple` mode. Agent
-startup messages emitted before the logging system is ready still go to stderr.
-
-Use `application` when you want agent messages to flow through the same
-logging framework as the rest of your application (including its log level
-filtering, appenders, and structured output).
 
 ### Config file
 
 | Option | Description |
 | --- | --- |
-| `auto-valhalla.config` | Path to a Java properties file supplying any of the options above. Keys may omit the `auto-valhalla.` prefix. |
+| `auto-valhalla.config` | Path to a Java properties file supplying any of the options above. |
 
 When `auto-valhalla.config` is set, config file entries are applied after
 env vars but can be overridden by explicit system properties set alongside it.

@@ -1,11 +1,11 @@
 package io.github.thunkware.auto.valhalla.logger;
 
-public enum LoggingMode {
+public enum LoggingSystem {
     SIMPLE,
     NONE,
     APPLICATION;
 
-    public static LoggingMode findOrNull(String s) {
+    public static LoggingSystem findOrNull(String s) {
         if (s == null) {
             return null;
         }

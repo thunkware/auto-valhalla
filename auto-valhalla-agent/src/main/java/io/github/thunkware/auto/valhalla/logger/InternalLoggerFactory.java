@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * Creates {@link InternalLogger} instances and holds the shared logging
- * configuration (global level, per-logger overrides, and logging mode).
+ * configuration (global level, per-logger overrides, and logging system).
  *
  * <p>A logger's effective level is resolved hierarchically: the exact name, then
  * each ancestor package, then {@code root}, then the global default. This lets a
@@ -23,7 +23,7 @@ public final class InternalLoggerFactory {
     }
 
     private static volatile Level level = Level.INFO;
-    private static volatile LoggingMode loggingMode = LoggingMode.SIMPLE;
+    private static volatile LoggingSystem loggingSystem = LoggingSystem.SIMPLE;
     private static final ConcurrentMap<String, Level> loggerLevels = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, InternalLogger> instances = new ConcurrentHashMap<>();
 
@@ -44,9 +44,9 @@ public final class InternalLoggerFactory {
     }
 
     private static InternalLogger create(String name) {
-        // The mode is typically set after loggers are first obtained (static
+        // The system is typically set after loggers are first obtained (static
         // initializers run before AutoValhallaAgent28.install), so the default
-        // implementation re-checks the mode at log time; in APPLICATION mode it
+        // implementation re-checks the system at log time; in APPLICATION mode it
         // delegates to a ApplicationLogger.
         return new SimpleLogger(name);
     }
@@ -102,33 +102,33 @@ public final class InternalLoggerFactory {
     }
 
     /**
-     * Sets the logging mode from a string (case-insensitive):
+     * Sets the logging system from a string (case-insensitive):
      * {@code simple} (default), {@code none}, {@code application}.
      * Unknown values default to {@code simple}.
      */
-    public static void setMode(String s) {
+    public static void setSystem(String s) {
         if (s == null || s.isBlank()) {
-            loggingMode = LoggingMode.SIMPLE;
+            loggingSystem = LoggingSystem.SIMPLE;
             return;
         }
-        LoggingMode m = LoggingMode.findOrNull(s);
+        LoggingSystem m = LoggingSystem.findOrNull(s);
         if (m != null) {
-            loggingMode = m;
+            loggingSystem = m;
         } else {
-            loggingMode = LoggingMode.SIMPLE;
-            getLogger(InternalLoggerFactory.class).warning("Unknown logging mode '" + s.trim()
+            loggingSystem = LoggingSystem.SIMPLE;
+            getLogger(InternalLoggerFactory.class).warning("Unknown logging system '" + s.trim()
                     + "'; valid values are: simple, none, application. Defaulting to simple.");
         }
     }
 
     /**
      * Starts buffering log output in memory. Flushed by {@link #reinstall()}.
-     * Buffering only engages in {@link LoggingMode#APPLICATION} mode (where the
+     * Buffering only engages in {@link LoggingSystem#APPLICATION} mode (where the
      * SLF4J bridge is installed and will eventually flush); in any other mode
      * this is a no-op so messages are never held and lost.
      */
     public static void startBuffering() {
-        if (loggingMode == LoggingMode.APPLICATION) {
+        if (loggingSystem == LoggingSystem.APPLICATION) {
             buffering = true;
         }
     }
@@ -142,8 +142,8 @@ public final class InternalLoggerFactory {
         flushBuffer();
     }
 
-    static LoggingMode mode() {
-        return loggingMode;
+    static LoggingSystem system() {
+        return loggingSystem;
     }
 
     static boolean isBuffering() {

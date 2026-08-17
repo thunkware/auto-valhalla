@@ -4,7 +4,7 @@ import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerBridgeTransform
 import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags;
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
-import io.github.thunkware.auto.valhalla.logger.LoggingMode;
+import io.github.thunkware.auto.valhalla.logger.LoggingSystem;
 import io.github.thunkware.auto.valhalla.util.StringUtils;
 
 import java.io.BufferedReader;
@@ -123,8 +123,8 @@ public final class AutoValhallaAgent28 {
     private static void initLogging(Instrumentation inst, Config cfg) {
         InternalLoggerFactory.setLevel(cfg.loggerLevels.remove("root"));
         cfg.loggerLevels.forEach(InternalLoggerFactory::setLevel);
-        InternalLoggerFactory.setMode(cfg.logging);
-        if (LoggingMode.findOrNull(cfg.logging) == LoggingMode.APPLICATION) {
+        InternalLoggerFactory.setSystem(cfg.logging);
+        if (LoggingSystem.findOrNull(cfg.logging) == LoggingSystem.APPLICATION) {
             ApplicationLoggerFlags.enableApplicationMode();
             inst.addTransformer(new ApplicationLoggerBridgeTransformer(), false);
         }

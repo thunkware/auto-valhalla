@@ -89,7 +89,7 @@ abstract class AbstractInternalLogger implements InternalLogger {
     }
 
     private void log(Level lv, String msg, Throwable t) {
-        if (InternalLoggerFactory.mode() == LoggingMode.NONE) {
+        if (InternalLoggerFactory.system() == LoggingSystem.NONE) {
             return;
         }
         Level effective = InternalLoggerFactory.effectiveLevel(name);

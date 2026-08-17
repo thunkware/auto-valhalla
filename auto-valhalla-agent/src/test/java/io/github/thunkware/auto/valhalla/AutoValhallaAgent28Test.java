@@ -165,24 +165,24 @@ class AutoValhallaAgent28Test {
     }
 
     @Test
-    void loggingModeIsParsed() {
+    void loggingSystemIsParsed() {
         assertEquals("simple", parseWith("logging", "simple").logging);
         assertEquals("none", parseWith("logging", "none").logging);
         assertEquals("application", parseWith("logging", "application").logging);
     }
 
     @Test
-    void loggingModeNoneSuppressesOutput() {
-        // setMode(null) resets to SIMPLE; setMode("none") suppresses
-        InternalLoggerFactory.setMode("none");
+    void loggingSystemNoneSuppressesOutput() {
+        // setSystem(null) resets to SIMPLE; setSystem("none") suppresses
+        InternalLoggerFactory.setSystem("none");
         InternalLoggerFactory.getLogger(AutoValhallaAgent28Test.class).info("this should be suppressed");
-        InternalLoggerFactory.setMode(null); // reset
+        InternalLoggerFactory.setSystem(null); // reset
     }
 
     @Test
-    void unknownLoggingModeDefaultsToSimple() {
+    void unknownLoggingSystemDefaultsToSimple() {
         // Must not crash; warns and falls back to simple
-        InternalLoggerFactory.setMode("bogus-logging-mode");
-        InternalLoggerFactory.setMode(null); // reset
+        InternalLoggerFactory.setSystem("bogus-logging-system");
+        InternalLoggerFactory.setSystem(null); // reset
     }
 }
