@@ -28,8 +28,7 @@ public class AttachViaSystemPropertyTest {
     void attachViaSystemPropertyTransformsDemoClasses() throws Exception {
         Assumptions.assumeTrue(Files.exists(Path.of("target", "classes", "demo", "runner", "Main.class")),
                 "demo runner not built; run mvn package first");
-        Assumptions.assumeTrue(Files.exists(Path.of("..", "auto-valhalla-agent", "target",
-                "auto-valhalla-agent-0.1.0-SNAPSHOT.jar")),
+        Assumptions.assumeTrue(agentJarExists(),
                 "agent jar not built; run mvn package first");
 
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
@@ -61,5 +60,16 @@ public class AttachViaSystemPropertyTest {
             bos.write(buf, 0, n);
         }
         return new String(bos.toByteArray(), StandardCharsets.UTF_8);
+    }
+
+    /** True if a packaged {@code auto-valhalla-agent} jar exists (any version,
+     *  e.g. {@code 0.1.0-SNAPSHOT} in dev or the release version during
+     *  {@code mvn release:prepare}). */
+    private static boolean agentJarExists() throws IOException {
+        try (java.util.stream.Stream<Path> children =
+                Files.list(Path.of("..", "..", "auto-valhalla-agent", "target"))) {
+            return children.anyMatch(p -> p.getFileName().toString()
+                    .matches("auto-valhalla-agent-.*\\.jar"));
+        }
     }
 }
