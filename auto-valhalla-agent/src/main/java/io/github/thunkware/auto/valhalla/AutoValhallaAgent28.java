@@ -137,7 +137,7 @@ public final class AutoValhallaAgent28 {
     }
 
     private static String getVersion() {
-        URL url = AutoValhallaAgent28.class.getResource("/git.properties");
+        URL url = AutoValhallaAgent28.class.getResource("/git-auto-valhalla-agent.properties");
         Properties properties = new Properties();
         return loadProperties(url, properties).getProperty("git.build.version", "");
     }
