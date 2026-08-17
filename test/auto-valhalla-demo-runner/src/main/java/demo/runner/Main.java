@@ -14,7 +14,7 @@ import java.util.Objects;
 /**
  * Exercises the cross-version demos and verifies each class became a value
  * class or stayed an identity class according to the
- * {@code -Dauto-valhalla.expect} system property ({@code value} or
+ * {@code -Ddemo.expect} system property ({@code value} or
  * {@code identity}). Exits non-zero when any class behaves like the wrong
  * object form, so a demo class that silently fails to transform fails
  * run-demo.sh / build.sh instead of passing unnoticed.
@@ -25,11 +25,11 @@ public class Main {
 
     static void main(String[] args) {
         // attach the agent via a system property when not started with -javaagent
-        if (Boolean.getBoolean("auto-valhalla.attach")) {
+        if (Boolean.getBoolean("demo.attach")) {
             AutoValhallaAttachAgent.attach();
         }
 
-        boolean expectValue = "value".equals(System.getProperty("auto-valhalla.expect", "identity"));
+        boolean expectValue = "value".equals(System.getProperty("demo.expect", "identity"));
         System.out.println("=== auto-valhalla cross-version demo ===");
         System.out.println("expecting " + (expectValue ? "value" : "identity") + " classes");
 

@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the demo runner's system-property attach path: when started with
- * {@code -Dauto-valhalla.attach=true} (instead of {@code -javaagent}), {@link
+ * {@code -Ddemo.attach=true} (instead of {@code -javaagent}), {@link
  * Main} self-attaches the agent and the demo classes must become value classes.
  *
  * <p>Runs the real {@code demo.runner.Main} in a forked JVM, so it needs the
@@ -36,8 +36,8 @@ public class AttachViaSystemPropertyTest {
         ProcessBuilder pb = new ProcessBuilder(
                 java,
                 "--enable-preview",
-                "-Dauto-valhalla.attach=true",
-                "-Dauto-valhalla.expect=value",
+                "-Ddemo.attach=true",
+                "-Ddemo.expect=value",
                 "-Dauto-valhalla.includes=demo16.includes.,demo5.includes.",
                 "-Dauto-valhalla.annotation-mode=yolo",
                 "-Dauto-valhalla.includes-mode=yolo",

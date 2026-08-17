@@ -11,7 +11,8 @@ cd "$(git rev-parse --show-toplevel)"
 export JAVA_HOME
 
 if [ "${1:-}" = "debug" ]; then
-    EXTRA=(-Dauto-valhalla.debug=true)
+    # the agent has no `debug` flag; raise its log level instead
+    EXTRA=(-Dlogging.level.root=DEBUG)
 else
     EXTRA=()
 fi
@@ -31,17 +32,16 @@ CP="test/auto-valhalla-demo-runner/target/classes:$DEMO5_JAR:$DEMO16_JAR:$ANNO_J
 echo
 echo "==== run WITHOUT agent (identity classes) ===="
 "$JAVA_HOME/bin/java" --enable-preview \
-    -Dauto-valhalla.expect=identity \
+    -Ddemo.expect=identity \
     -cp "$CP" demo.runner.Main
 
 echo
 echo "==== run WITH agent (annotation + includes selection, includes-mode=yolo) ===="
 "$JAVA_HOME/bin/java" --enable-preview \
     -javaagent:"$AGENT_JAR" \
-    -Dauto-valhalla.expect=value \
+    -Ddemo.expect=value \
     -Dauto-valhalla.includes=demo16.includes.,demo5.includes. \
     -Dauto-valhalla.annotation-mode=yolo \
     -Dauto-valhalla.includes-mode=yolo \
-    -Dauto-valhalla.debug=true \
     "${EXTRA[@]}" \
     -cp "$CP" demo.runner.Main
