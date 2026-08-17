@@ -254,30 +254,15 @@ logging.level.auto-valhalla.synchronization-monitor=INFO
 
 | Option | Description |
 | --- | --- |
-| `auto-valhalla.config` | Path to a Java properties file supplying any of the options above. |
+| `auto-valhalla.config` | Path to a Java properties file supplying any of the options. |
 
 When `auto-valhalla.config` is set, config file entries are applied after
 env vars but can be overridden by explicit system properties set alongside it.
 
-### Examples
-
-```bash
-# convert a whole package by prefix
--Dauto-valhalla.includes=com.example
-
-# convert only specific classes
--Dauto-valhalla.includes=com.example.Foo,com.example.Bar
-
-# read options from a properties file (keys may omit auto-valhalla.)
--Dauto-valhalla.config=/etc/auto-valhalla.properties
-```
-
-`/etc/auto-valhalla.properties`:
-
 ```properties
-includes=com.example
-excludes=com.example.dto
-logging.level.auto-valhalla.includes.rejected=fatal
+auto-valhalla.includes=com.example
+auto-valhalla.excludes=com.example.dto
+logging.level.auto-valhalla.includes.rejected=FATAL
 ```
 
 ### Feedback loop
@@ -308,7 +293,7 @@ surfacing errors:
 ```
 
 The companion `includes.on-success-append-to` records the classes that *were*
-converted, which is handy for turning a broad `includes` sweep into an
+converted, which is handy for applying `@AutoValhalla` annotation or for turning a broad `includes` sweep into an
 explicit `includes-files` list:
 
 ```bash

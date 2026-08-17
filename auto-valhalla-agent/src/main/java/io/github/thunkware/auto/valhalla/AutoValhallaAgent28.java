@@ -150,11 +150,12 @@ public final class AutoValhallaAgent28 {
 
         // Per-logger level overrides: -Dlogging.level.<name>=<level>
         // These are not in Config.KNOWN (the suffix is a logger name, not a fixed key).
-        for (String prop : System.getProperties().stringPropertyNames()) {
+        final Properties properties = System.getProperties();
+        for (String prop : properties.stringPropertyNames()) {
             if (prop.startsWith(Config.LOG_LEVEL_PREFIX)) {
                 String loggerName = StringUtils.substringAfter(prop, Config.LOG_LEVEL_PREFIX);
                 if (!loggerName.isEmpty()) {
-                    String v = System.getProperty(prop);
+                    String v = properties.getProperty(prop);
                     if (v != null) {
                         assigns.add(new String[]{Config.LOG_LEVEL_PREFIX + loggerName, v});
                     }
@@ -276,30 +277,26 @@ public final class AutoValhallaAgent28 {
     }
 
     private static void emit(List<String[]> assigns, String key, String value) {
-        if (key.equals(Config.CONFIG)) {
-            // expand the referenced properties file in place
-            Properties props = new Properties();
-            try (BufferedReader br = Files.newBufferedReader(Path.of(value.trim()))) {
-                props.load(br);
-            } catch (IOException e) {
-                LOG.error("cannot read config file " + value + ": " + e);
-                return;
-            }
-            for (String rawKey : props.stringPropertyNames()) {
-                String s = rawKey.trim();
-                if (s.startsWith("auto-valhalla.")) {
-                    s = StringUtils.substringAfter(s, "auto-valhalla.");
-                }
-                boolean isKnown = Config.KNOWN.contains(s) && !s.equals(Config.CONFIG);
-                boolean isLogLevelOverride = s.startsWith(Config.LOG_LEVEL_PREFIX);
-                if (!isKnown && !isLogLevelOverride) {
-                    continue;
-                }
-                emit(assigns, s, props.getProperty(rawKey));
-            }
+        if (!key.equals(Config.CONFIG)) {
+            assigns.add(new String[]{key, value});
             return;
         }
-        assigns.add(new String[] { key, value });
+        // expand the referenced properties file in place
+        Properties props = new Properties();
+        try (BufferedReader br = Files.newBufferedReader(Path.of(value.trim()))) {
+            props.load(br);
+        } catch (IOException e) {
+            LOG.error("cannot read config file " + value + ": " + e);
+            return;
+        }
+        for (String rawKey : props.stringPropertyNames()) {
+            String s = rawKey.trim();
+            boolean isKnown = Config.KNOWN.contains(s) && !s.equals(Config.CONFIG);
+            if (!isKnown) {
+                continue;
+            }
+            emit(assigns, s, props.getProperty(rawKey));
+        }
     }
 
     /**
