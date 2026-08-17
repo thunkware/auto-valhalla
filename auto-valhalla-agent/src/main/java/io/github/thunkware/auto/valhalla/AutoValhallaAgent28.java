@@ -117,12 +117,15 @@ public final class AutoValhallaAgent28 {
     /** Public so the JDK 5 shim can call it even when the two classes end up in
      *  different runtime packages, which happens when the agent jar is appended to
      *  the bootstrap class loader search. */
-    public static boolean installAttempted() {
+    public static synchronized boolean installAttempted() {
         return Boolean.getBoolean(INSTALL_ATTEMPTED);
     }
 
-    /** Public for the same reason as {@link #installAttempted()}. */
-    public static void install(Instrumentation inst) {
+    /** Public for the same reason as {@link #installAttempted()}. {@code synchronized}
+     *  so the check and the flag that guards it cannot interleave when {@code
+     *  -javaagent} and a programmatic attach race, which would install two
+     *  transformers. */
+    public static synchronized void install(Instrumentation inst) {
         if (installAttempted()) {
             return;
         }
