@@ -29,7 +29,7 @@ Add `auto-valhalla-api` dependency and annotate your plain identity
 class or record:
 
 ```java
-import io.github.thunkware.auto.valhalla.AutoValhalla;
+import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
 @AutoValhalla
 public final class Point {
@@ -63,6 +63,8 @@ without raising their compile version to JDK28.
 
 To detect errors earlier at build time, run AutoValhallaVerifier in a unit test:
 ```java
+import io.github.thunkware.auto.valhalla.api.AutoValhallaVerifier;
+
 @Test
 void test() {
     AutoValhallaVerifier.verify(Point.class, Currency.class);
