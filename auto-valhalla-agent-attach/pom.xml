@@ -19,6 +19,33 @@
     so it never leaks onto the application classpath.
   </description>
 
+  <url>https://github.com/thunkware/auto-valhalla.git</url>
+  <organization>
+      <name>thunkware</name>
+  </organization>
+
+  <licenses>
+      <license>
+          <name>Apache 2</name>
+          <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>manual</distribution>
+          <comments>A business-friendly OSS license</comments>
+      </license>
+  </licenses>
+
+  <scm>
+      <connection>scm:git:git://github.com/thunkware/auto-valhalla.git</connection>
+      <developerConnection>scm:git:https://github.com/thunkware/auto-valhalla.git</developerConnection>
+      <url>https://github.com/thunkware/auto-valhalla</url>
+      <tag>HEAD</tag>
+  </scm>
+
+  <developers>
+      <developer>
+          <name>maxxedev</name>
+      </developer>
+  </developers>
+
   <properties>
     <!-- The JDK 5 build of ByteBuddyAgent, whose classes the shade plugin
          relocates into the internal package. -->
