@@ -35,7 +35,7 @@ class ConstructorPatternsTest {
         var model = cf.parse(original);
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
                 internal + " must be suitable (mark-class-final + remove-synchronized)");
-        byte[] out = ValueClassRewriter.transform(model, false, true, true, null);
+        byte[] out = ValueClassRewriter.transform(model, true, true, null);
         assertNotNull(out, internal + " must be rewritten into a value class");
         var outModel = cf.parse(out);
         assertTrue(ValueClassRewriter.alreadyValue(outModel),
@@ -50,7 +50,7 @@ class ConstructorPatternsTest {
         var model = cf.parse(original);
         assertTrue(ValueClassRewriter.isSuitable(model, true, true),
                 internal + " must be structurally suitable");
-        byte[] out = ValueClassRewriter.transform(model, false, true, true, null);
+        byte[] out = ValueClassRewriter.transform(model, true, true, null);
         assertNull(out, internal
                 + " must be left as an identity class (relocating its constructor"
                 + " would produce illegal early-phase bytecode)");
@@ -99,7 +99,7 @@ class ConstructorPatternsTest {
         assertNotNull(original, internal + " must be on the test classpath");
 
         ClassFile cf = ClassFile.of();
-        byte[] out = ValueClassRewriter.transform(cf.parse(original), false, true, true, null);
+        byte[] out = ValueClassRewriter.transform(cf.parse(original), true, true, null);
         assertNotNull(out, internal + " must be rewritten into a value class");
         assertTrue(ValueClassRewriter.alreadyValue(cf.parse(out)),
                 internal + " must encode a value class");

@@ -216,9 +216,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
                     "is selected for value-class transformation but has a non-final field"
                     + " not written in every constructor (mode=mark-fields-final)", selection);
         }
-        InternalLogger rejectedLog = loggers.rejected(selection);
-        byte[] out = ValueClassRewriter.transform(model, rejectedLog.isFatal(),
-                ignoreSync, markClassFinal, loader);
+        byte[] out = ValueClassRewriter.transform(model, ignoreSync, markClassFinal, loader);
         if (out == null) {
             return onRejected(className,
                     "is selected for value-class transformation but could not be safely"

@@ -2,6 +2,8 @@ package io.github.thunkware.auto.valhalla;
 
 import static java.lang.classfile.Attributes.runtimeVisibleAnnotations;
 
+import io.github.thunkware.auto.valhalla.logger.InternalLogger;
+import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import java.lang.classfile.AccessFlags;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileVersion;
@@ -51,6 +53,8 @@ import java.util.stream.Collectors;
  */
 public final class ValueClassRewriter {
 
+    private static final InternalLogger LOG = InternalLoggerFactory.getLogger(ValueClassRewriter.class);
+
     /** {@code ACC_SUPER} bit, repurposed by JEP 401 as {@code ACC_IDENTITY}. */
     static final int ACC_IDENTITY = 0x0020;
     /** JEP 539 strict-field flag. */
@@ -74,7 +78,7 @@ public final class ValueClassRewriter {
      * @return the rewritten value-class bytes, or {@code null} if the class
      *         must remain an identity class
      */
-    public static byte[] transform(ClassModel model, boolean keepIfInvalid,
+    public static byte[] transform(ClassModel model,
             boolean removeSynchronized, boolean markClassFinal, ClassLoader loader) {
         if (!isSuitable(model, removeSynchronized, markClassFinal)) {
             return null;
@@ -146,7 +150,11 @@ public final class ValueClassRewriter {
         }
         List<VerifyError> errors = cf.verify(out);
         if (!errors.isEmpty()) {
-            return keepIfInvalid ? out : null;
+            // Never hand back bytes that do not verify: the caller would report
+            // the class as converted and the JVM would then reject it anyway.
+            LOG.debug(model.thisClass().asInternalName()
+                    + ": rewritten class does not verify: " + errors.getFirst().getMessage());
+            return null;
         }
         return out;
     }
