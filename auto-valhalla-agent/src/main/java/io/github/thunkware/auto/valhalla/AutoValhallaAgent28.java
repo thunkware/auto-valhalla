@@ -125,7 +125,7 @@ public final class AutoValhallaAgent28 {
         cfg.loggerLevels.forEach(InternalLoggerFactory::setLevel);
         InternalLoggerFactory.setSystem(cfg.logging);
         if (LoggingSystem.findOrNull(cfg.logging) == LoggingSystem.APPLICATION) {
-            ApplicationLoggerFlags.enableApplicationMode();
+            ApplicationLoggerFlags.enableApplicationLoggingSystem();
             inst.addTransformer(new ApplicationLoggerBridgeTransformer(), false);
         }
         LOG.info("Starting agent");

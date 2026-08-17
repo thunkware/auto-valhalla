@@ -224,14 +224,14 @@ are not re-appended, and a missing file is treated as empty.
 
 #### Logging System
 
-`auto-valhalla.logging` controls the agent’s logging System. The following 3 are supported:
-  * `simple`: The agent will print out its logs using the standard error stream. Only INFO or higher logs will be printed. This is the default Java agent logging mode.
+`auto-valhalla.logging` controls the agent’s logging system. The following 3 are supported:
+  * `simple`: The agent will print out its logs using the standard error stream. Only INFO or higher logs will be printed. This is the default Java agent logging system.
   * `none`: The agent will not log anything.
   * `application`: The agent will attempt to redirect its own logs to the instrumented application's slf4j logger. This 
    works the best for simple one-jar applications that do not use multiple classloaders; Spring Boot apps are supported 
    as well. The Java agent output logs can be further configured using the instrumented application's logging 
-   configuration (e.g. logback.xml or log4j2.xml). Make sure to test that this mode works for your application before 
-   running it in a production environment.
+   configuration (e.g. logback.xml or log4j2.xml). Make sure to test that this logging system works for your application
+   before running it in a production environment.
 
 #### Log levels
 
