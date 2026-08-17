@@ -3,8 +3,8 @@ package io.github.thunkware.auto.valhalla.api;
 import java.util.List;
 
 /**
- * Checks at development time that classes marked {@link AutoValhalla} satisfy
- * the structural prerequisites the agent enforces at load time.
+ * Checks at build time that classes marked {@link AutoValhalla} satisfy
+ * the structural prerequisites the agent enforces at load/deploy time.
  *
  * <p>Entry points:
  * <ul>

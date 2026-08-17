@@ -1,14 +1,14 @@
 # auto-valhalla
 
-> Automatically turn your plain classes/records into value classes/records!
+> Automatically turn your plain classes and records into value classes!
 > Codes like a class on older JDKs, works like an int on Valhalla.
 
 auto-valhalla is a Java agent that rewrites eligible identity classes into
-value classes at class-load time, so existing code (compiled on older JDKs
-or even JDK28) transparently gets value-object benefits when you run on a
-Valhalla-enabled JVM.
+value classes at class-load time, so existing code (compiled on older JDKs)
+transparently gets the memory and performance benefits of value classes when
+run on a Valhalla-enabled JVM.
 
-Background: Project Valhalla JEP 401 (https://openjdk.org/jeps/401).
+See [Background](#background) for what this means and how it works.
 
 ## Table of contents
 
@@ -16,6 +16,7 @@ Background: Project Valhalla JEP 401 (https://openjdk.org/jeps/401).
   - [1. Opt in with the annotation](#1-opt-in-with-the-annotation)
   - [2. Opt in with `includes` flag](#2-opt-in-with-includes-flag)
   - [3. Attach agent](#3-attach-agent)
+- [Background](#background)
 - [Synchronization monitor](#synchronization-monitor)
 - [Options](#options)
 - [Notes](#notes)
@@ -44,7 +45,7 @@ public final class Point {
 public record Currency(String code) { }
 ```
 
-Then download the agent and run the app:
+Then download the agent and run the app on JDK28:
 
 ```bash
 java --enable-preview \
@@ -56,11 +57,11 @@ After transformation, your class or record behaves like a value object:
   * `Objects.hasIdentity(new Point(1, 2)) == false`
   * `Objects.hasIdentity(new Currency("USD")) == false`
 
-Because `@AutoValhalla` annotation was compiled with Java 5, it is compatible with
+Because the `@AutoValhalla` annotation was compiled with Java 5, it is compatible with
 **JDK 1.5 and later**. You can apply the annotation in older codebases
 without raising their compile version to JDK28.
 
-To detect errors earlier at build time, run the verifier in a unit test:
+To detect errors earlier at build time, run AutoValhallaVerifier in a unit test:
 ```java
 @Test
 void test() {
@@ -74,7 +75,7 @@ If you cannot or do not want to edit the source code, use `-Dauto-valhalla.inclu
 
 ```bash
 java --enable-preview \
-     -Dauto-valhalla.includes=com.example \
+     -Dauto-valhalla.includes=com.example.model,com.example.dto \
      -javaagent:auto-valhalla.jar \
      -jar myapp.jar
 ```
@@ -83,7 +84,7 @@ java --enable-preview \
 
 For some apps, it may be more convenient to attach the agent, which does not require changing the app startup scripts.
 
-Add `auto-valhalla-agent-attach` dependency, and add this to your app's startup:
+Add `auto-valhalla-agent-attach` dependency, and activate it to your app's main class:
 
 ```java
 public class Main {
@@ -103,6 +104,59 @@ public class Main {
         ...
     }
 }
+```
+
+<a id="background"></a>
+## Background: Value Objects in Project Valhalla JEP 401
+
+Taking a step back, you might ask why you would want to do this, and what exactly the benefits of value classes are. 
+
+Value objects provide _flattening_ that allows for denser, more compact memory usage, and _scalarization_ that allows the
+JVM to more easily and frequently stack-allocate objects.
+
+Consider an array of `Point` objects (from the example above). Before conversion, the
+array holds references to separately allocated identity objects, one heap object per element:
+
+```text
++----------+
+| Point[3] |
++----------+
+| p0       | -----------------------> +-----------+
+| p1       | -----> +-----------+     |   Point   |
+| p2       | -> +   |-----------+     +-----------+
++----------+    |   |   Point   |     | x = 5     |
+                |   +-----------+     | y = 6     |
+                |   | x = 3     |     +-----------+
+                |   | y = 4     |
+                |   +-----------+
+                |
+                v
+            +-----------+
+            |   Point   |
+            +-----------+
+            | x = 1     |
+            | y = 2     |
+            +-----------+
+```
+
+One heap object per element: poor memory density (a pointer plus a separate
+object for every point) and poor reference locality (objects scattered in
+memory, so iteration jumps between cache lines).
+
+After conversion, the elements are _flattened_: each `Point`'s `x` and `y` fields are
+stored directly in the array, like primitives, in a single contiguous block of memory:
+
+```text
++----------+
+| Point[3] |
++----------+
+| p0.x     |
+| p0.y     |
+| p1.x     |
+| p1.y     |
+| p2.x     |
+| p2.y     |
++----------+
 ```
 
 ## Synchronization monitor
@@ -185,7 +239,7 @@ accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and
 
 ### Success and failure handling
 
-Controlled via [per-logger level overrides](#diagnostics).
+Controlled via [per-logger level overrides](#log-levels).
 
 - **rejected** — class was selected but did not meet suitability requirements (e.g. not final, mutable fields).
 - **fail** — class passed suitability checks but hit an unexpected error during transformation.
@@ -222,9 +276,9 @@ are not re-appended, and a missing file is treated as empty.
 | `auto-valhalla.logging` | Logging system: `simple` (default), `none`, `application`. See below.                                  |
 | `logging.level.<logger-name>` | Log level for the logger. `off`, `fatal`, `error`, `warning`, `info`, `debug`, `trace`. Default: `info` |
 
-#### Logging System
+#### Logging system
 
-`auto-valhalla.logging` controls the agent’s logging system. The following 3 are supported:
+`auto-valhalla.logging` controls the agent’s logging system. Three values are supported:
   * `simple`: The agent will print out its logs using the standard error stream. Only INFO or higher logs will be printed. This is the default Java agent logging system.
   * `none`: The agent will not log anything.
   * `application`: The agent will attempt to redirect its own logs to the instrumented application's slf4j logger. This 
@@ -246,8 +300,11 @@ logging.level.root=WARN
 # Agent startup and configuration
 logging.level.io.github.thunkware.auto.valhalla.AutoValhallaAgent28=INFO
 
-# Classes used in `synchronized` when synchronization-monitor mode is enabled
+# Log classes used in `synchronized` when synchronization-monitor mode is enabled
 logging.level.auto-valhalla.synchronization-monitor=INFO
+
+# Log performance stats every minute
+logging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
 ```
 
 ### Config file
@@ -339,7 +396,7 @@ set.
   are converted (as final) when the mode includes `mark-class-final`; any
   existing subclass then fails to load.
 
-### Warning
+### JVM Spec Conformance
 
 - **Semantics change.** For a converted class, `==` becomes value equality
   (two instances with equal fields compare `==`), `equals`/`hashCode` of the
@@ -359,17 +416,47 @@ set.
   at runtime; classes loaded *after* the agent attaches (or from the start,
   when attached via `-javaagent`) are the ones rewritten.
 
+### Performance Overhead
+
+#### Instrumentation Overhead
+
+The agent parses every loaded class that is not on an `excludes` pattern once at
+class-load time, and rewrites the selected ones. It adds a small one-time CPU cost
+(typically well under a millisecond per class) to class loading.
+
+In value-class-transformation mode, there is absolutely zero overhead once a class
+is loaded. Transformed value classes behave exactly as JDK would compile and execute.
+
+In synchronization monitor mode, there is non-zero but negligible overhead to every
+synchronization block in instrumented classes.
+
+Turn these loggers to `DEBUG` to see per-class transform timings and running totals
+```
+-Dlogging.level.io.github.thunkware.auto.valhalla.ValueClassTransformer=DEBUG
+-Dlogging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
+```
+#### Attach Overhead and Compatibility
+
+Compared to starting with the `-javaagent` option, <a href="#3-attach-agent">attaching the agent</a> can be a rather
+computationally heavy operation. However, once attached, the same instrumentation overhead applies. 
+
+More importantly, attach mechanism is not compatible with all JVMs. It is less reliable and is [frowned upon](https://openjdk.org/jeps/451).
+Balance the convenience it provides with the downsides when choosing it. And make sure to test that it works for your app
+before running it in a production environment.
+
 ### Synchronization
 
-JFR can also be used to find classes used for synchronization:
+JFR can also be employed to find classes used in synchronization:
 
 ```bash
+# record
 java -XX:StartFlightRecording=filename=locks.jfr \
      -XX:FlightRecorderOptions=stackdepth=0 \
      -XX:StartFlightRecording:jdk.JavaMonitorEnter#threshold=0ms \
      -XX:StartFlightRecording:jdk.JavaMonitorWait#threshold=0ms \
      -jar myapp.jar
 
+# print class names
 jfr print --json --events jdk.JavaMonitorEnter locks.jfr | \
     jq '.recording.events.[].values.monitorClass.name' | \
     sort | uniq | tr -d '"' | tr '/' '.'
@@ -377,7 +464,7 @@ jfr print --json --events jdk.JavaMonitorEnter locks.jfr | \
 
 However, because JFR is intended to find lock contention and because it performs sampling, 
 it will miss many classes used in synchronization. In comparison, this agent's
-synchronization-monitor mode does not sample but instead instruments all classes
+synchronization-monitor mode does not sample but instead instruments all selected classes
 to attempt to find all classes used in synchronization.
 
 ## AI assistance

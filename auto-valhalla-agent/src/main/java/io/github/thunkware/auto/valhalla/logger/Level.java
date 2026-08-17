@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla.logger;
 
+import java.util.Locale;
+
 public enum Level {
     OFF(0),
     FATAL(1),
@@ -13,5 +15,13 @@ public enum Level {
 
     Level(int rank) {
         this.rank = rank;
+    }
+
+    public static Level find(String name) {
+        name = name.trim().toUpperCase(Locale.ROOT);
+        if (name.equals("WARNING")) {
+            return WARN;
+        }
+        return Level.valueOf(name);
     }
 }

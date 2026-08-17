@@ -77,13 +77,13 @@ public final class ValueClassTransformer implements ClassFileTransformer {
 
         ClassName className = ClassName.of(classNameJvm);
         if (!loggers.log().isDebugEnabled()) {
-            return doTransform(module, loader, className, classfileBuffer);
+            return doTransform(loader, className, classfileBuffer);
         }
 
         long startTime = System.nanoTime();
         byte[] result = null;
         try {
-            result = doTransform(module, loader, className, classfileBuffer);
+            result = doTransform(loader, className, classfileBuffer);
             return result;
         } finally {
             long durationNano = System.nanoTime() - startTime;
@@ -96,7 +96,7 @@ public final class ValueClassTransformer implements ClassFileTransformer {
         }
     }
 
-    private byte[] doTransform(Module module, ClassLoader loader, ClassName className, byte[] classfileBuffer) {
+    private byte[] doTransform(ClassLoader loader, ClassName className, byte[] classfileBuffer) {
         if (isExcluded(className)) {
             return null;
         }

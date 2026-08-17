@@ -115,6 +115,8 @@ public final class AutoValhallaAgent28 {
         installAttempted = true;
         Config cfg = parse();
         initLogging(inst, cfg);
+        Stats.accept(cfg);
+
         ValueClassTransformer transformer = new ValueClassTransformer(cfg);
         // canRetransform = true so dynamically attached classes can be fixed up too
         inst.addTransformer(transformer, true);

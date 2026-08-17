@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.logger;
 
 import io.github.thunkware.auto.valhalla.util.StringUtils;
+
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Queue;
@@ -62,11 +63,11 @@ public final class InternalLoggerFactory {
             return;
         }
         try {
-            level = Level.valueOf(s.trim().toUpperCase());
+            level = Level.find(s);
         } catch (IllegalArgumentException e) {
             level = Level.INFO;
             getLogger(InternalLoggerFactory.class).warning("Unknown log-level '" + s.trim()
-                    + "'; valid values are: off, fatal, error, warning, info, debug. Defaulting to info.");
+                    + "'; valid values are: off, fatal, error, warning, info, debug, trace. Defaulting to info.");
         }
     }
 
@@ -85,11 +86,11 @@ public final class InternalLoggerFactory {
             return;
         }
         try {
-            loggerLevels.put(loggerName, Level.valueOf(levelString.trim().toUpperCase()));
+            loggerLevels.put(loggerName, Level.find(levelString));
         } catch (IllegalArgumentException e) {
             getLogger(InternalLoggerFactory.class).warning(
                     "Unknown log-level '" + levelString.trim() + "' for logger '"
-                            + loggerName + "'; valid values are: off, fatal, error, warning, info, debug. Ignoring.");
+                            + loggerName + "'; valid values are: off, fatal, error, warning, info, debug, trace. Ignoring.");
         }
     }
 

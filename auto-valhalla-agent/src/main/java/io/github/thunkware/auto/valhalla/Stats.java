@@ -1,9 +1,10 @@
 package io.github.thunkware.auto.valhalla;
 
+import static io.github.thunkware.auto.valhalla.Mode.SYNCHRONIZATION_MONITOR;
+
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import io.github.thunkware.auto.valhalla.util.Failable;
-
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAccumulator;
 
@@ -17,10 +18,12 @@ final class Stats {
     private static final LongAccumulator synchronizedOverheadDuration = new LongAccumulator(Long::sum, 0L);
     private static final LongAccumulator synchronizedCount = new LongAccumulator(Long::sum, 0L);
 
-    static {
+    public static void accept(final Config cfg) {
+        boolean inSynchronizedMonitorMode = cfg.annotationMode.contains(SYNCHRONIZATION_MONITOR)
+                || cfg.includesMode.contains(SYNCHRONIZATION_MONITOR);
         Thread.ofVirtual()
               .name("auto-valhalla-Stats")
-              .start(Stats::logStats);
+              .start(() -> logStats(inSynchronizedMonitorMode));
     }
 
     public static void onValueClassTransform(final long durationNano) {
@@ -49,15 +52,22 @@ final class Stats {
         return synchronizedCount.get();
     }
 
-    private static void logStats() {
+    private static void logStats(boolean inSynchronizedMonitorMode) {
+        String template = "Stats: transformTotalDuration=%sms transformTotalCount=%s";
+        if (inSynchronizedMonitorMode) {
+            template = template + " synchronizedOverheadDuration=%sms synchronizedCount=%s";
+        }
+
+        // undocumented property
+        long ms = Long.getLong(Stats.class.getName() + ".sleep", TimeUnit.MINUTES.toMillis(1));
         while (!Thread.currentThread().isInterrupted()) {
-            Failable.runQuietly(() -> TimeUnit.MINUTES.sleep(1));
+            Failable.runQuietly(() -> TimeUnit.MILLISECONDS.sleep(ms));
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Stats: transformTotalDuration=%sms transformTotalCount=%s " +
-                                                "synchronizedOverheadDuration=%sms synchronizedCount=%s",
+                log.debug(String.format(template,
                                         transformTotalDurationMs(), transformTotalCount(),
                                         synchronizedOverheadDurationMs(), synchronizedCount.get()));
             }
         }
     }
+
 }
