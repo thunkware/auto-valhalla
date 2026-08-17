@@ -17,12 +17,12 @@ public final class AutoValhallaAgent28 {
     private AutoValhallaAgent28() {
     }
 
-    static synchronized boolean installAttempted() {
+    public static synchronized boolean installAttempted() {
         // Replaced by the real (JDK 28) AutoValhallaAgent28 at packaging time.
         return false;
     }
 
-    static synchronized void install(Instrumentation inst) {
+    public static synchronized void install(Instrumentation inst) {
         // Replaced by the real (JDK 28) AutoValhallaAgent28 at packaging time.
     }
 }

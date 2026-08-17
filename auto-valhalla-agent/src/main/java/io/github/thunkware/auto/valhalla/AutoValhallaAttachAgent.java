@@ -41,6 +41,7 @@ public final class AutoValhallaAttachAgent {
             return;
         }
         Instrumentation instrumentation = ByteBuddyAgent.install();
+        AutoValhallaAgent.appendAgentJarToBootstrap(instrumentation);
         AutoValhallaAgent28.install(instrumentation);
     }
 

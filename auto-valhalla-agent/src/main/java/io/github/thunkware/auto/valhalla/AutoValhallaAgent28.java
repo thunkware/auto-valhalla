@@ -100,7 +100,8 @@ import java.util.stream.Collectors;
  * {@code --enable-preview}, since the transformed class files use preview
  * class-file versions and the value-object semantics are preview features.
  */
-// public class with non-public members to ensure javadoc visibility
+// public class with non-public members (other than the entry points) to ensure
+// javadoc visibility
 public final class AutoValhallaAgent28 {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent28.class);
@@ -109,11 +110,15 @@ public final class AutoValhallaAgent28 {
     private AutoValhallaAgent28() {
     }
 
-    static boolean installAttempted() {
+    /** Public so the JDK 5 shim can call it even when the two classes end up in
+     *  different runtime packages, which happens when the agent jar is appended to
+     *  the bootstrap class loader search. */
+    public static boolean installAttempted() {
         return Boolean.getBoolean(INSTALL_ATTEMPTED);
     }
 
-    static void install(Instrumentation inst) {
+    /** Public for the same reason as {@link #installAttempted()}. */
+    public static void install(Instrumentation inst) {
         if (installAttempted()) {
             return;
         }
