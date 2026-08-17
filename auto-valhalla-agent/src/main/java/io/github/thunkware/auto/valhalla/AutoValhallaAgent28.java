@@ -5,12 +5,14 @@ import io.github.thunkware.auto.valhalla.logger.ApplicationLoggerFlags;
 import io.github.thunkware.auto.valhalla.logger.InternalLogger;
 import io.github.thunkware.auto.valhalla.logger.InternalLoggerFactory;
 import io.github.thunkware.auto.valhalla.logger.LoggingSystem;
+import io.github.thunkware.auto.valhalla.util.Failable;
 import io.github.thunkware.auto.valhalla.util.StringUtils;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
-import java.lang.management.ManagementFactory;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -130,7 +132,24 @@ public final class AutoValhallaAgent28 {
             ApplicationLoggerFlags.enableApplicationLoggingSystem();
             inst.addTransformer(new ApplicationLoggerBridgeTransformer(), false);
         }
-        LOG.info("Starting agent");
+        String version = getVersion();
+        LOG.info(version.isEmpty() ? "Starting agent" : "Starting agent " + version);
+    }
+
+    private static String getVersion() {
+        URL url = AutoValhallaAgent28.class.getResource("/git.properties");
+        Properties properties = new Properties();
+        return loadProperties(url, properties).getProperty("git.build.version", "");
+    }
+
+    private static Properties loadProperties(URL url, Properties properties) {
+        Failable.runQuietly(() -> {
+            try (InputStream stream = url.openStream()) {
+                final byte[] bytes = stream.readAllBytes();
+                properties.load(new ByteArrayInputStream(bytes));
+            }
+        });
+        return properties;
     }
 
     static Config parse() {
@@ -285,12 +304,9 @@ public final class AutoValhallaAgent28 {
         }
         // expand the referenced properties file in place
         Properties props = new Properties();
-        try (BufferedReader br = Files.newBufferedReader(Path.of(value.trim()))) {
-            props.load(br);
-        } catch (IOException e) {
-            LOG.error("cannot read config file " + value + ": " + e);
-            return;
-        }
+        Path file = Path.of(value.trim());
+        Failable.run(() -> loadProperties(file.toUri().toURL(), props),
+                     t -> LOG.error("cannot read config file " + value, t));
         for (String rawKey : props.stringPropertyNames()) {
             String s = rawKey.trim();
             boolean isKnown = Config.KNOWN.contains(s) && !s.equals(Config.CONFIG);
@@ -339,21 +355,25 @@ public final class AutoValhallaAgent28 {
 
     private static Set<String> readPatternFile(String path, boolean quiet) {
         Set<String> set = new HashSet<>();
-        try (BufferedReader br = Files.newBufferedReader(Path.of(path.trim()))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String t = line.trim();
-                if (t.isEmpty() || t.startsWith("#")) {
-                    continue;
-                }
-                String n = normalizePattern(t);
-                if (n != null) {
-                    set.add(n);
-                }
-            }
+
+        List<String> lines;
+        try {
+            Path file = Path.of(path.trim());
+            lines = Files.readAllLines(file);
         } catch (IOException e) {
             if (!quiet) {
                 LOG.error("cannot read pattern file " + path + ": " + e);
+            }
+            return set;
+        }
+        for (String line : lines) {
+            String t = line.trim();
+            if (t.isEmpty() || t.startsWith("#")) {
+                continue;
+            }
+            String n = normalizePattern(t);
+            if (n != null) {
+                set.add(n);
             }
         }
         return set;
@@ -419,8 +439,6 @@ public final class AutoValhallaAgent28 {
         String body;
         if (prop.startsWith("auto-valhalla.")) {
             body = "AUTO_VALHALLA_" + StringUtils.substringAfter(prop, "auto-valhalla.").replace('-', '_').replace('.', '_');
-        } else if (prop.startsWith("autovalhalla.")) {
-            body = "AUTO_VALHALLA_" + StringUtils.substringAfter(prop, "autovalhalla.").replace('-', '_').replace('.', '_');
         } else {
             body = prop.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
         }
@@ -436,13 +454,5 @@ public final class AutoValhallaAgent28 {
             sb.append(Character.toUpperCase(c));
         }
         return sb.toString();
-    }
-
-    /**
-     * Returns {@code true} if the JVM was started with {@code --enable-preview},
-     * which is required for value classes (a preview feature) to be usable.
-     */
-    private static boolean valhallaAvailable() {
-        return ManagementFactory.getRuntimeMXBean().getInputArguments().contains("--enable-preview");
     }
 }
