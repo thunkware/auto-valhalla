@@ -540,8 +540,9 @@ class ValueClassRewriterTest {
         assertNotNull(mutable, "Mutable on classpath");
         String internal = "sample/Mutable";
 
-        // A mutable field written by a setter fails the mark-fields-final gate.
-        // includes.rejected defaults to DEBUG (quiet): leaves the class as identity.
+        // Mutable is not final and its field is written by a setter, so it is
+        // rejected under includes-mode=safe on both counts. includes.rejected
+        // defaults to DEBUG (quiet), which leaves the class as identity.
         Config quietCfg = new Config();
         quietCfg.includes = Set.of("sample.Mutable");
         quietCfg.excludes = Set.of();
