@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Asynchronous file writer with per-file queues and background flushing.
@@ -115,12 +114,11 @@ final class BackgroundFileWriter {
     private void run() throws Exception {
         long lastFlush = System.currentTimeMillis();
         while (!Thread.currentThread().isInterrupted()) {
-            String name = queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS);
             synchronized (lock) {
-                if (name != null) {
-                    writeLocked(name);
-                    writeLocked("\n");
-                }
+                // Poll inside the lock: a record must never be in flight (taken
+                // from the queue but not yet written) while another thread holds
+                // the lock, or drain()/shutdown() would miss it.
+                writeQueuedLocked();
                 long now = System.currentTimeMillis();
                 if (now - lastFlush >= FLUSH_INTERVAL_MS) {
                     if (writer != null) {
@@ -128,7 +126,19 @@ final class BackgroundFileWriter {
                     }
                     lastFlush = now;
                 }
+                // Releases the lock while idle; nothing signals it, so records are
+                // written within FLUSH_INTERVAL_MS of being queued.
+                lock.wait(FLUSH_INTERVAL_MS);
             }
+        }
+    }
+
+    /** Writes every queued record. Caller must hold {@link #lock}. */
+    private void writeQueuedLocked() throws IOException {
+        String name;
+        while ((name = queue.poll()) != null) {
+            writeLocked(name);
+            writeLocked("\n");
         }
     }
 
@@ -146,14 +156,7 @@ final class BackgroundFileWriter {
     static void drain() {
         for (BackgroundFileWriter w : WRITERS.values()) {
             synchronized (w.lock) {
-                String pending;
-                while ((pending = w.queue.poll()) != null) {
-                    String finalPending = pending;
-                    Failable.runQuietly(() -> {
-                        w.writeLocked(finalPending);
-                        w.writeLocked("\n");
-                    });
-                }
+                Failable.runQuietly(w::writeQueuedLocked);
                 if (w.writer != null) {
                     Failable.runQuietly(w.writer::flush);
                 }
@@ -166,11 +169,7 @@ final class BackgroundFileWriter {
         synchronized (lock) {
             // Drain any records still queued before flushing: the background thread
             // may have been interrupted before it processed them.
-            String pending;
-            while ((pending = queue.poll()) != null) {
-                writeLocked(pending);
-                writeLocked("\n");
-            }
+            writeQueuedLocked();
             if (writer != null) {
                 writer.flush();
                 writer.close();
