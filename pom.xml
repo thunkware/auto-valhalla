@@ -133,17 +133,15 @@
         </executions>
         <configuration>
           <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+          <dateFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</dateFormat>
           <generateGitPropertiesFile>true</generateGitPropertiesFile>
           <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
           <failOnNoGitDirectory>false</failOnNoGitDirectory>
           <includeOnlyProperties>
             <includeOnlyProperty>^git.branch$</includeOnlyProperty>
-            <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
-            <includeOnlyProperty>^git.commit.id.describe$</includeOnlyProperty>
             <includeOnlyProperty>^git.build.time$</includeOnlyProperty>
-            <includeOnlyProperty>^git.commit.user.name$</includeOnlyProperty>
-            <includeOnlyProperty>^git.commit.user.email$</includeOnlyProperty>
-            <includeOnlyProperty>^git.commit.message.short$</includeOnlyProperty>
+            <includeOnlyProperty>^git.build.version$</includeOnlyProperty>
+            <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
             <includeOnlyProperty>^git.commit.time$</includeOnlyProperty>
             <includeOnlyProperty>^git.remote.origin.url$</includeOnlyProperty>
           </includeOnlyProperties>

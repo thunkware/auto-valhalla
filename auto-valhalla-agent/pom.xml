@@ -98,6 +98,11 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
+          <parameters>true</parameters>
+          <debug>true</debug>
+          <compilerArgs>
+            <arg>-Xlint</arg>
+          </compilerArgs>
           <excludes>
             <exclude>**/AutoValhallaAgent.java</exclude>
             <exclude>**/AutoValhallaAttachAgent.java</exclude>

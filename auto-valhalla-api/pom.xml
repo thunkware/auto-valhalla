@@ -71,6 +71,7 @@
                 <argument>1.5</argument>
                 <argument>-target</argument>
                 <argument>1.5</argument>
+                <argument>-g</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>${project.basedir}/src/main/java/io/github/thunkware/auto/valhalla/api/AutoValhalla.java</argument>
