@@ -316,17 +316,15 @@ logging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
 | `auto-valhalla.config` | Path to a Java properties file supplying any of the options. |
 
 Config file entries are applied first, so an environment variable or system
-property set alongside the file overrides it. Keys may be written with or
-without the `auto-valhalla.` prefix, and `logging.level.*` entries are honoured;
-an unrecognized key is logged as a warning.
+property set alongside the file overrides it.
 
-`includes` / `excludes` accumulate across sources rather than replacing each
-other: a pattern listed in the config file still applies when
-`-Dauto-valhalla.includes` is also given.
+Each key is spelled exactly as the system property it stands for — options keep
+their `auto-valhalla.` prefix, and per-logger levels their `logging.level.`
+prefix. Any other key is logged as a warning and ignored.
 
 ```properties
 auto-valhalla.includes=com.example
-excludes=com.example.dto
+auto-valhalla.excludes=com.example.dto
 logging.level.auto-valhalla.includes.rejected=FATAL
 ```
 

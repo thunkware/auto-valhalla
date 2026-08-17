@@ -82,9 +82,9 @@ import java.util.stream.Collectors;
  *       allowing logged failures and problematic classes to be skipped in future
  *       runs. Supplying any explicit excludes disables these defaults entirely.</li>
  *   <li>{@code auto-valhalla.config=file} — read options from a Java properties
- *       file. Keys may be written with or without the {@code auto-valhalla.}
- *       prefix, {@code logging.level.<name>} entries are honoured, and unknown
- *       keys are logged as warnings.</li>
+ *       file. Each key is spelled exactly as the system property it stands for:
+ *       {@code auto-valhalla.includes}, or {@code logging.level.<name>} for a
+ *       per-logger level. Any other key is logged as a warning and ignored.</li>
  * </ul>
  * A class selected by both the annotation and {@code includes} follows the
  * annotation settings for failure handling (an explicit in-source opt-in is
@@ -109,6 +109,9 @@ import java.util.stream.Collectors;
 public final class AutoValhallaAgent28 {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getLogger(AutoValhallaAgent28.class);
+    /** Namespace of every option, as a system property, an environment variable
+     *  ({@code AUTO_VALHALLA_*}), or a config-file key. */
+    static final String PREFIX = "auto-valhalla.";
     public static final String INSTALL_ATTEMPTED = AutoValhallaAgent28.class.getSimpleName() + ".installAttempted";
 
     private AutoValhallaAgent28() {
@@ -176,7 +179,7 @@ public final class AutoValhallaAgent28 {
 
         // Lowest precedence first: the config file, so that a system property or
         // environment variable set alongside it overrides the file.
-        String configFile = propertyOrEnv("auto-valhalla." + Config.CONFIG);
+        String configFile = propertyOrEnv(PREFIX + Config.CONFIG);
         if (configFile != null) {
             emitConfigFile(assigns, configFile);
         }
@@ -186,7 +189,7 @@ public final class AutoValhallaAgent28 {
             if (key.equals(Config.CONFIG)) {
                 continue;
             }
-            String v = propertyOrEnv("auto-valhalla." + key);
+            String v = propertyOrEnv(PREFIX + key);
             if (v != null) {
                 assigns.add(new String[]{key, v});
             }
@@ -329,11 +332,10 @@ public final class AutoValhallaAgent28 {
 
     /**
      * Expands the properties file named by {@code auto-valhalla.config} into
-     * {@code assigns}. Keys may be written in canonical form ({@code includes})
-     * or with the {@code auto-valhalla.} prefix ({@code auto-valhalla.includes});
-     * {@code logging.level.<logger>} entries are honoured too. A nested
-     * {@code config} key is ignored, and an unrecognized key is reported rather
-     * than silently dropped.
+     * {@code assigns}. Every key is written exactly as the system property it
+     * stands for: {@code auto-valhalla.includes}, or {@code logging.level.<logger>}
+     * for a per-logger level. A nested {@code auto-valhalla.config} key is ignored,
+     * and any other key is reported rather than silently dropped.
      */
     private static void emitConfigFile(List<String[]> assigns, String value) {
         Properties props = new Properties();
@@ -341,20 +343,34 @@ public final class AutoValhallaAgent28 {
         Failable.run(() -> loadProperties(file.toUri().toURL(), props),
                      t -> LOG.error("cannot read config file " + value, t));
         for (String rawKey : props.stringPropertyNames()) {
-            String key = rawKey.trim();
-            if (key.startsWith("auto-valhalla.")) {
-                key = StringUtils.substringAfter(key, "auto-valhalla.");
+            String key = configFileKey(rawKey.trim(), value);
+            if (key != null) {
+                assigns.add(new String[]{key, props.getProperty(rawKey)});
             }
-            if (key.equals(Config.CONFIG)) {
-                LOG.warning("Nested " + Config.CONFIG + " key ignored in config file " + value);
-                continue;
-            }
-            if (!Config.KNOWN.contains(key) && !key.startsWith(Config.LOG_LEVEL_PREFIX)) {
-                LOG.warning("Unknown key ignored in config file " + value + ": " + rawKey);
-                continue;
-            }
-            assigns.add(new String[]{key, props.getProperty(rawKey)});
         }
+    }
+
+    /** The canonical option key for a config-file key, or {@code null} (with a
+     *  warning) when the key is not one the agent understands. */
+    private static String configFileKey(String rawKey, String file) {
+        if (rawKey.startsWith(Config.LOG_LEVEL_PREFIX)) {
+            return rawKey;
+        }
+        if (!rawKey.startsWith(PREFIX)) {
+            LOG.warning("Unknown key ignored in config file " + file + ": " + rawKey
+                    + " (options need the " + PREFIX + " prefix)");
+            return null;
+        }
+        String key = StringUtils.substringAfter(rawKey, PREFIX);
+        if (key.equals(Config.CONFIG)) {
+            LOG.warning("Nested " + rawKey + " key ignored in config file " + file);
+            return null;
+        }
+        if (!Config.KNOWN.contains(key)) {
+            LOG.warning("Unknown key ignored in config file " + file + ": " + rawKey);
+            return null;
+        }
+        return key;
     }
 
     /**
@@ -446,7 +462,7 @@ public final class AutoValhallaAgent28 {
      *  but whose suffix is not a known option key. */
     static List<String> unknownSysProps(Set<String> propNames) {
         Set<String> known = new HashSet<>(Config.KNOWN);
-        String prefix = "auto-valhalla.";
+        String prefix = PREFIX;
         List<String> result = new ArrayList<>();
         for (String prop : propNames) {
             if (prop.startsWith(prefix)) {
@@ -464,7 +480,7 @@ public final class AutoValhallaAgent28 {
     static List<String> unknownEnvVars(Set<String> envNames) {
         Set<String> knownEnv = new HashSet<>();
         for (String key : Config.KNOWN) {
-            knownEnv.add(envName("auto-valhalla." + key));
+            knownEnv.add(envName(PREFIX + key));
         }
         List<String> result = new ArrayList<>();
         for (String env : envNames) {
@@ -477,8 +493,8 @@ public final class AutoValhallaAgent28 {
 
     private static String envName(String prop) {
         String body;
-        if (prop.startsWith("auto-valhalla.")) {
-            body = "AUTO_VALHALLA_" + StringUtils.substringAfter(prop, "auto-valhalla.").replace('-', '_').replace('.', '_');
+        if (prop.startsWith(PREFIX)) {
+            body = "AUTO_VALHALLA_" + StringUtils.substringAfter(prop, PREFIX).replace('-', '_').replace('.', '_');
         } else {
             body = prop.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
         }

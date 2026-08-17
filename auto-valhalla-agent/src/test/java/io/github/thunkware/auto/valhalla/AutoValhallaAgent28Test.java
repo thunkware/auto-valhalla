@@ -42,6 +42,37 @@ class AutoValhallaAgent28Test {
     }
 
     @Test
+    void configFileKeysNeedTheAutoValhallaPrefix(@TempDir Path dir) throws Exception {
+        Path config = dir.resolve("av.properties");
+        Files.writeString(config, """
+                auto-valhalla.includes=com.prefixed
+                auto-valhalla.includes-mode=yolo
+                logging.level.root=debug
+                includes=com.bare
+                excludes=com.bare.too
+                bogus=1
+                """);
+
+        var cfg = parseWith("config", config.toString());
+        assertEquals(Set.of("com/prefixed"), cfg.includes,
+                "only the prefixed key is applied");
+        assertTrue(cfg.excludes.isEmpty(), "an unprefixed key is ignored, not applied");
+        assertEquals(EnumSet.of(Mode.YOLO), cfg.includesMode, "prefixed scalar applied");
+        assertEquals("debug", cfg.loggerLevels.get("root"),
+                "logging.level.* keys are read as-is");
+    }
+
+    @Test
+    void systemPropertiesOverrideTheConfigFile(@TempDir Path dir) throws Exception {
+        Path config = dir.resolve("av.properties");
+        Files.writeString(config, "auto-valhalla.includes-mode=yolo\n");
+
+        var cfg = parseWith("config", config.toString(), "includes-mode", "safe");
+        assertEquals(EnumSet.of(Mode.SAFE), cfg.includesMode,
+                "an explicit -D must win over the config file");
+    }
+
+    @Test
     void normalizePatternDoesNotRequireTrailingDot() {
         assertEquals("demo16", AutoValhallaAgent28.normalizePattern("demo16"));
         assertEquals("com/Foo", AutoValhallaAgent28.normalizePattern("com.Foo"));
