@@ -1,5 +1,8 @@
 # auto-valhalla
 
+![Maven Central Version](https://img.shields.io/maven-central/v/io.github.thunkware/auto-valhalla-api?link=https%3A%2F%2Fcentral.sonatype.com%2Fsearch%3Fq%3Dauto-valhalla%26namespace%3Dio.github.thunkware%26sort%3Dname)
+[![javadoc](https://javadoc.io/badge2/io.github.thunkware/auto-valhalla-api/javadoc.svg)](https://javadoc.io/doc/io.github.thunkware/auto-valhalla-api)
+
 > Automatically turn your plain classes and records into value classes!
 > Codes like a class on older JDKs, works like an int on Valhalla.
 
@@ -25,7 +28,7 @@ See [Background](#background) for what this means and how it works.
 
 ### 1. Opt in with the annotation
 
-Add `auto-valhalla-api` dependency and annotate your plain identity
+Add [`auto-valhalla-api` dependency](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-api) and annotate your plain identity
 class or record:
 
 ```java
@@ -48,8 +51,9 @@ public record Currency(String code) { }
 Then download the agent and run the app on JDK28:
 
 ```bash
+wget -O auto-valhalla-agent.jar https://repo1.maven.org/maven2/io/github/thunkware/auto-valhalla-agent/0.1.0/auto-valhalla-agent-0.1.0.jar
 java --enable-preview \
-     -javaagent:auto-valhalla.jar \
+     -javaagent:auto-valhalla-agent.jar \
      -jar myapp.jar
 ```
 
@@ -59,7 +63,8 @@ After transformation, your class or record behaves like a value object:
 
 Because the `@AutoValhalla` annotation was compiled with Java 5, it is compatible with
 **JDK 1.5 and later**. You can apply the annotation in older codebases
-without raising their compile version to JDK28.
+without raising their compile version to JDK28. The javaagent is similarly compatible
+with older JVMs; it will disable itself when run on a non-Valhalla JVM.
 
 To detect errors earlier at build time, run AutoValhallaVerifier in a unit test:
 ```java
@@ -78,7 +83,7 @@ If you cannot or do not want to edit the source code, use `-Dauto-valhalla.inclu
 ```bash
 java --enable-preview \
      -Dauto-valhalla.includes=com.example.model,com.example.dto \
-     -javaagent:auto-valhalla.jar \
+     -javaagent:auto-valhalla-agent.jar \
      -jar myapp.jar
 ```
 
@@ -86,7 +91,7 @@ java --enable-preview \
 
 For some apps, it may be more convenient to attach the agent, which does not require changing the app startup scripts.
 
-Add `auto-valhalla-agent-attach` dependency, and activate it to your app's main class:
+Add [`auto-valhalla-agent-attach` dependency](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-agent-attach), and activate it to your app's main class:
 
 ```java
 public class Main {
@@ -174,7 +179,7 @@ in `synchronization-monitor` mode:
 java --enable-preview \
     -Dauto-valhalla.includes='*' \
     -Dauto-valhalla.includes-mode=synchronization-monitor \
-    -javaagent:auto-valhalla.jar \
+    -javaagent:auto-valhalla-agent.jar \
     -jar myapp.jar
 ```
 
