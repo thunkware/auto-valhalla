@@ -4,6 +4,7 @@
 [![javadoc](https://javadoc.io/badge2/io.github.thunkware/auto-valhalla-api/javadoc.svg)](https://javadoc.io/doc/io.github.thunkware/auto-valhalla-api)
 
 > Automatically turn your plain classes and records into value classes!
+> 
 > Codes like a class on older JDKs, works like an int on Valhalla.
 
 auto-valhalla is a Java agent that rewrites eligible identity classes into
@@ -35,8 +36,8 @@ class or record:
 import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
 @AutoValhalla
-public final class Point {
-    public final int x;
+public final class Point {        // class must be final
+    public final int x;           // with final instance fields
     public final int y;
     public Point(int x, int y) { 
         this.x = x; 
@@ -45,7 +46,7 @@ public final class Point {
 }
 
 @AutoValhalla
-public record Currency(String code) { }
+public record Currency(String code) { }  // or a record class
 ```
 
 Then download the agent and run the app on JDK28:
@@ -89,16 +90,16 @@ java --enable-preview \
 
 ### 3. Attach agent
 
-For some apps, it may be more convenient to attach the agent, which does not require changing the app startup scripts.
+For some apps, it may be more convenient to attach the agent, which does not require adding `-javaagent` to app startup scripts.
 
 Add [`auto-valhalla-agent-attach` dependency](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-agent-attach), and activate it to your app's main class:
 
 ```java
 public class Main {
-    
+
+    // Attach auto-valhalla agent as early as possible.
     static {
-        // init auto-valhalla agent as early as possible.
-        // if running on Valhalla-enabled JVM (i.e. JDK28 with preview) ...
+        // If running on JDK28 with --enable-preview ...
         if (AutoValhallaAttachAgent.isSupported()) {
             System.setProperty("auto-valhalla.includes", "com.example"); // set options as needed
             AutoValhallaAttachAgent.attach(); // ... then attach auto-valhalla agent
