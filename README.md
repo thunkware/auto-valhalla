@@ -1,6 +1,6 @@
 # auto-valhalla
 
-![Maven Central Version](https://img.shields.io/maven-central/v/io.github.thunkware/auto-valhalla-api?link=https%3A%2F%2Fcentral.sonatype.com%2Fsearch%3Fq%3Dauto-valhalla%26namespace%3Dio.github.thunkware%26sort%3Dname)
+<a href="https://central.sonatype.com/search?q=auto-valhalla&namespace=io.github.thunkware&sort=name"><img src="https://img.shields.io/maven-central/v/io.github.thunkware/auto-valhalla-api"></a>
 [![javadoc](https://javadoc.io/badge2/io.github.thunkware/auto-valhalla-api/javadoc.svg)](https://javadoc.io/doc/io.github.thunkware/auto-valhalla-api)
 
 > Automatically turn your plain classes and records into value classes!
@@ -29,8 +29,8 @@ See [Background](#background) for what this means and how it works.
 
 ### 1. Opt in with the annotation
 
-Add [`auto-valhalla-api` dependency](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-api) and annotate your plain identity
-class or record:
+Add [`auto-valhalla-api` dependency](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-api) and annotate plain identity
+class or record in your JDK1.5+ codebase:
 
 ```java
 import io.github.thunkware.auto.valhalla.api.AutoValhalla;
@@ -62,7 +62,7 @@ After transformation, your class or record behaves like a value object:
   * `Objects.hasIdentity(new Point(1, 2)) == false`
   * `Objects.hasIdentity(new Currency("USD")) == false`
 
-Because the `@AutoValhalla` annotation was compiled with Java 5, it is compatible with
+Because the `@AutoValhalla` annotation was compiled with Java 1.5, it is compatible with
 **JDK 1.5 and later**. You can apply the annotation in older codebases
 without raising their compile version to JDK28. The javaagent is similarly compatible
 with older JVMs; it will disable itself when run on a non-Valhalla JVM.
@@ -234,13 +234,13 @@ under the active mode, that is a failure; see [Success and failure handling](#su
 
 #### Mode values
 
-| Mode | Effect                                                                                                                                                          |
-| --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `safe` | Convert only classes that can safely be converted: `final` class with `final` instance fields.                                                          |
-| `remove-synchronized` | Allow classes with synchronized instance methods by removing `synchronized` modifier.                                                                           |
+| Mode | Effect                                                                                                        |
+| --- |----------------------------------------------------------------------------------------------------------------|
+| `safe` | Convert only classes that can safely be converted: `final` class with `final` instance fields.              |
 | `mark-class-final` | Allow non-final classes by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                    |
 | `mark-fields-final` | Allow classes with non-`final` instance fields if those fields written only once in a constructor. The fields are marked `final`.                               |
-| `yolo` | Shorthand for `remove-synchronized,mark-class-final,mark-fields-final`.                                                                                         |
+| `remove-synchronized` | Allow classes with synchronized instance methods by removing `synchronized` modifier.        |
+| `yolo` | Shorthand for `mark-class-final,mark-fields-final,remove-synchronized`.                                     |
 | `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. See [Synchronization Monitor](#synchronization-monitor) |
 
 Multiple modes are comma-separated. Mode names are case-insensitive and
@@ -445,11 +445,12 @@ is loaded. Transformed value classes behave exactly as JDK would compile and exe
 In synchronization monitor mode, there is non-zero but negligible overhead to every
 synchronization block in instrumented classes.
 
-Turn these loggers to `DEBUG` to see per-class transform timings and running totals
+Turn these loggers to `DEBUG` to see per-class and total transform stats:
 ```
 -Dlogging.level.io.github.thunkware.auto.valhalla.ValueClassTransformer=DEBUG
 -Dlogging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
 ```
+
 #### Attach Overhead and Compatibility
 
 Compared to starting with the `-javaagent` option, <a href="#3-attach-agent">attaching the agent</a> can be a rather
