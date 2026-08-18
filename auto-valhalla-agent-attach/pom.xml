@@ -14,9 +14,7 @@
   <name>auto-valhalla agent attach</name>
 
   <description>
-    Attaches the auto-valhalla agent to an already running JVM. Byte Buddy is
-    shaded (relocated to io.github.thunkware.auto.valhalla.internal.bytebuddy)
-    so it never leaks onto the application classpath.
+    Attaches the auto-valhalla agent to an already running JVM
   </description>
 
   <url>https://github.com/thunkware/auto-valhalla.git</url>
@@ -134,6 +132,45 @@
             <goals>
               <goal>clean</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- This module ships no own sources (it is a shaded assembly of Byte
+           Buddy), so the inherited source/javadoc plugins create nothing. Maven
+           Central still expects -sources and -javadoc jars, so attach
+           MANIFEST-only placeholders of the right name. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
+        <executions>
+          <execution>
+            <id>dummy-sources-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>sources</classifier>
+              <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+              <excludes>
+                <exclude>**/*</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>dummy-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+              <excludes>
+                <exclude>**/*</exclude>
+              </excludes>
+            </configuration>
           </execution>
         </executions>
       </plugin>
