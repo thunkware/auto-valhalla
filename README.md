@@ -483,9 +483,3 @@ However, because JFR is intended to find lock contention and because it performs
 it will miss many classes used in synchronization. In comparison, this agent's
 synchronization-monitor mode does not sample but instead instruments all selected classes
 to attempt to find all classes used in synchronization.
-
-## AI assistance
-
-This project was vibe-coded with an AI coding agent. Humans designed,
-directed, reviewed, and edited the work. The agent authored the bulk of the
-implementation, build configuration, and documentation.
