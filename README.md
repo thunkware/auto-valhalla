@@ -466,12 +466,13 @@ JFR can also be employed to find classes used in synchronization:
 
 ```bash
 # record
-java -XX:StartFlightRecording=filename=locks.jfr \
-     -XX:FlightRecorderOptions=stackdepth=0 \
-     -XX:StartFlightRecording:jdk.JavaMonitorEnter#threshold=0ms \
-     -XX:StartFlightRecording:jdk.JavaMonitorWait#threshold=0ms \
+java -XX:StartFlightRecording:filename=locks.jfr,settings=none,\
++jdk.JavaMonitorEnter#enabled=true,\
++jdk.JavaMonitorEnter#stackTrace=false,\
++jdk.JavaMonitorWait#enabled=true,\
++jdk.JavaMonitorWait#stackTrace=false\
      -jar myapp.jar
-
+    
 # print class names
 jfr print --json --events jdk.JavaMonitorEnter locks.jfr | \
     jq '.recording.events.[].values.monitorClass.name' | \
