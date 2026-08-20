@@ -22,12 +22,16 @@
 
   <modules>
     <module>auto-valhalla-api</module>
+    <module>auto-valhalla-maven-plugin</module>
     <module>auto-valhalla-agent</module>
     <module>auto-valhalla-agent-attach</module>
     <module>test/auto-valhalla-demo5</module>
     <module>test/auto-valhalla-demo16</module>
     <module>test/auto-valhalla-demo-runner</module>
     <module>test/auto-valhalla-demo-runner5</module>
+    <!-- consumer end-to-end proof for the maven plugin; must come after the
+         plugin module so Maven resolves the plugin from the reactor -->
+    <module>test/auto-valhalla-demo-maven-plugin</module>
   </modules>
 
   <properties>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-maven-plugin</artifactId>
+  <name>auto-valhalla maven plugin</name>
+  <packaging>maven-plugin</packaging>
+
+  <description>
+    Maven plugin that compiles @AutoValhalla classes as JEP-401 value classes
+    (via the JDK 28 compiler with --enable-preview) and packages them as
+    multi-release jar entries, so they run as value classes on JDK 28+ and as
+    ordinary identity classes everywhere else.
+  </description>
+
+  <url>https://github.com/thunkware/auto-valhalla.git</url>
+  <organization>
+    <name>thunkware</name>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache 2</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>manual</distribution>
+      <comments>A business-friendly OSS license</comments>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:git://github.com/thunkware/auto-valhalla.git</connection>
+    <developerConnection>scm:git:https://github.com/thunkware/auto-valhalla.git</developerConnection>
+    <url>https://github.com/thunkware/auto-valhalla</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <developers>
+    <developer>
+      <name>maxxedev</name>
+    </developer>
+  </developers>
+
+  <properties>
+    <!-- The plugin itself stays on Java 8 so it loads on Maven running on
+         anything from JDK 8 up. All value-class compilation happens later in
+         the consuming project, by calling out to the JDK 28 compiler, so the
+         plugin jar needs no JDK 28 classes of its own. -->
+    <maven.compiler.release>8</maven.compiler.release>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+    <java.base.jdk>28</java.base.jdk>
+  </properties>
+
+  <dependencies>
+    <!-- The plugin's own @Mojo code talks only to this (shared, Java-8) API. -->
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-plugin-api</artifactId>
+      <version>3.9.16</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-core</artifactId>
+      <version>3.9.16</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.plugin-tools</groupId>
+      <artifactId>maven-plugin-annotations</artifactId>
+      <version>3.15.1</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- The @AutoValhalla annotation, used only by the test fixtures. -->
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-api</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <!-- The plugin's own classes are compiled for Java 8 (release 8 via
+               the maven.compiler.release property). Tests, however, inspect the
+               produced value-class files with the java.lang.classfile API, so
+               they are compiled for the JDK 28 runtime that runs them. -->
+          <testRelease>28</testRelease>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>3.15.1</version>
+        <configuration>
+          <goalPrefix>auto-valhalla</goalPrefix>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.6</version>
+        <configuration>
+          <!-- the test JVM must accept the preview-version value-class files
+               produced by the transformer tests -->
+          <argLine>--enable-preview</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

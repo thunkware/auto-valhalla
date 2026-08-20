@@ -20,6 +20,7 @@ See [Background](#background) for what this means and how it works.
   - [1. Opt in with the annotation](#1-opt-in-with-the-annotation)
   - [2. Opt in with `includes` flag](#2-opt-in-with-includes-flag)
   - [3. Attach agent](#3-attach-agent)
+  - [4. Compile-time transformation with the Maven plugin](#4-compile-time-transformation-with-the-maven-plugin)
 - [Background](#background)
 - [Synchronization monitor](#synchronization-monitor)
 - [Options](#options)
@@ -112,6 +113,65 @@ public class Main {
         ...
     }
 }
+```
+
+### 4. Compile-time transformation with the Maven plugin
+
+Instead of transforming classes in the running JVM, the
+`auto-valhalla-maven-plugin` compiles the value-class variants at build time
+and packages them into a multi-release jar: your classes stay ordinary
+identity classes (usable on any JDK), while JDK 28+ loads the value-class
+variants from `META-INF/versions/28`.
+
+```xml
+<plugin>
+  <groupId>io.github.thunkware</groupId>
+  <artifactId>auto-valhalla-maven-plugin</artifactId>
+  <version>0.1.0</version>
+  <executions>
+    <execution>
+      <goals>
+        <goal>transform</goal>
+        <goal>jar</goal>
+      </goals>
+    </execution>
+  </executions>
+</plugin>
+```
+
+`transform` (default phase `process-classes`) scans the project's sources,
+selects the `@AutoValhalla` classes and the classes matching `includes`,
+and compiles adapted `value class` / `value record` copies with
+`javac --release 28 --enable-preview`, writing them under
+`META-INF/versions/28`. `jar` (default phase `package`) adds
+`Multi-Release: true` to the jar manifest so the JVM serves the value
+variants on JDK 28+ and the identity classes on older JDKs.
+
+Run Maven itself on **JDK 28 or newer** — below 28 the goals log a warning and
+leave everything as identity classes. Both goals are also available from the
+command line: `mvn auto-valhalla:transform auto-valhalla:jar`.
+
+Configuration parameters (all optional):
+
+| parameter | default | description |
+|---|---|---|
+| `includes` | (empty) | patterns (dots or slashes) matching classes to convert, like `-Dauto-valhalla.includes` for the agent |
+| `excludes` | (empty) | patterns never converted, checked first |
+| `versionDirectory` | `28` | the multi-release version directory, also the javac `--release` |
+| `failOnAnnotationFailure` | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
+| `failOnIncludesFailure` | `false` | fail the build when an `includes`-selected class cannot be compiled as a value class |
+| `javac` | `<java.home>/bin/javac` | override the JDK compiler executable |
+| `skip` | `false` | skip both goals (`-Dauto-valhalla.skip`) |
+
+Because javac enforces the value-class rules, an `@AutoValhalla` class that
+cannot be a value class (for example a non-final class, a class with mutable
+fields, or one using `synchronized`) fails the build by default instead of
+silently staying an identity class.
+
+At runtime, run on JDK 28 with `--enable-preview`:
+
+```bash
+java --enable-preview -jar myapp.jar
 ```
 
 <a id="background"></a>

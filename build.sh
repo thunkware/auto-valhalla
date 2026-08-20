@@ -87,6 +87,20 @@ echo "== 5. end-to-end demo =="
 ./test/run-demo.sh >/tmp/avv-demo.log 2>&1
 check $? "run-demo.sh (with and without agent)"
 
+echo "== 6. maven-plugin end-to-end =="
+PLUGIN_DEMO_JAR=$(ls test/auto-valhalla-demo-maven-plugin/target/auto-valhalla-demo-maven-plugin-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+[ -n "$PLUGIN_DEMO_JAR" ]; check $? "maven-plugin demo jar built [got $PLUGIN_DEMO_JAR]"
+unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "Multi-Release: true"; check $? "maven-plugin demo jar manifest is multi-release"
+unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "^Main-Class: demo.Main"; check $? "maven-plugin demo jar declares Main-Class"
+"$JAVA_HOME/bin/jar" tf "$PLUGIN_DEMO_JAR" 2>/dev/null | grep -qE "META-INF/versions/28/demo/(Point|Plain)\.class"; check $? "maven-plugin demo jar carries value-class variants"
+OUTPLUGIN=$( "$JAVA_HOME/bin/java" --enable-preview -jar "$PLUGIN_DEMO_JAR" 2>&1 )
+RUNPLUGIN_RC=$?
+echo "$OUTPLUGIN" | grep -q "Point.isValue()=true"; check $? "annotated demo.Point is a value class at runtime"
+echo "$OUTPLUGIN" | grep -q "Plain.isValue()=true"; check $? "includes-selected demo.Plain is a value class at runtime"
+echo "$OUTPLUGIN" | grep -q "sum=7"; check $? "maven-plugin demo app runs from the multi-release jar"
+echo "$OUTPLUGIN" | grep -q "OK: all classes are value classes"; check $? "maven-plugin demo Main force-checks the value classes"
+[ "$RUNPLUGIN_RC" = "0" ]; check $? "maven-plugin demo Main exits 0 [got $RUNPLUGIN_RC]"
+
 echo
 echo "==================== RESULT ===================="
 echo "  passed: $PASS"
