@@ -13,10 +13,10 @@
 
   <description>
     Annotation processor (javac's -processor) that selects the top-level
-    @AutoValhalla classes and the includes-matched classes in a source tree and
-    emits adapted value class/value record sources plus a selection manifest.
-    The auto-valhalla-maven-plugin drives it with javac -proc:only and compiles
-    the adapted sources with --enable-preview.
+    @AutoValhalla classes in a source tree and emits adapted value class/value
+    record sources plus a selection manifest. The auto-valhalla-maven-plugin
+    drives it with javac -proc:only and compiles the adapted sources with
+    --enable-preview.
   </description>
 
   <url>https://github.com/thunkware/auto-valhalla.git</url>
@@ -75,4 +75,17 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <proc>none</proc>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

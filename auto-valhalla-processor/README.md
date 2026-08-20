@@ -4,9 +4,9 @@
 # auto-valhalla processor
 
 An annotation processor (`javac -processor`) that selects the top-level
-`@AutoValhalla` classes and the classes matched by `includes` patterns in a
-source tree and emits adapted copies with `value class`/`value record`
-declarations, plus a `selection.txt` manifest describing what was selected.
+`@AutoValhalla` classes in a source tree and emits adapted copies with
+`value class`/`value record` declarations, plus a `selection.txt` manifest
+describing what was selected.
 
 The [auto-valhalla-maven-plugin](../auto-valhalla-maven-plugin) bundles this
 module as a dependency, runs it with `javac -proc:only`, and then compiles the
@@ -20,12 +20,10 @@ whole project, see the [auto-valhalla README](../README.md).
 ## What the processor does
 
 Given a set of source files, it visits every top-level `class`/`record` and
-applies the agent's selection semantics:
+selects the ones annotated with `@AutoValhalla`:
 
-* `excludes` are checked first and override everything;
-* a type selected by both `@AutoValhalla` and `includes` counts as
-  annotation-selected only;
-* `interface`/`enum`/`module-info`/`package-info` are never selected.
+* `interface`/`enum`/`module-info`/`package-info` are never selected;
+* unannotated classes are never selected.
 
 For each selected type it writes an adapted copy of its source file — with the
 `value` keyword inserted before the `class`/`record` keyword — under the output
@@ -34,11 +32,10 @@ file are all adapted in a single copy. It then writes a `selection.txt` manifest
 with one line per selected type:
 
 ```
-ADAPTED annotated <qname> <relPath>
-ADAPTED includes <qname> <relPath>
+ADAPTED <qname> <relPath>
 ```
 
-(I/O failures during selection are reported as `FAIL <bucket> <qname> <reason>`
+(I/O failures during selection are reported as `FAIL <qname> <reason>`
 instead.)
 
 The processor never compiles anything. Turning the adapted sources into value
@@ -49,9 +46,9 @@ invocation with `--enable-preview`.
 
 The plugin can drive it, but so can any build tool that calls javac (Gradle,
 Ant, Bazel, `make`, scripts) — useful for non-Maven builds, for custom
-multi-release jar packaging, or for a CI pre-flight gate that checks the
-selection configuration. The processor is not published to Maven Central yet;
-build it from this repository first (`mvn -pl auto-valhalla-processor -am
+multi-release jar packaging, or for a CI pre-flight gate that proves the
+annotated types adapt cleanly. The processor is not published to Maven Central
+yet; build it from this repository first (`mvn -pl auto-valhalla-processor -am
 package`). The pass and the follow-up compile look like this:
 
 ```bash
@@ -59,7 +56,6 @@ package`). The pass and the follow-up compile look like this:
 javac -proc:only \
   -processorpath auto-valhalla-processor.jar \
   -cp "$CLASSES:$COMPILE_DEPS" \
-  -Aincludes=demo \
   -Aoutdir=staging \
   $(find src -name '*.java')
 
@@ -78,8 +74,6 @@ classes.
 
 | `-A` option | default | description                                                          |
 | --- | --- |----------------------------------------------------------------------|
-| `includes` | (empty) | Comma-separated classes/packages to convert. `*` matches everything. |
-| `excludes` | (empty) | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
 | `outdir` | (required) | directory that receives the adapted sources and `selection.txt`      |
 
 ## Prerequisites

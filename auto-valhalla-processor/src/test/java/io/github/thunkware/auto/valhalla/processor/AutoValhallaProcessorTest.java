@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.processor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,49 +47,27 @@ class AutoValhallaProcessorTest {
     }
 
     @Test
-    void adaptsAnnotatedAndIncludesMatchedSources() throws Exception {
+    void adaptsAnnotatedSourcesOnly() throws Exception {
         Path src = write("fixture/Point.java", POINT);
         write("fixture/Shade.java", SHADE);
         Path out = temp.resolve("out");
         Path classes = temp.resolve("classes");
 
-        ProcessResult pass = runPass(src, List.of("fixture"), List.of(), out);
+        ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("""
-                ADAPTED annotated fixture.Point fixture/Point.java
-                ADAPTED includes fixture.Shade fixture/Shade.java
-                """, manifest(out));
+        assertEquals("ADAPTED fixture.Point fixture/Point.java\n", manifest(out));
         assertSource(out.resolve("fixture/Point.java"), "public final value class Point");
-        assertSource(out.resolve("fixture/Shade.java"), "public final value class Shade");
+        assertFalse(Files.exists(out.resolve("fixture/Shade.java")),
+                "an unannotated class must not be staged");
 
-        ProcessResult compile = runValueCompile(out, classes);
-        assertEquals(0, compile.exit, compile.output);
-        assertTrue(Files.isRegularFile(classes.resolve("fixture/Point.class")));
-        assertTrue(Files.isRegularFile(classes.resolve("fixture/Shade.class")));
-    }
-
-    @Test
-    void doubleSelectedTypeIsReportedAsAnnotatedOnly() throws Exception {
-        Path src = write("fixture/Point.java", POINT);
-        Path out = temp.resolve("out");
-
-        ProcessResult pass = runPass(src, List.of("fixture"), List.of(), out);
-
-        assertEquals(0, pass.exit, pass.output);
-        assertEquals("ADAPTED annotated fixture.Point fixture/Point.java\n", manifest(out));
-    }
-
-    @Test
-    void excludesOverrideAnnotationAndIncludes() throws Exception {
-        Path src = write("fixture/Point.java", POINT);
-        write("fixture/Shade.java", SHADE);
-        Path out = temp.resolve("out");
-
-        ProcessResult pass = runPass(src, List.of("fixture"), List.of("fixture"), out);
-
-        assertEquals(0, pass.exit, pass.output);
-        assertEquals("", manifest(out));
+        if (jdkFeature() >= 28) {
+            ProcessResult compile = runValueCompile(out, classes);
+            assertEquals(0, compile.exit, compile.output);
+            assertTrue(Files.isRegularFile(classes.resolve("fixture/Point.class")));
+            assertFalse(Files.exists(classes.resolve("fixture/Shade.class")),
+                    "no class file may be produced for an unannotated class");
+        }
     }
 
     @Test
@@ -96,10 +75,10 @@ class AutoValhallaProcessorTest {
         Path src = write("fixture/R.java", RECORD);
         Path out = temp.resolve("out");
 
-        ProcessResult pass = runPass(src, List.of(), List.of(), out);
+        ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("ADAPTED annotated fixture.R fixture/R.java\n", manifest(out));
+        assertEquals("ADAPTED fixture.R fixture/R.java\n", manifest(out));
         assertSource(out.resolve("fixture/R.java"), "public value record R(int a)");
     }
 
@@ -108,47 +87,15 @@ class AutoValhallaProcessorTest {
         Path src = write("fixture/Pair.java", PAIR);
         Path out = temp.resolve("out");
 
-        ProcessResult pass = runPass(src, List.of("fixture"), List.of(), out);
+        ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
         assertEquals("""
-                ADAPTED annotated fixture.Pair fixture/Pair.java
-                ADAPTED includes fixture.Side fixture/Pair.java
+                ADAPTED fixture.Pair fixture/Pair.java
+                ADAPTED fixture.Side fixture/Pair.java
                 """, manifest(out));
         assertSource(out.resolve("fixture/Pair.java"), "public final value class Pair");
         assertSource(out.resolve("fixture/Pair.java"), "final value class Side");
-    }
-
-    @Test
-    void starMatchesEverythingAndExcludesEverything() throws Exception {
-        Path src = write("fixture/Point.java", POINT);
-        write("fixture/Shade.java", SHADE);
-        Path out = temp.resolve("out");
-
-        ProcessResult include = runPass(src, List.of("*"), List.of(), out);
-
-        assertEquals(0, include.exit, include.output);
-        assertEquals("""
-                ADAPTED annotated fixture.Point fixture/Point.java
-                ADAPTED includes fixture.Shade fixture/Shade.java
-                """, manifest(out));
-
-        Path out2 = temp.resolve("out2");
-        ProcessResult exclude = runPass(src, List.of("*"), List.of("*"), out2);
-
-        assertEquals(0, exclude.exit, exclude.output);
-        assertEquals("", manifest(out2));
-    }
-
-    @Test
-    void slashPatternsAreRejected() throws Exception {
-        Path src = write("fixture/Point.java", POINT);
-        Path out = temp.resolve("out");
-
-        ProcessResult pass = runPass(src, List.of("fixture/Point"), List.of(), out);
-
-        assertTrue(pass.exit != 0, "a slash pattern must fail the selection pass:\n" + pass.output);
-        assertTrue(pass.output.contains("slashes not accepted"), pass.output);
     }
 
     // -- fixture sources -----------------------------------------------------
@@ -180,7 +127,9 @@ class AutoValhallaProcessorTest {
     private static final String SHADE = """
             package fixture;
 
-            /** Suitable but not annotated; selected via includes only. */
+            /** Suitable value-class candidate, but not annotated: the processor
+             *  selects {@code @AutoValhalla} classes only, so this is never
+             *  adapted. */
             public final class Shade {
 
                 public final int r;
@@ -211,7 +160,7 @@ class AutoValhallaProcessorTest {
 
             import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
-            /** Two top-level types in one file: Pair annotated, Side via includes. */
+            /** Two annotated top-level types in one file share one staged copy. */
             @AutoValhalla
             public final class Pair {
 
@@ -222,7 +171,8 @@ class AutoValhallaProcessorTest {
                 }
             }
 
-            /** Same file, not annotated. */
+            /** Same file, also annotated. */
+            @AutoValhalla
             final class Side {
 
                 final int b;
@@ -257,8 +207,7 @@ class AutoValhallaProcessorTest {
                 : "";
     }
 
-    private static ProcessResult runPass(Path srcRoot, List<String> includes,
-            List<String> excludes, Path out) throws Exception {
+    private static ProcessResult runPass(Path srcRoot, Path out) throws Exception {
         List<String> command = new ArrayList<>();
         command.add(javacPath);
         command.add("-proc:only");
@@ -268,8 +217,6 @@ class AutoValhallaProcessorTest {
         command.add(apiJar);
         command.add("-encoding");
         command.add("UTF-8");
-        command.add("-A" + AutoValhallaProcessor.OPT_INCLUDES + "=" + String.join(",", includes));
-        command.add("-A" + AutoValhallaProcessor.OPT_EXCLUDES + "=" + String.join(",", excludes));
         command.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + out.toAbsolutePath());
         try (var files = Files.walk(srcRoot)) {
             files.filter(p -> p.toString().endsWith(".java"))
@@ -324,6 +271,18 @@ class AutoValhallaProcessorTest {
         private ProcessResult(int exit, String output) {
             this.exit = exit;
             this.output = output;
+        }
+    }
+
+    private static int jdkFeature() {
+        String spec = System.getProperty("java.specification.version", "1.8");
+        if (spec.startsWith("1.")) {
+            spec = spec.substring(2);
+        }
+        try {
+            return Integer.parseInt(spec);
+        } catch (NumberFormatException e) {
+            return 8;
         }
     }
 }

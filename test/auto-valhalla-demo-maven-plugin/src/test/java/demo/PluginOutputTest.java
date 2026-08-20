@@ -41,10 +41,6 @@ class PluginOutputTest {
         assertFalse(versionedPoint.contains("ACC_SUPER"),
                 "value classes are not identity classes (no ACC_SUPER)");
 
-        String versionedPlain = javap("target/classes/META-INF/versions/28/demo/Plain.class");
-        assertTrue(versionedPlain.contains("value class demo.Plain"),
-                "includes-selected Plain is converted to a value class too");
-
         String basePoint = javap("target/classes/demo/Point.class");
         assertTrue(basePoint.contains("major version: 61"),
                 "base Point keeps its pre-Valhalla class file");

@@ -1,7 +1,8 @@
 package fixture;
 
 /**
- * Suitable but not annotated; only converted when selected via {@code includes}.
+ * Suitable value-class candidate, but not annotated: the compile-time transform
+ * selects {@code @AutoValhalla} classes only, so this is never converted.
  */
 public final class Shade {
 

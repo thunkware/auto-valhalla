@@ -14,12 +14,11 @@
 
   <description>
     A consumer project that applies the auto-valhalla-maven-plugin: the
-    @AutoValhalla classes (and the includes-selected ones) are compiled into
-    value-class variants under META-INF/versions/28 while the base classes stay
-    ordinary identity classes, and the jar goal marks the packaged jar
-    multi-release. The surefire test asserts the structural result and build.sh
-    runs the packaged jar on JDK 28 to prove the value classes are active at
-    runtime.
+    @AutoValhalla classes are compiled into value-class variants under
+    META-INF/versions/28 while the base classes stay ordinary identity classes,
+    and the jar goal marks the packaged jar multi-release. The surefire test
+    asserts the structural result and build.sh runs the packaged jar on JDK 28
+    to prove the value classes are active at runtime.
   </description>
 
   <properties>
@@ -65,13 +64,6 @@
         <groupId>io.github.thunkware</groupId>
         <artifactId>auto-valhalla-maven-plugin</artifactId>
         <version>${project.version}</version>
-        <configuration>
-          <!-- demo.Point is selected via its @AutoValhalla annotation;
-               demo.Plain (unannotated) is selected via the includes pattern. -->
-          <includes>
-            <include>demo.Plain</include>
-          </includes>
-        </configuration>
         <executions>
           <execution>
             <id>transform</id>

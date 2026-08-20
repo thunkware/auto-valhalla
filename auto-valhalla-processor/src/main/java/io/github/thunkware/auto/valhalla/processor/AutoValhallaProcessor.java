@@ -26,10 +26,9 @@ import javax.tools.Diagnostic;
  * The annotation processor that drives the compile-time value-class
  * transformation. The {@code auto-valhalla-maven-plugin} runs it as a
  * {@code javac -proc:only} pass over the project's sources; for every top-level
- * {@code class}/{@code record} that is either annotated with
- * {@code @AutoValhalla} or matches an {@code includes} pattern (and is not
- * excluded), it emits an adapted copy of the source file in which the
- * declaration keyword becomes {@code value class}/{@code value record}.
+ * {@code class}/{@code record} annotated with {@code @AutoValhalla}, it emits an
+ * adapted copy of the source file in which the declaration keyword becomes
+ * {@code value class}/{@code value record}.
  *
  * <p>Adapted sources and a selection manifest ({@code selection.txt}) are
  * written under the directory given by the {@code -Aoutdir} option, preserving
@@ -37,24 +36,14 @@ import javax.tools.Diagnostic;
  * {@code javac --release <N> --enable-preview -proc:none} to produce the
  * versioned value-class files.
  *
- * <p>Selection mirrors the agent: {@code excludes} are checked first and
- * override everything; a type selected by both the annotation and
- * {@code includes} is treated as annotation-selected only. A manifest line is
- * one of:
+ * <p>A manifest line is one of:
  * <ul>
- *   <li>{@code ADAPTED annotated <qname> <relPath>}</li>
- *   <li>{@code ADAPTED includes <qname> <relPath>}</li>
- *   <li>{@code FAIL annotated|includes <qname> <reason>}</li>
+ *   <li>{@code ADAPTED <qname> <relPath>}</li>
+ *   <li>{@code FAIL <qname> <reason>}</li>
  * </ul>
- * The plugin reads this manifest to report and bucket failures.
+ * The plugin reads this manifest to report failures.
  */
 public class AutoValhallaProcessor extends AbstractProcessor {
-
-    /** The {@code -A} option with the class/package patterns to convert. */
-    public static final String OPT_INCLUDES = "includes";
-
-    /** The {@code -A} option with the patterns never converted, checked first. */
-    public static final String OPT_EXCLUDES = "excludes";
 
     /** The {@code -A} option with the directory that receives the adapted
      *  sources and the {@code selection.txt} manifest. */
@@ -90,7 +79,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
 
     @Override
     public Set<String> getSupportedOptions() {
-        return Set.of(OPT_INCLUDES, OPT_EXCLUDES, OPT_OUTDIR);
+        return Set.of(OPT_OUTDIR);
     }
 
     @Override
@@ -113,17 +102,6 @@ public class AutoValhallaProcessor extends AbstractProcessor {
                     "auto-valhalla processor requires the -A" + OPT_OUTDIR + " option");
             return false;
         }
-        List<String> includes = split(processingEnv.getOptions().getOrDefault(OPT_INCLUDES, ""));
-        List<String> excludes = split(processingEnv.getOptions().getOrDefault(OPT_EXCLUDES, ""));
-        List<String> invalid = new ArrayList<>(invalidPatterns(includes));
-        invalid.addAll(invalidPatterns(excludes));
-        if (!invalid.isEmpty()) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                    "auto-valhalla processor: includes/excludes patterns must be '*', a dotted "
-                            + "class name, or a dotted package (slashes not accepted); invalid: "
-                            + String.join(", ", invalid));
-            return false;
-        }
         List<String> report = new ArrayList<>();
         Path out = Path.of(outdir.trim());
 
@@ -134,27 +112,20 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             if (type == null) {
                 continue;
             }
+            if (!isAnnotated(type)) {
+                continue;
+            }
             String pkg = processingEnv.getElementUtils().getPackageOf(type)
                     .getQualifiedName().toString();
-            String internal = internalName(pkg, type);
-            if (patternMatches(excludes, internal)) {
-                continue;
-            }
-            boolean annotated = isAnnotated(type);
-            boolean included = patternMatches(includes, internal);
-            if (!annotated && !included) {
-                continue;
-            }
-            String bucket = annotated ? "annotated" : "includes";
             String qname = type.getQualifiedName().toString();
 
             TreePath path = trees.getPath(type);
             if (path == null || !(path.getLeaf() instanceof ClassTree)) {
-                report.add("FAIL " + bucket + " " + qname + " no tree path");
+                report.add("FAIL " + qname + " no tree path");
                 continue;
             }
             byUnit.computeIfAbsent(path.getCompilationUnit(), k -> new ArrayList<>())
-                    .add(new Selected(path.getCompilationUnit(), pkg, bucket, qname,
+                    .add(new Selected(path.getCompilationUnit(), pkg, qname,
                             (ClassTree) path.getLeaf()));
         }
         for (List<Selected> unit : byUnit.values()) {
@@ -173,9 +144,8 @@ public class AutoValhallaProcessor extends AbstractProcessor {
 
     /** Adapts every selected type of one compilation unit into a single staged
      *  copy: all {@code value} keywords are inserted before the file is written,
-     *  so several selected types in one file (e.g. an annotated class next to an
-     *  includes-matched one) are all adapted and one {@code ADAPTED} line is
-     *  recorded per type. */
+     *  so several selected types in one file are all adapted and one
+     *  {@code ADAPTED} line is recorded per type. */
     private void adaptUnit(Trees trees, List<Selected> unit, Path out, List<String> report) {
         CompilationUnitTree compilationUnit = unit.get(0).unit;
         SourcePositions positions = trees.getSourcePositions();
@@ -215,7 +185,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             Files.createDirectories(target.getParent());
             Files.write(target, adapted.toString().getBytes(StandardCharsets.UTF_8));
             for (Selected selected : unit) {
-                report.add("ADAPTED " + selected.bucket + " " + selected.qname + " " + rel);
+                report.add("ADAPTED " + selected.qname + " " + rel);
             }
         } catch (IOException e) {
             for (Selected selected : unit) {
@@ -225,11 +195,10 @@ public class AutoValhallaProcessor extends AbstractProcessor {
     }
 
     /** Records an I/O failure for a selected type in the manifest and raises a
-     *  javac error so the {@code -proc:only} pass fails the build no matter how
-     *  the selection bucket would otherwise be treated (an I/O problem is a
-     *  tooling error, not a per-type rejection). */
+     *  javac error so the {@code -proc:only} pass fails the build (an I/O
+     *  problem is a tooling error, not a per-type rejection). */
     private void failIo(Selected selected, String reason, List<String> report) {
-        report.add("FAIL " + selected.bucket + " " + selected.qname + " " + reason);
+        report.add("FAIL " + selected.qname + " " + reason);
         processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                 "auto-valhalla processor: " + selected.qname + ": " + reason);
     }
@@ -239,15 +208,13 @@ public class AutoValhallaProcessor extends AbstractProcessor {
 
         private final CompilationUnitTree unit;
         private final String pkg;
-        private final String bucket;
         private final String qname;
         private final ClassTree classTree;
 
-        private Selected(CompilationUnitTree unit, String pkg, String bucket, String qname,
+        private Selected(CompilationUnitTree unit, String pkg, String qname,
                 ClassTree classTree) {
             this.unit = unit;
             this.pkg = pkg;
-            this.bucket = bucket;
             this.qname = qname;
             this.classTree = classTree;
         }
@@ -275,14 +242,6 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         return type;
     }
 
-    /** Slashed internal name, e.g. {@code com/example/Point} (no leading
-     *  slash; just the simple name for the default package). */
-    private static String internalName(String pkg, TypeElement type) {
-        return pkg.isEmpty()
-                ? type.getSimpleName().toString()
-                : pkg.replace('.', '/') + "/" + type.getSimpleName();
-    }
-
     /** True when the {@code @AutoValhalla} annotation is attached, matched by
      *  fully qualified or simple name. */
     private static boolean isAnnotated(TypeElement type) {
@@ -293,59 +252,9 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         });
     }
 
-    /** Matches {@code internal} (a slashed name like {@code com/acme/Point})
-     *  against the dotted patterns accepted for {@code includes}/{@code excludes}:
-     *  {@code *} matches everything; any other pattern is a dotted class name or
-     *  a dotted package, matching an exact class or a class in that package or
-     *  any of its subpackages. Slash-separated patterns are not accepted (they
-     *  are rejected by {@link #validatePatterns} before matching). */
-    static boolean patternMatches(List<String> patterns, String internal) {
-        if (patterns == null || patterns.isEmpty()) {
-            return false;
-        }
-        for (String pattern : patterns) {
-            if ("*".equals(pattern)) {
-                return true;
-            }
-            String normalized = pattern.replace('.', '/');
-            if (normalized.equals(internal)) {
-                return true;
-            }
-            if (internal.startsWith(normalized + "/")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Rejects every pattern that is not {@code *}, a dotted class name, or a
-     *  dotted package (i.e. contains a slash) and returns the offending ones. */
-    private static List<String> invalidPatterns(List<? extends String> patterns) {
-        List<String> invalid = new ArrayList<>();
-        for (String pattern : patterns) {
-            if (!"*".equals(pattern) && pattern.contains("/")) {
-                invalid.add(pattern);
-            }
-        }
-        return invalid;
-    }
-
     private static String fileName(CompilationUnitTree unit) {
         String name = unit.getSourceFile().getName();
         int slash = name.lastIndexOf('/');
         return slash < 0 ? name : name.substring(slash + 1);
-    }
-
-    private static List<String> split(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return List.of();
-        }
-        List<String> patterns = new ArrayList<>();
-        for (String pattern : value.split(",")) {
-            if (!pattern.trim().isEmpty()) {
-                patterns.add(pattern.trim());
-            }
-        }
-        return patterns;
     }
 }

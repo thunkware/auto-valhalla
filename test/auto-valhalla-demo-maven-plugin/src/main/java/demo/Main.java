@@ -10,7 +10,6 @@ public final class Main {
             // compiled for JDK 17, so Class.isValue() is reached reflectively
             Method isValue = Class.class.getMethod("isValue");
             requireValue(isValue, "demo.Point");
-            requireValue(isValue, "demo.Plain");
             System.out.println("OK: all classes are value classes");
         } else {
             System.out.println("running on Java " + feature
