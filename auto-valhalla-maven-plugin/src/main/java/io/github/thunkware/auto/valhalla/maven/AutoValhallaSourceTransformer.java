@@ -140,9 +140,10 @@ public final class AutoValhallaSourceTransformer {
         return result;
     }
 
-    /** Runs the processor's {@code javac -proc:only} selection pass and maps a
-     *  failed pass without a manifest to an {@link IOException} (an internal
-     *  error rather than a per-source failure). */
+    /** Runs the processor's {@code javac -proc:only} selection pass. A failed
+     *  pass maps to an {@link IOException} that fails the build: the processor
+     *  only exits non-zero when it reported a real problem (e.g. an I/O error
+     *  writing the staged sources or the manifest). */
     private static void runSelectionPass(String javac, String processorPath,
             List<String> includes, List<String> excludes, File selected,
             List<String> compileClasspath, List<File> sources) throws IOException {
@@ -162,7 +163,7 @@ public final class AutoValhallaSourceTransformer {
             command.add(file.getAbsolutePath());
         }
         ProcessResult process = run(command);
-        if (process.exit != 0 && !new File(selected, AutoValhallaProcessor.SELECTION_FILE).exists()) {
+        if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass (javac -proc:only) failed:\n"
                     + process.output);
         }

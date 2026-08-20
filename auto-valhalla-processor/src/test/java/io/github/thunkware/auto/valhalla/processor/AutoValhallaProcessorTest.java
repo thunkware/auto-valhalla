@@ -119,6 +119,38 @@ class AutoValhallaProcessorTest {
         assertSource(out.resolve("fixture/Pair.java"), "final value class Side");
     }
 
+    @Test
+    void starMatchesEverythingAndExcludesEverything() throws Exception {
+        Path src = write("fixture/Point.java", POINT);
+        write("fixture/Shade.java", SHADE);
+        Path out = temp.resolve("out");
+
+        ProcessResult include = runPass(src, List.of("*"), List.of(), out);
+
+        assertEquals(0, include.exit, include.output);
+        assertEquals("""
+                ADAPTED annotated fixture.Point fixture/Point.java
+                ADAPTED includes fixture.Shade fixture/Shade.java
+                """, manifest(out));
+
+        Path out2 = temp.resolve("out2");
+        ProcessResult exclude = runPass(src, List.of("*"), List.of("*"), out2);
+
+        assertEquals(0, exclude.exit, exclude.output);
+        assertEquals("", manifest(out2));
+    }
+
+    @Test
+    void slashPatternsAreRejected() throws Exception {
+        Path src = write("fixture/Point.java", POINT);
+        Path out = temp.resolve("out");
+
+        ProcessResult pass = runPass(src, List.of("fixture/Point"), List.of(), out);
+
+        assertTrue(pass.exit != 0, "a slash pattern must fail the selection pass:\n" + pass.output);
+        assertTrue(pass.output.contains("slashes not accepted"), pass.output);
+    }
+
     // -- fixture sources -----------------------------------------------------
 
     private static final String POINT = """

@@ -39,8 +39,8 @@ import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
  * <p>Selection and failure handling mirror the agent:
  * <ul>
  *   <li>{@code @AutoValhalla} annotation is the in-source opt-in;</li>
- *   <li>{@code includes}/{@code excludes} patterns match conditions equivalent
- *       to the agent's {@code auto-valhalla.includes}/{@code excludes};</li>
+ *   <li>{@code includes}/{@code excludes} accept dotted class/package
+ *       patterns ({@code *} matches everything);</li>
  *   <li>a class selected by both counts as annotation-selected only;</li>
  *   <li>by default an annotation-selected class that javac rejects (because it
  *       cannot be a value class) fails the build, while an includes-selected one
@@ -68,13 +68,13 @@ public class AutoValhallaMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
     private File buildDirectory;
 
-    /** Class/package patterns selected for conversion, equivalent to the
-     *  agent's {@code auto-valhalla.includes}. */
+    /** Dotted class/package patterns selected for conversion ({@code *} matches
+     *  everything; a package pattern matches the package and its subpackages;
+     *  slashes are not accepted). */
     @Parameter(property = "auto-valhalla.includes")
     private List<String> includes;
 
-    /** Class/package patterns never converted, checked first; equivalent to
-     *  the agent's {@code auto-valhalla.excludes}. */
+    /** Dotted class/package patterns never converted, checked first. */
     @Parameter(property = "auto-valhalla.excludes")
     private List<String> excludes;
 

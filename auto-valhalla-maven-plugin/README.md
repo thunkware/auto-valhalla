@@ -89,8 +89,8 @@ All parameters are optional:
 
 | parameter | property | default | description |
 | --- | --- | --- | --- |
-| `includes` | `auto-valhalla.includes` | (empty) | patterns (dots or slashes) matching classes to convert, like `-Dauto-valhalla.includes` for the agent |
-| `excludes` | `auto-valhalla.excludes` | (empty) | patterns never converted, checked first |
+| `includes` | `auto-valhalla.includes` | (empty) | Comma-separated classes/packages to convert. `*` matches everything. |
+| `excludes` | `auto-valhalla.excludes` | (empty) | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
 | `versionDirectory` | `auto-valhalla.version` | `28` | the multi-release version directory, also the javac `--release` |
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
 | `failOnIncludesFailure` | — | `false` | fail the build when an `includes`-selected class cannot be compiled as a value class |

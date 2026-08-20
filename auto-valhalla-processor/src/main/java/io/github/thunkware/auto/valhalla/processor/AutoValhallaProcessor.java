@@ -115,6 +115,15 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         }
         List<String> includes = split(processingEnv.getOptions().getOrDefault(OPT_INCLUDES, ""));
         List<String> excludes = split(processingEnv.getOptions().getOrDefault(OPT_EXCLUDES, ""));
+        List<String> invalid = new ArrayList<>(invalidPatterns(includes));
+        invalid.addAll(invalidPatterns(excludes));
+        if (!invalid.isEmpty()) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                    "auto-valhalla processor: includes/excludes patterns must be '*', a dotted "
+                            + "class name, or a dotted package (slashes not accepted); invalid: "
+                            + String.join(", ", invalid));
+            return false;
+        }
         List<String> report = new ArrayList<>();
         Path out = Path.of(outdir.trim());
 
@@ -175,8 +184,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             source = compilationUnit.getSourceFile().getCharContent(true).toString();
         } catch (IOException e) {
             for (Selected selected : unit) {
-                report.add("FAIL " + selected.bucket + " " + selected.qname
-                        + " cannot read source: " + e);
+                failIo(selected, "cannot read source: " + e, report);
             }
             return;
         }
@@ -211,10 +219,19 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             }
         } catch (IOException e) {
             for (Selected selected : unit) {
-                report.add("FAIL " + selected.bucket + " " + selected.qname
-                        + " cannot write " + rel + ": " + e);
+                failIo(selected, "cannot write " + rel + ": " + e, report);
             }
         }
+    }
+
+    /** Records an I/O failure for a selected type in the manifest and raises a
+     *  javac error so the {@code -proc:only} pass fails the build no matter how
+     *  the selection bucket would otherwise be treated (an I/O problem is a
+     *  tooling error, not a per-type rejection). */
+    private void failIo(Selected selected, String reason, List<String> report) {
+        report.add("FAIL " + selected.bucket + " " + selected.qname + " " + reason);
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                "auto-valhalla processor: " + selected.qname + ": " + reason);
     }
 
     /** A selected top-level type plus the context needed to adapt its file. */
@@ -276,30 +293,41 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         });
     }
 
-    /** Mirrors {@code ValueClassTransformer#patternMatches}: {@code *} matches
-     *  everything; a pattern ending in {@code /} is a package-prefix match;
-     *  otherwise the pattern matches an exact class or an exact or recursive
-     *  package. Patterns may use dots or slashes. */
+    /** Matches {@code internal} (a slashed name like {@code com/acme/Point})
+     *  against the dotted patterns accepted for {@code includes}/{@code excludes}:
+     *  {@code *} matches everything; any other pattern is a dotted class name or
+     *  a dotted package, matching an exact class or a class in that package or
+     *  any of its subpackages. Slash-separated patterns are not accepted (they
+     *  are rejected by {@link #validatePatterns} before matching). */
     static boolean patternMatches(List<String> patterns, String internal) {
         if (patterns == null || patterns.isEmpty()) {
             return false;
         }
-        String pkg = internal.indexOf('/') < 0 ? "" : internal.substring(0, internal.lastIndexOf('/'));
         for (String pattern : patterns) {
-            String normalized = pattern.replace('.', '/');
-            if ("*".equals(normalized)) {
+            if ("*".equals(pattern)) {
                 return true;
             }
-            if (normalized.endsWith("/")) {
-                if (internal.startsWith(normalized)) {
-                    return true;
-                }
-            } else if (internal.equals(normalized) || pkg.equals(normalized)
-                    || pkg.startsWith(normalized + "/")) {
+            String normalized = pattern.replace('.', '/');
+            if (normalized.equals(internal)) {
+                return true;
+            }
+            if (internal.startsWith(normalized + "/")) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** Rejects every pattern that is not {@code *}, a dotted class name, or a
+     *  dotted package (i.e. contains a slash) and returns the offending ones. */
+    private static List<String> invalidPatterns(List<? extends String> patterns) {
+        List<String> invalid = new ArrayList<>();
+        for (String pattern : patterns) {
+            if (!"*".equals(pattern) && pattern.contains("/")) {
+                invalid.add(pattern);
+            }
+        }
+        return invalid;
     }
 
     private static String fileName(CompilationUnitTree unit) {
