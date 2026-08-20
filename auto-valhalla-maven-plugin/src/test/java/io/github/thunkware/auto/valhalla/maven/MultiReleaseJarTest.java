@@ -31,7 +31,7 @@ class MultiReleaseJarTest {
         byte[] classBytes = "fake-class-bytes".getBytes(StandardCharsets.UTF_8);
         File jar = new File(tempDir, "app.jar");
         writeJar(jar, "Manifest-Version: 1.0\nCreated-By: test\n\n",
-                Map.of("a/b/C.class", classBytes));
+                java.util.Collections.singletonMap("a/b/C.class", classBytes));
 
         assertTrue(MultiReleaseJar.addMultiReleaseFlag(jar));
 
@@ -49,7 +49,7 @@ class MultiReleaseJarTest {
     @Test
     void createsManifestWhenMissing() throws Exception {
         File jar = new File(tempDir, "nomanifest.jar");
-        writeJar(jar, null, Map.of("C.class", new byte[] { 1, 2, 3 }));
+        writeJar(jar, null, java.util.Collections.singletonMap("C.class", new byte[] { 1, 2, 3 }));
 
         assertTrue(MultiReleaseJar.addMultiReleaseFlag(jar));
 
@@ -63,7 +63,7 @@ class MultiReleaseJarTest {
     @Test
     void reportsNoChangeWhenAlreadyMultiRelease() throws Exception {
         File jar = new File(tempDir, "mralready.jar");
-        writeJar(jar, "Manifest-Version: 1.0\nMulti-Release: true\n\n", Map.of());
+        writeJar(jar, "Manifest-Version: 1.0\nMulti-Release: true\n\n", java.util.Collections.emptyMap());
 
         assertFalse(MultiReleaseJar.addMultiReleaseFlag(jar));
     }

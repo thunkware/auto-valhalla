@@ -110,11 +110,6 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <!-- The plugin's own classes are compiled for Java 8 (release 8 via
-               the maven.compiler.release property). Tests, however, inspect the
-               produced value-class files with the java.lang.classfile API, so
-               they are compiled for the JDK 28 runtime that runs them. -->
-          <testRelease>28</testRelease>
           <!-- The auto-valhalla processor is on this module's own classpath; it
                must not auto-run during the plugin's compilation. It only runs
                inside the javac subprocesses the transformer spawns. -->
