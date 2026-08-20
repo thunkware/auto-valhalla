@@ -30,16 +30,9 @@ overview of the whole project, see the [auto-valhalla README](../README.md).
 </plugin>
 ```
 
-Select classes with the [`@AutoValhalla` annotation](../auto-valhalla-api#quickstart)
-or with `includes` patterns:
-
-```xml
-<configuration>
-  <includes>
-    <include>demo.Plain</include>
-  </includes>
-</configuration>
-```
+Select classes in source with the
+[`@AutoValhalla` annotation](../auto-valhalla-api#quickstart); the plugin converts
+exactly the annotated top-level classes and nothing else:
 
 The plugin is also available directly from the command line:
 
@@ -57,7 +50,7 @@ java --enable-preview -jar myapp.jar
 
 | Goal | Default phase | Description |
 | --- | --- | --- |
-| `transform` | `process-classes` | Runs the `auto-valhalla-processor` (via `javac -proc:only`) over the project's sources, selects the `@AutoValhalla` classes and the classes matching `includes`, and compiles the adapted `value class`/`value record` copies with `javac --release 28 --enable-preview`, writing them under `META-INF/versions/28`. |
+| `transform` | `process-classes` | Runs the `auto-valhalla-processor` (via `javac -proc:only`) over the project's sources, selects the `@AutoValhalla` classes, and compiles the adapted `value class`/`value record` copies with `javac --release 28 --enable-preview`, writing them under `META-INF/versions/28`. |
 | `jar` | `package` | Adds `Multi-Release: true` to the jar manifest so the JVM serves the value variants on JDK 28+ and the identity classes on older JDKs. |
 
 ## How it works
@@ -65,9 +58,9 @@ java --enable-preview -jar myapp.jar
 There is no bytecode rewriting anywhere: the `auto-valhalla-processor`
 annotation processor (a dependency of this plugin, passed to `javac -
 processorpath`) selects the top-level types that carry the `@AutoValhalla`
-annotation or match the `includes` patterns, and writes adapted copies of their
-source files into a staging directory with the `class`/`record` declarations
-turned into `value class`/`value record`. The `transform` goal then delegates to
+annotation, and writes adapted copies of their source files into a staging
+directory with the `class`/`record` declarations turned into
+`value class`/`value record`. The `transform` goal then delegates to
 the JDK compiler — `javac --release <N> --enable-preview` — which produces the
 value-class files natively and enforces the value-class rules. The base classes
 are left untouched, so they keep working on JDKs older than 28.
@@ -89,18 +82,24 @@ All parameters are optional:
 
 | parameter | property | default | description |
 | --- | --- | --- | --- |
-| `includes` | `auto-valhalla.includes` | (empty) | Comma-separated classes/packages to convert. `*` matches everything. |
-| `excludes` | `auto-valhalla.excludes` | (empty) | Same matching rules, but for exclusion (overrides `includes` and the annotation). |
 | `versionDirectory` | `auto-valhalla.version` | `28` | the multi-release version directory, also the javac `--release` |
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
-| `failOnIncludesFailure` | — | `false` | fail the build when an `includes`-selected class cannot be compiled as a value class |
 | `javac` | `auto-valhalla.javac` | `<java.home>/bin/javac` | override the JDK compiler executable |
 | `skip` | `auto-valhalla.skip` | `false` | skip both goals |
+| `encoding` | `auto-valhalla.encoding` | `${project.build.sourceEncoding}` | character encoding for source compilation |
+| `parameters` | `auto-valhalla.parameters` | inherited | generate metadata for reflection on method parameters (`-parameters`) |
+| `debug` | `auto-valhalla.debug` | inherited | include debugging information (`-g` or `-g:none`) |
+| `debuglevel` | `auto-valhalla.debuglevel` | inherited | keyword list for `-g:` (e.g. `lines,vars,source`) |
+| `showWarnings` | `auto-valhalla.showWarnings` | inherited | show compiler warnings (passes `-nowarn` when `false`) |
+| `showDeprecation` | `auto-valhalla.showDeprecation` | inherited | show deprecation warnings (`-deprecation`) |
+| `compilerArgs` | — | inherited | list of additional arguments to pass to javac (e.g. `<compilerArgs><arg>-parameters</arg></compilerArgs>`) |
+| `compilerArgument` | `auto-valhalla.compilerArgument` | inherited | single additional argument string to pass to javac |
 
-Selection mirrors the agent: `excludes` are checked first and override
-everything; a class selected by both the annotation and `includes` is treated as
-annotation-selected only; annotation failures fail the build by default while
-includes failures are logged and skipped (`failOnIncludesFailure=false`).
+Compiler configuration options (`parameters`, `debug`, `debuglevel`, `showWarnings`, `showDeprecation`, `encoding`, `compilerArgs`) are automatically inherited from the project's `maven-compiler-plugin` configuration when omitted, and can be overridden directly in this plugin's `<configuration>`.
+
+Selection is by the `@AutoValhalla` annotation alone: an annotated class that
+javac rejects (because it cannot be a value class) fails the build by default
+(`failOnAnnotationFailure=true`).
 
 ## Example
 

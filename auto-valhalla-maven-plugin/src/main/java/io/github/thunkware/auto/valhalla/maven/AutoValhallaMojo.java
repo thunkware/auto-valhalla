@@ -2,6 +2,7 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -11,14 +12,14 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 
 /**
- * Turns {@code @AutoValhalla}-annotated classes (and classes whose package
- * matches the {@code includes} patterns) into JEP 401 value classes at compile
- * time and writes them under {@code META-INF/versions/<versionDirectory>} so the
- * jar becomes a multi-release jar whose value-class variants are used on JDK 28+
- * and whose original identity classes are used everywhere else.
+ * Turns {@code @AutoValhalla}-annotated classes into JEP 401 value classes at
+ * compile time and writes them under {@code META-INF/versions/<versionDirectory>}
+ * so the jar becomes a multi-release jar whose value-class variants are used on
+ * JDK 28+ and whose original identity classes are used everywhere else.
  *
  * <p>There is no bytecode rewriting: for every selected source file the goal
  * copies it into a staging directory with its {@code class}/{@code record}
@@ -38,18 +39,13 @@ import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
  *
  * <p>Selection and failure handling mirror the agent:
  * <ul>
- *   <li>{@code @AutoValhalla} annotation is the in-source opt-in;</li>
- *   <li>{@code includes}/{@code excludes} accept dotted class/package
- *       patterns ({@code *} matches everything);</li>
- *   <li>a class selected by both counts as annotation-selected only;</li>
- *   <li>by default an annotation-selected class that javac rejects (because it
- *       cannot be a value class) fails the build, while an includes-selected one
- *       is logged and skipped ({@code failOnAnnotationFailure}/
- *       {@code failOnIncludesFailure}).</li>
+ *   <li>the {@code @AutoValhalla} annotation is the in-source opt-in;</li>
+ *   <li>by default an annotated class that javac rejects (because it cannot be
+ *       a value class) fails the build ({@code failOnAnnotationFailure}).</li>
  * </ul>
  */
 @Mojo(name = "transform", defaultPhase = LifecyclePhase.PROCESS_CLASSES, threadSafe = true,
-        requiresProject = true, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
+        requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class AutoValhallaMojo extends AbstractMojo {
 
     /** Minimum Java feature version that can compile value classes. */
@@ -68,16 +64,6 @@ public class AutoValhallaMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
     private File buildDirectory;
 
-    /** Dotted class/package patterns selected for conversion ({@code *} matches
-     *  everything; a package pattern matches the package and its subpackages;
-     *  slashes are not accepted). */
-    @Parameter(property = "auto-valhalla.includes")
-    private List<String> includes;
-
-    /** Dotted class/package patterns never converted, checked first. */
-    @Parameter(property = "auto-valhalla.excludes")
-    private List<String> excludes;
-
     /** The multi-release version directory ({@code META-INF/versions/<N>}) that
      *  receives the value-class variants. Must be at least 28, and not higher
      *  than the JDK running Maven: it becomes the compiler's {@code --release}. */
@@ -90,16 +76,49 @@ public class AutoValhallaMojo extends AbstractMojo {
     @Parameter(defaultValue = "true")
     private boolean failOnAnnotationFailure;
 
-    /** Fail the build when an includes-selected class cannot be compiled as a
-     *  value class. Mirrors the agent's {@code includes.rejected}/
-     *  {@code includes.fail} defaulting to {@code debug} (skip). */
-    @Parameter(defaultValue = "false")
-    private boolean failOnIncludesFailure;
-
     /** Override for the JDK compiler executable; defaults to
      *  {@code <java.home>/bin/javac}. */
     @Parameter(property = "auto-valhalla.javac")
     private String javac;
+
+    /** Character encoding for source compilation. Defaults to
+     *  {@code ${project.build.sourceEncoding}} or UTF-8. */
+    @Parameter(property = "auto-valhalla.encoding", defaultValue = "${project.build.sourceEncoding}")
+    private String encoding;
+
+    /** Whether to generate metadata for reflection on method parameters
+     *  ({@code -parameters}). If not explicitly specified, inherits from
+     *  {@code maven-compiler-plugin} if configured there. */
+    @Parameter(property = "auto-valhalla.parameters")
+    private Boolean parameters;
+
+    /** Whether to include debugging information in the compiled class files
+     *  ({@code -g} or {@code -g:none}). If not explicitly specified, inherits
+     *  from {@code maven-compiler-plugin}. */
+    @Parameter(property = "auto-valhalla.debug")
+    private Boolean debug;
+
+    /** Keyword list to be appended to the {@code -g} command-line switch
+     *  (e.g. {@code lines,vars,source}). */
+    @Parameter(property = "auto-valhalla.debuglevel")
+    private String debuglevel;
+
+    /** Whether to show or suppress compiler warnings ({@code -nowarn} when false). */
+    @Parameter(property = "auto-valhalla.showWarnings")
+    private Boolean showWarnings;
+
+    /** Whether to show deprecation warnings ({@code -deprecation} when true). */
+    @Parameter(property = "auto-valhalla.showDeprecation")
+    private Boolean showDeprecation;
+
+    /** A list of additional compiler arguments to pass to javac (e.g.
+     *  {@code <compilerArgs><arg>-parameters</arg></compilerArgs>}). */
+    @Parameter
+    private List<String> compilerArgs;
+
+    /** A single additional compiler argument to pass to javac. */
+    @Parameter(property = "auto-valhalla.compilerArgument")
+    private String compilerArgument;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -142,10 +161,12 @@ public class AutoValhallaMojo extends AbstractMojo {
                 throw new MojoExecutionException("auto-valhalla: could not locate the "
                         + "auto-valhalla-processor jar for javac's -processorpath");
             }
+            String resolvedEncoding = resolveEncoding();
+            List<String> extraCompilerArgs = resolveCompilerArgs();
             result = AutoValhallaSourceTransformer.transform(
-                    project.getCompileSourceRoots(), includes, excludes, versionDirectory,
+                    project.getCompileSourceRoots(), versionDirectory,
                     outputDirectory, buildDirectory, javacExecutable(), processorPath,
-                    compileClasspath);
+                    compileClasspath, resolvedEncoding, extraCompilerArgs);
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the source-level "
                     + "transformation: " + e.getMessage(), e);
@@ -154,19 +175,10 @@ public class AutoValhallaMojo extends AbstractMojo {
             getLog().error("auto-valhalla: " + failure
                     + "; leaving as an identity class");
         }
-        for (String failure : result.includesFailures()) {
-            getLog().warn("auto-valhalla: " + failure
-                    + "; leaving as an identity class");
-        }
         if (!result.annotationFailures().isEmpty() && failOnAnnotationFailure) {
             throw new MojoFailureException("auto-valhalla: " + result.annotationFailures().size()
                     + " annotation-selected class(es) could not be compiled as value classes:\n  - "
                     + String.join("\n  - ", result.annotationFailures()));
-        }
-        if (!result.includesFailures().isEmpty() && failOnIncludesFailure) {
-            throw new MojoFailureException("auto-valhalla: " + result.includesFailures().size()
-                    + " includes-selected class(es) could not be compiled as value classes:\n  - "
-                    + String.join("\n  - ", result.includesFailures()));
         }
         if (result.convertedCount() > 0) {
             getLog().info("auto-valhalla: compiled " + result.convertedCount()
@@ -174,6 +186,175 @@ public class AutoValhallaMojo extends AbstractMojo {
         } else {
             getLog().info("auto-valhalla: no classes converted into value classes");
         }
+    }
+
+    List<String> resolveCompilerArgs() {
+        List<String> args = new ArrayList<String>();
+        Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
+
+        Boolean resolvedParameters = resolveBoolean(this.parameters, compilerConfig, "parameters");
+        Boolean resolvedDebug = resolveBoolean(this.debug, compilerConfig, "debug");
+        String resolvedDebuglevel = resolveString(this.debuglevel, compilerConfig, "debuglevel");
+        Boolean resolvedShowWarnings = resolveBoolean(this.showWarnings, compilerConfig, "showWarnings");
+        Boolean resolvedShowDeprecation = resolveBoolean(this.showDeprecation, compilerConfig, "showDeprecation");
+        String resolvedCompilerArgument = resolveString(this.compilerArgument, compilerConfig, "compilerArgument");
+        List<String> resolvedCompilerArgs = resolveCompilerArgsList(this.compilerArgs, compilerConfig);
+
+        if (resolvedParameters != null && resolvedParameters.booleanValue()) {
+            args.add("-parameters");
+        }
+        if (resolvedDebug != null) {
+            if (resolvedDebug.booleanValue()) {
+                if (resolvedDebuglevel != null && !resolvedDebuglevel.trim().isEmpty()) {
+                    args.add("-g:" + resolvedDebuglevel.trim());
+                } else {
+                    args.add("-g");
+                }
+            } else {
+                args.add("-g:none");
+            }
+        } else if (resolvedDebuglevel != null && !resolvedDebuglevel.trim().isEmpty()) {
+            args.add("-g:" + resolvedDebuglevel.trim());
+        }
+        if (resolvedShowWarnings != null && !resolvedShowWarnings.booleanValue()) {
+            args.add("-nowarn");
+        }
+        if (resolvedShowDeprecation != null && resolvedShowDeprecation.booleanValue()) {
+            args.add("-deprecation");
+        }
+        if (resolvedCompilerArgument != null && !resolvedCompilerArgument.trim().isEmpty()) {
+            for (String token : resolvedCompilerArgument.trim().split("\\s+")) {
+                if (!token.isEmpty()) {
+                    args.add(token);
+                }
+            }
+        }
+        if (resolvedCompilerArgs != null) {
+            for (String arg : resolvedCompilerArgs) {
+                if (arg != null && !arg.trim().isEmpty()) {
+                    args.add(arg.trim());
+                }
+            }
+        }
+        return args;
+    }
+
+    String resolveEncoding() {
+        Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
+        if (encoding != null && !encoding.trim().isEmpty()) {
+            return encoding.trim();
+        }
+        if (compilerConfig != null) {
+            Xpp3Dom child = compilerConfig.getChild("encoding");
+            if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
+                return child.getValue().trim();
+            }
+        }
+        return "UTF-8";
+    }
+
+    private Xpp3Dom getCompilerPluginConfiguration() {
+        if (project == null) {
+            return null;
+        }
+        org.apache.maven.model.Plugin plugin = project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
+        if (plugin == null) {
+            plugin = project.getPlugin("maven-compiler-plugin");
+        }
+        if (plugin != null && plugin.getConfiguration() instanceof Xpp3Dom) {
+            return (Xpp3Dom) plugin.getConfiguration();
+        }
+        return null;
+    }
+
+    private static List<String> resolveCompilerArgsList(List<String> directArgs, Xpp3Dom compilerConfig) {
+        if (directArgs != null && !directArgs.isEmpty()) {
+            return directArgs;
+        }
+        if (compilerConfig == null) {
+            return directArgs;
+        }
+        Xpp3Dom argsDom = compilerConfig.getChild("compilerArgs");
+        if (argsDom == null) {
+            argsDom = compilerConfig.getChild("compilerArguments");
+        }
+        if (argsDom != null) {
+            List<String> list = new ArrayList<String>();
+            for (Xpp3Dom child : argsDom.getChildren()) {
+                String val = child.getValue();
+                if (val != null && !val.trim().isEmpty()) {
+                    list.add(val.trim());
+                } else if (child.getName() != null && child.getName().startsWith("-")) {
+                    list.add(child.getName());
+                }
+            }
+            if (!list.isEmpty()) {
+                return list;
+            }
+        }
+        return directArgs;
+    }
+
+    private static Boolean resolveBoolean(Boolean directVal, Xpp3Dom compilerConfig, String childName) {
+        if (directVal != null) {
+            return directVal;
+        }
+        if (compilerConfig != null) {
+            Xpp3Dom child = compilerConfig.getChild(childName);
+            if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
+                return Boolean.valueOf(child.getValue().trim());
+            }
+        }
+        return null;
+    }
+
+    private static String resolveString(String directVal, Xpp3Dom compilerConfig, String childName) {
+        if (directVal != null && !directVal.trim().isEmpty()) {
+            return directVal.trim();
+        }
+        if (compilerConfig != null) {
+            Xpp3Dom child = compilerConfig.getChild(childName);
+            if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
+                return child.getValue().trim();
+            }
+        }
+        return directVal;
+    }
+
+    void setProject(MavenProject project) {
+        this.project = project;
+    }
+
+    void setEncoding(String encoding) {
+        this.encoding = encoding;
+    }
+
+    void setParameters(Boolean parameters) {
+        this.parameters = parameters;
+    }
+
+    void setDebug(Boolean debug) {
+        this.debug = debug;
+    }
+
+    void setDebuglevel(String debuglevel) {
+        this.debuglevel = debuglevel;
+    }
+
+    void setShowWarnings(Boolean showWarnings) {
+        this.showWarnings = showWarnings;
+    }
+
+    void setShowDeprecation(Boolean showDeprecation) {
+        this.showDeprecation = showDeprecation;
+    }
+
+    void setCompilerArgs(List<String> compilerArgs) {
+        this.compilerArgs = compilerArgs;
+    }
+
+    void setCompilerArgument(String compilerArgument) {
+        this.compilerArgument = compilerArgument;
     }
 
     private String javacExecutable() {

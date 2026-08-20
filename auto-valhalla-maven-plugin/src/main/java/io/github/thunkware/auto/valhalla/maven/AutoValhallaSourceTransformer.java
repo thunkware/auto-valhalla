@@ -17,18 +17,16 @@ import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 /**
  * Compile-time transformation driver. It runs the {@code auto-valhalla}
  * annotation processor with {@code javac -proc:only} over the project's source
- * roots to select the {@code @AutoValhalla}-annotated and {@code includes}-
- * matched top-level types and stage adapted copies of their source files
- * (with {@code value class}/{@code value record}), then compiles each staged
- * file with the JDK 28 compiler ({@code --release <N> --enable-preview}),
- * writing the resulting value-class files under {@code META-INF/versions/<N>}
- * so {@link MultiReleaseJarMojo} can mark the jar as multi-release.
+ * roots to select the {@code @AutoValhalla}-annotated top-level types and stage
+ * adapted copies of their source files (with {@code value class}/
+ * {@code value record}), then compiles each staged file with the JDK 28 compiler
+ * ({@code --release <N> --enable-preview}), writing the resulting value-class
+ * files under {@code META-INF/versions/<N>} so {@link MultiReleaseJarMojo} can
+ * mark the jar as multi-release.
  *
  * <p>There is no bytecode rewriting anywhere: the JVM's own compiler enforces
  * the value-class rules, and classes that javac rejects surface as per-source
- * failures. Selection mirrors the agent: {@code excludes} are checked first and
- * override everything; a type selected by both the annotation and
- * {@code includes} is treated as annotation-selected only.
+ * failures.
  */
 public final class AutoValhallaSourceTransformer {
 
@@ -36,13 +34,10 @@ public final class AutoValhallaSourceTransformer {
     }
 
     /** The outcome of a run: how many types were converted and which selected
-     *  types javac (or the selection rules) rejected, grouped by selection
-     *  source so the annotation-selected failures can fail the build while the
-     *  includes-selected ones are normally skipped. */
+     *  types javac rejected. The annotation-selected failures fail the build. */
     public static final class Result {
 
         private final List<String> annotationFailures = new ArrayList<>();
-        private final List<String> includesFailures = new ArrayList<>();
         private int converted;
 
         private Result() {
@@ -55,18 +50,12 @@ public final class AutoValhallaSourceTransformer {
         public List<String> annotationFailures() {
             return annotationFailures;
         }
-
-        public List<String> includesFailures() {
-            return includesFailures;
-        }
     }
 
     /**
-     * Runs the source-level transformation.
+     * Runs the source-level transformation with default encoding (UTF-8) and no extra compiler args.
      *
      * @param sourceRoots      directories containing the project's sources
-     * @param includes         package/class patterns to convert (may be empty)
-     * @param excludes         patterns never converted, checked first
      * @param versionDirectory the multi-release version directory (== the
      *                         {@code --release} the value classes target)
      * @param outputDirectory  compiled classes directory; versioned value classes
@@ -78,10 +67,36 @@ public final class AutoValhallaSourceTransformer {
      * @param compileClasspath the project's compile classpath passed to javac
      * @throws IOException on I/O errors during scanning, staging, or compilation
      */
-    public static Result transform(List<String> sourceRoots, List<String> includes,
-            List<String> excludes, int versionDirectory, File outputDirectory,
+    public static Result transform(List<String> sourceRoots,
+            int versionDirectory, File outputDirectory,
             File buildDirectory, String javac, String processorPath,
             List<String> compileClasspath) throws IOException {
+        return transform(sourceRoots, versionDirectory, outputDirectory, buildDirectory,
+                javac, processorPath, compileClasspath, "UTF-8", java.util.Collections.emptyList());
+    }
+
+    /**
+     * Runs the source-level transformation.
+     *
+     * @param sourceRoots      directories containing the project's sources
+     * @param versionDirectory the multi-release version directory (== the
+     *                         {@code --release} the value classes target)
+     * @param outputDirectory  compiled classes directory; versioned value classes
+     *                         are written under {@code META-INF/versions/N}
+     * @param buildDirectory   Maven {@code target} directory, for the staging area
+     * @param javac            the JDK 28 {@code javac} executable
+     * @param processorPath    {@code -processorpath} for the auto-valhalla
+     *                         processor (its jar or class directory)
+     * @param compileClasspath the project's compile classpath passed to javac
+     * @param encoding         the source encoding to use for javac
+     * @param compilerArgs     additional compiler arguments forwarded to javac
+     * @throws IOException on I/O errors during scanning, staging, or compilation
+     */
+    public static Result transform(List<String> sourceRoots,
+            int versionDirectory, File outputDirectory,
+            File buildDirectory, String javac, String processorPath,
+            List<String> compileClasspath, String encoding,
+            List<String> compilerArgs) throws IOException {
         Result result = new Result();
         File staging = new File(buildDirectory, "auto-valhalla-jdk28");
         deleteRecursively(staging);
@@ -95,8 +110,10 @@ public final class AutoValhallaSourceTransformer {
             return result;
         }
 
-        runSelectionPass(javac, processorPath, includes, excludes, selected,
-                compileClasspath, sources);
+        String sourceEncoding = (encoding != null && !encoding.trim().isEmpty())
+                ? encoding.trim() : "UTF-8";
+
+        runSelectionPass(javac, processorPath, selected, compileClasspath, sources, sourceEncoding);
 
         List<String> manifest = readManifest(selected);
         Map<String, List<Adapted>> adaptedFiles = new LinkedHashMap<>();
@@ -108,7 +125,7 @@ public final class AutoValhallaSourceTransformer {
             }
             SelectionFailure failure = parseFailure(line);
             if (failure != null) {
-                fail(result, failure.bucket, failure.qname, failure.reason);
+                fail(result, failure.qname, failure.reason);
             }
         }
 
@@ -121,18 +138,25 @@ public final class AutoValhallaSourceTransformer {
             command.add("--enable-preview");
             command.add("-proc:none");
             command.add("-encoding");
-            command.add("UTF-8");
+            command.add(sourceEncoding);
             command.add("-cp");
             command.add(joinPathSeparator(compileClasspath));
             command.add("-d");
             command.add(versionedOut.getAbsolutePath());
+            if (compilerArgs != null) {
+                for (String arg : compilerArgs) {
+                    if (arg != null && !arg.trim().isEmpty()) {
+                        command.add(arg.trim());
+                    }
+                }
+            }
             command.add(new File(selected, entry.getKey()).getAbsolutePath());
             ProcessResult process = run(command);
             if (process.exit == 0) {
                 result.converted += entry.getValue().size();
             } else {
                 for (Adapted adapted : entry.getValue()) {
-                    fail(result, adapted.bucket, adapted.qname,
+                    fail(result, adapted.qname,
                             "javac reported:\n" + process.output);
                 }
             }
@@ -145,8 +169,8 @@ public final class AutoValhallaSourceTransformer {
      *  only exits non-zero when it reported a real problem (e.g. an I/O error
      *  writing the staged sources or the manifest). */
     private static void runSelectionPass(String javac, String processorPath,
-            List<String> includes, List<String> excludes, File selected,
-            List<String> compileClasspath, List<File> sources) throws IOException {
+            File selected, List<String> compileClasspath, List<File> sources,
+            String encoding) throws IOException {
         List<String> command = new ArrayList<>();
         command.add(javac);
         command.add("-proc:only");
@@ -155,9 +179,7 @@ public final class AutoValhallaSourceTransformer {
         command.add("-cp");
         command.add(joinPathSeparator(compileClasspath));
         command.add("-encoding");
-        command.add("UTF-8");
-        command.add("-A" + AutoValhallaProcessor.OPT_INCLUDES + "=" + joinCommas(includes));
-        command.add("-A" + AutoValhallaProcessor.OPT_EXCLUDES + "=" + joinCommas(excludes));
+        command.add(encoding);
         command.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
         for (File file : sources) {
             command.add(file.getAbsolutePath());
@@ -189,22 +211,21 @@ public final class AutoValhallaSourceTransformer {
 
     private static Adapted parseAdapted(String line) {
         List<String> tokens = tokens(line);
-        if (tokens.size() < 4 || !"ADAPTED".equals(tokens.get(0))) {
+        if (tokens.size() < 3 || !"ADAPTED".equals(tokens.get(0))) {
             return null;
         }
-        return new Adapted(tokens.get(1), tokens.get(2), tokens.get(3));
+        return new Adapted(tokens.get(1), tokens.get(2));
     }
 
     private static SelectionFailure parseFailure(String line) {
         List<String> tokens = tokens(line);
-        if (tokens.size() < 4 || !"FAIL".equals(tokens.get(0))) {
+        if (tokens.size() < 3 || !"FAIL".equals(tokens.get(0))) {
             return null;
         }
         int space = line.indexOf(' ');
         int second = line.indexOf(' ', space + 1);
-        int third = line.indexOf(' ', second + 1);
-        return new SelectionFailure(tokens.get(1), tokens.get(2),
-                third < 0 ? "" : line.substring(third + 1));
+        return new SelectionFailure(tokens.get(1),
+                second < 0 ? "" : line.substring(second + 1));
     }
 
     private static List<String> tokens(String line) {
@@ -225,39 +246,31 @@ public final class AutoValhallaSourceTransformer {
         return tokens;
     }
 
-    private static void fail(Result result, String bucket, String qname, String reason) {
-        if ("annotated".equals(bucket)) {
-            result.annotationFailures.add(qname + ": " + reason);
-        } else {
-            result.includesFailures.add(qname + ": " + reason);
-        }
+    private static void fail(Result result, String qname, String reason) {
+        result.annotationFailures.add(qname + ": " + reason);
     }
 
-    /** An {@code ADAPTED} manifest line: one selected type, the staged file it
-     *  lives in (relative to the selection out dir), and its selection bucket. */
+    /** An {@code ADAPTED} manifest line: one selected type and the staged file
+     *  it lives in (relative to the selection out dir). */
     private static final class Adapted {
 
-        private final String bucket;
         private final String qname;
         private final String rel;
 
-        private Adapted(String bucket, String qname, String rel) {
-            this.bucket = bucket;
+        private Adapted(String qname, String rel) {
             this.qname = qname;
             this.rel = rel;
         }
     }
 
     /** A {@code FAIL} manifest line: a selected type the processor could not
-     *  adapt, bucketed like a javac rejection. */
+     *  adapt. */
     private static final class SelectionFailure {
 
-        private final String bucket;
         private final String qname;
         private final String reason;
 
-        private SelectionFailure(String bucket, String qname, String reason) {
-            this.bucket = bucket;
+        private SelectionFailure(String qname, String reason) {
             this.qname = qname;
             this.reason = reason;
         }
@@ -310,17 +323,6 @@ public final class AutoValhallaSourceTransformer {
                 joined.append(File.pathSeparatorChar);
             }
             joined.append(path);
-        }
-        return joined.toString();
-    }
-
-    private static String joinCommas(List<String> patterns) {
-        StringBuilder joined = new StringBuilder();
-        for (String pattern : patterns) {
-            if (joined.length() > 0) {
-                joined.append(',');
-            }
-            joined.append(pattern);
         }
         return joined.toString();
     }
