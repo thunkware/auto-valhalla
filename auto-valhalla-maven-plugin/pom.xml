@@ -85,6 +85,16 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- The processor the plugin drives with javac -proc:only to select and
+         adapt the value-class sources. Compile scope so it ends up on the
+         plugin's own classpath at runtime (the plugin locates it there and
+         passes it to javac as -processorpath). -->
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-processor</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -105,6 +115,10 @@
                produced value-class files with the java.lang.classfile API, so
                they are compiled for the JDK 28 runtime that runs them. -->
           <testRelease>28</testRelease>
+          <!-- The auto-valhalla processor is on this module's own classpath; it
+               must not auto-run during the plugin's compilation. It only runs
+               inside the javac subprocesses the transformer spawns. -->
+          <proc>none</proc>
         </configuration>
       </plugin>
       <plugin>

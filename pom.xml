@@ -22,6 +22,8 @@
 
   <modules>
     <module>auto-valhalla-api</module>
+    <!-- the processor must be built before the maven plugin, which drives it -->
+    <module>auto-valhalla-processor</module>
     <module>auto-valhalla-maven-plugin</module>
     <module>auto-valhalla-agent</module>
     <module>auto-valhalla-agent-attach</module>

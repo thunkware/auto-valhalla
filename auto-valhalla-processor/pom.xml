@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>auto-valhalla-processor</artifactId>
+  <name>auto-valhalla annotation processor</name>
+
+  <description>
+    Annotation processor (javac's -processor) that selects the top-level
+    @AutoValhalla classes and the includes-matched classes in a source tree and
+    emits adapted value class/value record sources plus a selection manifest.
+    The auto-valhalla-maven-plugin drives it with javac -proc:only and compiles
+    the adapted sources with --enable-preview.
+  </description>
+
+  <url>https://github.com/thunkware/auto-valhalla.git</url>
+  <organization>
+      <name>thunkware</name>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache 2</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>manual</distribution>
+      <comments>A business-friendly OSS license</comments>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:git://github.com/thunkware/auto-valhalla.git</connection>
+    <developerConnection>scm:git:https://github.com/thunkware/auto-valhalla.git</developerConnection>
+    <url>https://github.com/thunkware/auto-valhalla</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <developers>
+    <developer>
+      <name>maxxedev</name>
+    </developer>
+  </developers>
+
+  <properties>
+    <!-- The processor is loaded by the javac subprocess that the maven plugin
+         runs WITHOUT the preview flag, so it is compiled without the preview
+         flag (a preview-marked class file would not load there). It targets
+         release 17 rather than the root's 28 so the class files stay readable
+         by the maven-plugin-plugin ASM version that generates the maven
+         plugin's descriptor (the processor is an ordinary dependency of the
+         plugin); the processor only uses the stable com.sun.source API, which
+         exists since Java 9 and runs on every JDK the plugin drives. -->
+    <maven.compiler.release>17</maven.compiler.release>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+  </properties>
+
+  <dependencies>
+    <!-- Only used by the tests, which compile fixture sources carrying the
+         annotation through the same javac that runs the processor. -->
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-api</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

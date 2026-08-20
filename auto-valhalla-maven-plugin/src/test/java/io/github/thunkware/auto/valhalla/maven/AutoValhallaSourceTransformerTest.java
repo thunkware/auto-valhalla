@@ -28,6 +28,7 @@ class AutoValhallaSourceTransformerTest {
 
     private static String javacPath;
     private static String apiJar;
+    private static String processorPath;
 
     @BeforeAll
     static void locateJdk() throws Exception {
@@ -36,6 +37,8 @@ class AutoValhallaSourceTransformerTest {
         javacPath = new File(System.getProperty("java.home"), "bin/javac").getAbsolutePath();
         apiJar = io.github.thunkware.auto.valhalla.api.AutoValhalla.class
                 .getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+        processorPath = io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor
+                .processorPath();
     }
 
     @TempDir
@@ -58,6 +61,7 @@ class AutoValhallaSourceTransformerTest {
                 classes.toFile(),
                 target.toFile(),
                 javacPath,
+                processorPath,
                 List.of(apiJar));
 
         assertEquals(2, result.convertedCount(), "Point and Shade both convert");
@@ -95,6 +99,7 @@ class AutoValhallaSourceTransformerTest {
                 classes.toFile(),
                 target.toFile(),
                 javacPath,
+                processorPath,
                 List.of(apiJar));
 
         assertEquals(1, result.convertedCount(), "only Point converts");
@@ -122,6 +127,7 @@ class AutoValhallaSourceTransformerTest {
                 classes.toFile(),
                 target.toFile(),
                 javacPath,
+                processorPath,
                 List.of(apiJar));
 
         assertEquals(0, result.convertedCount());

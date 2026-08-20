@@ -11,6 +11,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 
 /**
  * Turns {@code @AutoValhalla}-annotated classes (and classes whose package
@@ -136,9 +137,15 @@ public class AutoValhallaMojo extends AbstractMojo {
         }
         AutoValhallaSourceTransformer.Result result;
         try {
+            String processorPath = AutoValhallaProcessor.processorPath();
+            if (processorPath == null) {
+                throw new MojoExecutionException("auto-valhalla: could not locate the "
+                        + "auto-valhalla-processor jar for javac's -processorpath");
+            }
             result = AutoValhallaSourceTransformer.transform(
                     project.getCompileSourceRoots(), includes, excludes, versionDirectory,
-                    outputDirectory, buildDirectory, javacExecutable(), compileClasspath);
+                    outputDirectory, buildDirectory, javacExecutable(), processorPath,
+                    compileClasspath);
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the source-level "
                     + "transformation: " + e.getMessage(), e);
