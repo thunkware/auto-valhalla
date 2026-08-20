@@ -94,8 +94,23 @@ All parameters are optional:
 | `showDeprecation` | `auto-valhalla.showDeprecation` | inherited | show deprecation warnings (`-deprecation`) |
 | `compilerArgs` | — | inherited | list of additional arguments to pass to javac (e.g. `<compilerArgs><arg>-parameters</arg></compilerArgs>`) |
 | `compilerArgument` | `auto-valhalla.compilerArgument` | inherited | single additional argument string to pass to javac |
+| `maven-compiler` | — | — | nested configuration block (`<maven-compiler>` or `<compiler>`) containing any of the compiler options above |
 
-Compiler configuration options (`parameters`, `debug`, `debuglevel`, `showWarnings`, `showDeprecation`, `encoding`, `compilerArgs`) are automatically inherited from the project's `maven-compiler-plugin` configuration when omitted, and can be overridden directly in this plugin's `<configuration>`.
+Compiler configuration options (`parameters`, `debug`, `debuglevel`, `showWarnings`, `showDeprecation`, `encoding`, `compilerArgs`) can be specified directly on `<configuration>`, nested inside a `<maven-compiler>` (or `<compiler>`) block, or automatically inherited from the project's `maven-compiler-plugin` configuration:
+
+```xml
+<configuration>
+  <!-- Nested compiler options -->
+  <maven-compiler>
+    <debug>true</debug>
+    <parameters>true</parameters>
+    <compilerArgs>
+      <arg>-parameters</arg>
+      <arg>-Xlint:all</arg>
+    </compilerArgs>
+  </maven-compiler>
+</configuration>
+```
 
 Selection is by the `@AutoValhalla` annotation alone: an annotated class that
 javac rejects (because it cannot be a value class) fails the build by default

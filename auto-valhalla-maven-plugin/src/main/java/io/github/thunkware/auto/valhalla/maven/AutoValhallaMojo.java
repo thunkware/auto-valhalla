@@ -120,6 +120,10 @@ public class AutoValhallaMojo extends AbstractMojo {
     @Parameter(property = "auto-valhalla.compilerArgument")
     private String compilerArgument;
 
+    /** Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}). */
+    @Parameter(alias = "compiler")
+    private CompilerConfiguration mavenCompiler;
+
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
@@ -192,13 +196,40 @@ public class AutoValhallaMojo extends AbstractMojo {
         List<String> args = new ArrayList<String>();
         Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
 
-        Boolean resolvedParameters = resolveBoolean(this.parameters, compilerConfig, "parameters");
-        Boolean resolvedDebug = resolveBoolean(this.debug, compilerConfig, "debug");
-        String resolvedDebuglevel = resolveString(this.debuglevel, compilerConfig, "debuglevel");
-        Boolean resolvedShowWarnings = resolveBoolean(this.showWarnings, compilerConfig, "showWarnings");
-        Boolean resolvedShowDeprecation = resolveBoolean(this.showDeprecation, compilerConfig, "showDeprecation");
-        String resolvedCompilerArgument = resolveString(this.compilerArgument, compilerConfig, "compilerArgument");
-        List<String> resolvedCompilerArgs = resolveCompilerArgsList(this.compilerArgs, compilerConfig);
+        Boolean resolvedParameters = firstNonNull(
+                this.parameters,
+                mavenCompiler != null ? mavenCompiler.getParameters() : null,
+                resolveBoolean(compilerConfig, "parameters"));
+
+        Boolean resolvedDebug = firstNonNull(
+                this.debug,
+                mavenCompiler != null ? mavenCompiler.getDebug() : null,
+                resolveBoolean(compilerConfig, "debug"));
+
+        String resolvedDebuglevel = firstNonEmpty(
+                this.debuglevel,
+                mavenCompiler != null ? mavenCompiler.getDebuglevel() : null,
+                resolveString(compilerConfig, "debuglevel"));
+
+        Boolean resolvedShowWarnings = firstNonNull(
+                this.showWarnings,
+                mavenCompiler != null ? mavenCompiler.getShowWarnings() : null,
+                resolveBoolean(compilerConfig, "showWarnings"));
+
+        Boolean resolvedShowDeprecation = firstNonNull(
+                this.showDeprecation,
+                mavenCompiler != null ? mavenCompiler.getShowDeprecation() : null,
+                resolveBoolean(compilerConfig, "showDeprecation"));
+
+        String resolvedCompilerArgument = firstNonEmpty(
+                this.compilerArgument,
+                mavenCompiler != null ? mavenCompiler.getCompilerArgument() : null,
+                resolveString(compilerConfig, "compilerArgument"));
+
+        List<String> resolvedCompilerArgs = firstNonEmptyList(
+                this.compilerArgs,
+                mavenCompiler != null ? mavenCompiler.getCompilerArgs() : null,
+                resolveCompilerArgsList(compilerConfig));
 
         if (resolvedParameters != null && resolvedParameters.booleanValue()) {
             args.add("-parameters");
@@ -241,16 +272,44 @@ public class AutoValhallaMojo extends AbstractMojo {
 
     String resolveEncoding() {
         Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
-        if (encoding != null && !encoding.trim().isEmpty()) {
-            return encoding.trim();
+        String enc = firstNonEmpty(
+                this.encoding,
+                mavenCompiler != null ? mavenCompiler.getEncoding() : null,
+                resolveString(compilerConfig, "encoding"));
+        return (enc != null && !enc.trim().isEmpty()) ? enc.trim() : "UTF-8";
+    }
+
+    private static Boolean firstNonNull(Boolean a, Boolean b, Boolean c) {
+        if (a != null) {
+            return a;
         }
-        if (compilerConfig != null) {
-            Xpp3Dom child = compilerConfig.getChild("encoding");
-            if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
-                return child.getValue().trim();
-            }
+        if (b != null) {
+            return b;
         }
-        return "UTF-8";
+        return c;
+    }
+
+    private static String firstNonEmpty(String a, String b, String c) {
+        if (a != null && !a.trim().isEmpty()) {
+            return a.trim();
+        }
+        if (b != null && !b.trim().isEmpty()) {
+            return b.trim();
+        }
+        if (c != null && !c.trim().isEmpty()) {
+            return c.trim();
+        }
+        return null;
+    }
+
+    private static List<String> firstNonEmptyList(List<String> a, List<String> b, List<String> c) {
+        if (a != null && !a.isEmpty()) {
+            return a;
+        }
+        if (b != null && !b.isEmpty()) {
+            return b;
+        }
+        return c;
     }
 
     private Xpp3Dom getCompilerPluginConfiguration() {
@@ -267,12 +326,9 @@ public class AutoValhallaMojo extends AbstractMojo {
         return null;
     }
 
-    private static List<String> resolveCompilerArgsList(List<String> directArgs, Xpp3Dom compilerConfig) {
-        if (directArgs != null && !directArgs.isEmpty()) {
-            return directArgs;
-        }
+    private static List<String> resolveCompilerArgsList(Xpp3Dom compilerConfig) {
         if (compilerConfig == null) {
-            return directArgs;
+            return null;
         }
         Xpp3Dom argsDom = compilerConfig.getChild("compilerArgs");
         if (argsDom == null) {
@@ -292,13 +348,10 @@ public class AutoValhallaMojo extends AbstractMojo {
                 return list;
             }
         }
-        return directArgs;
+        return null;
     }
 
-    private static Boolean resolveBoolean(Boolean directVal, Xpp3Dom compilerConfig, String childName) {
-        if (directVal != null) {
-            return directVal;
-        }
+    private static Boolean resolveBoolean(Xpp3Dom compilerConfig, String childName) {
         if (compilerConfig != null) {
             Xpp3Dom child = compilerConfig.getChild(childName);
             if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
@@ -308,17 +361,14 @@ public class AutoValhallaMojo extends AbstractMojo {
         return null;
     }
 
-    private static String resolveString(String directVal, Xpp3Dom compilerConfig, String childName) {
-        if (directVal != null && !directVal.trim().isEmpty()) {
-            return directVal.trim();
-        }
+    private static String resolveString(Xpp3Dom compilerConfig, String childName) {
         if (compilerConfig != null) {
             Xpp3Dom child = compilerConfig.getChild(childName);
             if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
                 return child.getValue().trim();
             }
         }
-        return directVal;
+        return null;
     }
 
     void setProject(MavenProject project) {
@@ -355,6 +405,10 @@ public class AutoValhallaMojo extends AbstractMojo {
 
     void setCompilerArgument(String compilerArgument) {
         this.compilerArgument = compilerArgument;
+    }
+
+    void setMavenCompiler(CompilerConfiguration mavenCompiler) {
+        this.mavenCompiler = mavenCompiler;
     }
 
     private String javacExecutable() {

@@ -129,4 +129,79 @@ class AutoValhallaMojoTest {
         assertTrue(args.contains("-parameters"));
         assertEquals("UTF-8", mojo.resolveEncoding());
     }
+
+    @Test
+    void resolvesNestedMavenCompilerConfiguration() {
+        CompilerConfiguration compiler = new CompilerConfiguration();
+        compiler.setParameters(true);
+        compiler.setDebug(true);
+        compiler.setDebuglevel("lines,vars");
+        compiler.setShowWarnings(false);
+        compiler.setShowDeprecation(true);
+        compiler.setCompilerArgument("-Xlint:all");
+        compiler.setCompilerArgs(Arrays.asList("-Werror"));
+        compiler.setEncoding("ISO-8859-1");
+
+        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        mojo.setMavenCompiler(compiler);
+
+        List<String> args = mojo.resolveCompilerArgs();
+        assertTrue(args.contains("-parameters"));
+        assertTrue(args.contains("-g:lines,vars"));
+        assertTrue(args.contains("-nowarn"));
+        assertTrue(args.contains("-deprecation"));
+        assertTrue(args.contains("-Xlint:all"));
+        assertTrue(args.contains("-Werror"));
+        assertEquals("ISO-8859-1", mojo.resolveEncoding());
+    }
+
+    @Test
+    void directParametersOverrideNestedCompilerConfig() {
+        CompilerConfiguration compiler = new CompilerConfiguration();
+        compiler.setDebug(true);
+        compiler.setEncoding("UTF-16");
+
+        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        mojo.setMavenCompiler(compiler);
+        mojo.setDebug(false);
+        mojo.setEncoding("UTF-8");
+
+        List<String> args = mojo.resolveCompilerArgs();
+        assertTrue(args.contains("-g:none"));
+        assertEquals("UTF-8", mojo.resolveEncoding());
+    }
+
+    @Test
+    void nestedCompilerConfigOverridesInheritedCompilerPluginConfig() {
+        MavenProject project = new MavenProject();
+        Build build = new Build();
+        Plugin compilerPlugin = new Plugin();
+        compilerPlugin.setGroupId("org.apache.maven.plugins");
+        compilerPlugin.setArtifactId("maven-compiler-plugin");
+
+        Xpp3Dom config = new Xpp3Dom("configuration");
+        Xpp3Dom parameters = new Xpp3Dom("parameters");
+        parameters.setValue("false");
+        config.addChild(parameters);
+
+        Xpp3Dom encoding = new Xpp3Dom("encoding");
+        encoding.setValue("UTF-16");
+        config.addChild(encoding);
+
+        compilerPlugin.setConfiguration(config);
+        build.addPlugin(compilerPlugin);
+        project.setBuild(build);
+
+        CompilerConfiguration compiler = new CompilerConfiguration();
+        compiler.setParameters(true);
+        compiler.setEncoding("ISO-8859-1");
+
+        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        mojo.setProject(project);
+        mojo.setMavenCompiler(compiler);
+
+        List<String> args = mojo.resolveCompilerArgs();
+        assertTrue(args.contains("-parameters"));
+        assertEquals("ISO-8859-1", mojo.resolveEncoding());
+    }
 }
