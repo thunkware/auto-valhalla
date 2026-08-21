@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -150,12 +151,18 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
+    /** The current Maven session, so the jar-plugin version check runs at
+     *  most once per Maven run across all modules and goals. */
+    @Parameter(defaultValue = "${session}", readonly = true, required = true)
+    private MavenSession session;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
             getLog().info("auto-valhalla: skipping transformation");
             return;
         }
+        JarPluginCheck.checkOnce(session, project, getLog());
         int feature = jdkFeature();
         if (feature < MIN_JDK) {
             getLog().warn("auto-valhalla: running on Java " + feature
@@ -225,7 +232,7 @@ public class TransformMojo extends AbstractMojo {
         }
     }
 
-    private <E, T> Supplier<T> supplier(E bean, Function<E, T> getter) {
+    private <E, T> Supplier<T> resolve(E bean, Function<E, T> getter) {
         return () -> bean == null ? null : getter.apply(bean);
     }
 
@@ -235,37 +242,37 @@ public class TransformMojo extends AbstractMojo {
 
         Boolean resolvedParameters = firstNonNull(
                 this.parameters,
-                supplier(mavenCompiler, CompilerConfiguration::getParameters),
+                resolve(mavenCompiler, CompilerConfiguration::getParameters),
                 resolveBoolean(compilerConfig, "parameters"));
 
         Boolean resolvedDebug = firstNonNull(
                 this.debug,
-                supplier(mavenCompiler, CompilerConfiguration::getDebug),
+                resolve(mavenCompiler, CompilerConfiguration::getDebug),
                 resolveBoolean(compilerConfig, "debug"));
 
         String resolvedDebuglevel = firstNonEmpty(
                 this.debuglevel,
-                supplier(mavenCompiler, CompilerConfiguration::getDebuglevel),
+                resolve(mavenCompiler, CompilerConfiguration::getDebuglevel),
                 resolveString(compilerConfig, "debuglevel"));
 
         Boolean resolvedShowWarnings = firstNonNull(
                 this.showWarnings,
-                supplier(mavenCompiler, CompilerConfiguration::getShowWarnings),
+                resolve(mavenCompiler, CompilerConfiguration::getShowWarnings),
                 resolveBoolean(compilerConfig, "showWarnings"));
 
         Boolean resolvedShowDeprecation = firstNonNull(
                 this.showDeprecation,
-                supplier(mavenCompiler, CompilerConfiguration::getShowDeprecation),
+                resolve(mavenCompiler, CompilerConfiguration::getShowDeprecation),
                 resolveBoolean(compilerConfig, "showDeprecation"));
 
         String resolvedCompilerArgument = firstNonEmpty(
                 this.compilerArgument,
-                supplier(mavenCompiler, CompilerConfiguration::getCompilerArgument),
+                resolve(mavenCompiler, CompilerConfiguration::getCompilerArgument),
                 resolveString(compilerConfig, "compilerArgument"));
 
         List<String> resolvedCompilerArgs = firstNonEmptyList(
                 this.compilerArgs,
-                supplier(mavenCompiler, CompilerConfiguration::getCompilerArgs),
+                resolve(mavenCompiler, CompilerConfiguration::getCompilerArgs),
                 () -> resolveCompilerArgsList(compilerConfig));
 
         if (asBoolean(resolvedParameters)) {
@@ -311,7 +318,7 @@ public class TransformMojo extends AbstractMojo {
         Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
         String enc = firstNonEmpty(
                 this.encoding,
-                supplier(mavenCompiler, CompilerConfiguration::getEncoding),
+                resolve(mavenCompiler, CompilerConfiguration::getEncoding),
                 resolveString(compilerConfig, "encoding"));
         return (enc != null && !enc.trim().isEmpty()) ? enc.trim() : "UTF-8";
     }

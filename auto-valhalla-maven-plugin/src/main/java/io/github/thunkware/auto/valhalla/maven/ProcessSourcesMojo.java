@@ -1,12 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
-
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -15,6 +10,13 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Runs only the {@code auto-valhalla} annotation processor: a
@@ -86,12 +88,18 @@ public class ProcessSourcesMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
+    /** The current Maven session, so the jar-plugin version check runs at
+     *  most once per Maven run across all modules and goals. */
+    @Parameter(defaultValue = "${session}", readonly = true, required = true)
+    private MavenSession session;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
             getLog().info("auto-valhalla: skipping source processing");
             return;
         }
+        JarPluginCheck.checkOnce(session, project, getLog());
         int feature = TransformMojo.jdkFeature();
         if (feature < TransformMojo.MIN_JDK) {
             getLog().warn("auto-valhalla: running on Java " + feature

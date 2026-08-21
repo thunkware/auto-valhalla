@@ -53,7 +53,7 @@ public final class AnnotationProcessorRunner {
      *              processor path, compile classpath, encoding)
      * @throws IOException on I/O errors during scanning or the selection pass
      */
-    public static Selection run(Input input) throws IOException {
+    static Selection run(Input input) throws IOException {
         File generatedDir = new File(input.buildDirectory, GENERATED_DIR);
         File selected = selectedDir(generatedDir);
 

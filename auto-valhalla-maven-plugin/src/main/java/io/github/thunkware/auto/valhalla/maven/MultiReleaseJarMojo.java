@@ -1,13 +1,16 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import java.io.File;
-import java.io.IOException;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Turns the jar built by {@code maven-jar-plugin} (in the {@code package}
@@ -54,6 +57,16 @@ public class MultiReleaseJarMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.outputDirectory}", readonly = true, required = true)
     private File outputDirectory;
 
+    /** The current Maven project, used to look up the maven-jar-plugin
+     *  version in use. */
+    @Parameter(defaultValue = "${project}", readonly = true, required = true)
+    private MavenProject project;
+
+    /** The current Maven session, so the jar-plugin version check runs at
+     *  most once per Maven run across all modules and goals. */
+    @Parameter(defaultValue = "${session}", readonly = true, required = true)
+    private MavenSession session;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
@@ -68,6 +81,7 @@ public class MultiReleaseJarMojo extends AbstractMojo {
             getLog().info("auto-valhalla: no META-INF/versions produced; jar is not multi-release");
             return;
         }
+        JarPluginCheck.checkOnce(session, project, getLog());
         if (!multiRelease) {
             return;
         }
