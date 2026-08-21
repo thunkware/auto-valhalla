@@ -43,17 +43,27 @@ public final class AnnotationProcessorRunner {
      * {@code versionDirectory}, {@code outputDirectory} and
      * {@code compilerArgs} input fields are ignored.
      *
+     * <p>With {@code skipProcessor} set, the staging area is not touched and
+     * no pass runs: the manifest left by a previous run (e.g. a prior
+     * {@code process-sources} execution) is parsed as-is, which fails when it
+     * does not exist.
+     *
      * @param input the run inputs (source roots, build directory, javac,
      *              processor path, compile classpath, encoding)
      * @throws IOException on I/O errors during scanning or the selection pass
      */
     public static Selection run(Input input) throws IOException {
         File staging = new File(input.buildDirectory, STAGING_DIR);
-        deleteRecursively(staging);
         File selected = selectedDir(staging);
-        Files.createDirectories(selected.toPath());
 
         Selection selection = new Selection(selected);
+        if (input.skipProcessor) {
+            parseManifest(readManifest(selected), selection);
+            return selection;
+        }
+
+        deleteRecursively(staging);
+        Files.createDirectories(selected.toPath());
 
         List<File> sources = collectSources(input.sourceRoots);
         if (sources.isEmpty()) {

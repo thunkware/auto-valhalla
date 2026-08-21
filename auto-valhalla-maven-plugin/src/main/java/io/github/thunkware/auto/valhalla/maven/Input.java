@@ -24,6 +24,7 @@ public final class Input {
     final String encoding;
     final List<String> compilerArgs;
     final boolean fork;
+    final boolean skipProcessor;
 
     private Input(Builder builder) {
         this.sourceRoots = builder.sourceRoots;
@@ -36,6 +37,7 @@ public final class Input {
         this.encoding = builder.encoding;
         this.compilerArgs = builder.compilerArgs;
         this.fork = builder.fork;
+        this.skipProcessor = builder.skipProcessor;
     }
 
     public static Builder builder() {
@@ -57,6 +59,7 @@ public final class Input {
         private String encoding = "UTF-8";
         private List<String> compilerArgs = java.util.Collections.emptyList();
         private boolean fork = true;
+        private boolean skipProcessor;
 
         /**
          * Directories containing the project's sources.
@@ -142,6 +145,16 @@ public final class Input {
          */
         public Builder fork(boolean fork) {
             this.fork = fork;
+            return this;
+        }
+
+        /**
+         * Whether to skip the annotation-processor selection pass and reuse
+         * the staging area from a previous run; only meaningful for
+         * {@link AutoValhallaSourceTransformer#transform(Input)}.
+         */
+        public Builder skipProcessor(boolean skipProcessor) {
+            this.skipProcessor = skipProcessor;
             return this;
         }
 

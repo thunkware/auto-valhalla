@@ -142,6 +142,43 @@ class AutoValhallaSourceTransformerTest {
         assertEquals(72, major);
     }
 
+    @Test
+    void transformCanSkipTheProcessorAndReuseStagedSources() throws Exception {
+        Path src = temp.resolve("src");
+        Path classes = temp.resolve("classes");
+        Path target = temp.resolve("target");
+        Files.createDirectories(src.resolve("fixture"));
+        copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
+        copyFixture(src.resolve("fixture/Shade.java"), "fixture/Shade.java");
+
+        // stage the adapted sources once with a standalone selection pass...
+        AnnotationProcessorRunner.run(
+                Input.builder()
+                        .sourceRoots(java.util.Collections.singletonList(src.toString()))
+                        .buildDirectory(target.toFile())
+                        .javac(javacPath)
+                        .processorPath(processorPath)
+                        .compileClasspath(java.util.Collections.singletonList(apiJar))
+                        .build());
+
+        // ...then transform with the processor skipped
+        Result result = AutoValhallaSourceTransformer.transform(
+                Input.builder()
+                        .sourceRoots(java.util.Collections.singletonList(src.toString()))
+                        .versionDirectory(28)
+                        .outputDirectory(classes.toFile())
+                        .buildDirectory(target.toFile())
+                        .javac(javacPath)
+                        .processorPath(processorPath)
+                        .compileClasspath(java.util.Collections.singletonList(apiJar))
+                        .skipProcessor(true)
+                        .build());
+
+        assertEquals(1, result.convertedCount(), "the staged Point converts");
+        assertTrue(result.annotationFailures().isEmpty());
+        assertTrue(Files.isRegularFile(classes.resolve("META-INF/versions/28/fixture/Point.class")));
+    }
+
     private static void copyFixture(Path destination, String resource) throws Exception {
         // fixtures live in src/test/java (not in test resources), so read them
         // from the project source tree rather than the classpath

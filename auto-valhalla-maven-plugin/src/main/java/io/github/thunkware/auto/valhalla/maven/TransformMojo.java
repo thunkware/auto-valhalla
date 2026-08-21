@@ -62,6 +62,14 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "true", property = "auto-valhalla.fork")
     private boolean fork;
 
+    /** Whether to skip the annotation-processor selection pass and reuse the
+     *  staging area from a previous run (e.g. a prior {@code process-sources}
+     *  execution or manually staged sources under
+     *  {@code target/auto-valhalla-jdk28/selected}); only what that manifest
+     *  lists is compiled. */
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipProcessor")
+    private boolean skipProcessor;
+
     /** The compiled classes directory; the versioned value classes are written
      *  under {@code META-INF/versions/<versionDirectory>} here. */
     @Parameter(defaultValue = "${project.build.outputDirectory}", readonly = true, required = true)
@@ -186,6 +194,7 @@ public class TransformMojo extends AbstractMojo {
                             .encoding(resolvedEncoding)
                             .compilerArgs(extraCompilerArgs)
                             .fork(fork)
+                            .skipProcessor(skipProcessor)
                             .build());
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the source-level "
