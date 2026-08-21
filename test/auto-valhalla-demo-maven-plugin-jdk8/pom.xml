@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>auto-valhalla-demo-maven-plugin-jdk8</artifactId>
+  <name>auto-valhalla maven-plugin demo (compiler pinned to JDK 8)</name>
+
+  <description>
+    A consumer project where maven-compiler-plugin only builds the base
+    classes at release 8: there is no java 28 compiler execution. The
+    auto-valhalla-maven-plugin's transform goal does the value-class
+    compilation itself, writing the variants under META-INF/versions/28,
+    and the jar goal marks the packaged jar multi-release.
+  </description>
+
+  <properties>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <!-- the base classes stay ordinary identity classes compiled for a
+               pre-Valhalla JDK; the value-class variants are produced by the
+               auto-valhalla-maven-plugin's transform goal alone -->
+          <release>8</release>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>io.github.thunkware</groupId>
+        <artifactId>auto-valhalla-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <id>auto-valhalla</id>
+            <!-- no phase: transform runs at its default process-classes,
+                 jar at its default package -->
+            <goals>
+              <goal>transform</goal>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <!-- runnable directly: java -enable-preview -jar ... -->
+            <manifest>
+              <mainClass>demo.Main</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

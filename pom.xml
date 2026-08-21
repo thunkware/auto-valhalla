@@ -34,6 +34,8 @@
     <!-- consumer end-to-end proof for the maven plugin; must come after the
          plugin module so Maven resolves the plugin from the reactor -->
     <module>test/auto-valhalla-demo-maven-plugin</module>
+    <module>test/auto-valhalla-demo-maven-plugin-jdk8</module>
+    <module>test/auto-valhalla-demo-maven-plugin-no-compiler</module>
   </modules>
 
   <properties>

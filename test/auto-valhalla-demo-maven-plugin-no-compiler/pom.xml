@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>auto-valhalla-demo-maven-plugin-no-compiler</artifactId>
+  <name>auto-valhalla maven-plugin demo (no maven-compiler-plugin)</name>
+
+  <description>
+    A consumer project that declares no maven-compiler-plugin at all: the
+    base classes are compiled by the default lifecycle binding, steered to a
+    pre-Valhalla release purely through properties. The auto-valhalla
+    -maven-plugin's transform goal selects the @AutoValhalla classes and
+    compiles their value-class variants under META-INF/versions/28, and the
+    jar goal marks the packaged jar multi-release.
+  </description>
+
+  <properties>
+    <!-- the default-bound maven-compiler-plugin reads these; the base classes
+         must target a pre-Valhalla release without preview -->
+    <maven.compiler.release>8</maven.compiler.release>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.github.thunkware</groupId>
+        <artifactId>auto-valhalla-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <id>auto-valhalla</id>
+            <!-- no phase: transform runs at its default process-classes,
+                 jar at its default package -->
+            <goals>
+              <goal>transform</goal>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <!-- runnable directly: java -enable-preview -jar ... -->
+            <manifest>
+              <mainClass>demo.Main</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
