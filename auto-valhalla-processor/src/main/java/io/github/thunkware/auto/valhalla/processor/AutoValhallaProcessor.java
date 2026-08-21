@@ -21,6 +21,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
+import javax.tools.Diagnostic.Kind;
 
 /**
  * The annotation processor that drives the compile-time value-class
@@ -184,6 +185,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             Path target = out.resolve(rel);
             Files.createDirectories(target.getParent());
             Files.write(target, adapted.toString().getBytes(StandardCharsets.UTF_8));
+            processingEnv.getMessager().printMessage(Kind.NOTE, "Writing " + target);
             for (Selected selected : unit) {
                 report.add("ADAPTED " + selected.qname + " " + rel);
             }
