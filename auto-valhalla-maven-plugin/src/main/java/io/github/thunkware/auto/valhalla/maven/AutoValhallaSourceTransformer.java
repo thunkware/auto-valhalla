@@ -9,7 +9,7 @@ import java.util.Map;
 
 import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
-import static java.util.Collections.*;
+import static java.util.Collections.singletonList;
 
 /**
  * Compile-time transformation driver. It runs the {@code auto-valhalla}

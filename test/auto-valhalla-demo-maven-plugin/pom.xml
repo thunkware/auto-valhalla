@@ -93,10 +93,10 @@
             <version>${project.version}</version>
             <executions>
                 <execution>
-                    <id>transform</id>
+                    <id>process-sources</id>
                     <phase>process-sources</phase>
                     <goals>
-                        <goal>transform</goal>
+                        <goal>process-sources</goal>
                     </goals>
                 </execution>
             </executions>
