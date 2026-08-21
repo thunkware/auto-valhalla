@@ -1,8 +1,5 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
-
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -71,8 +68,10 @@ public class ProcessSourcesMojo extends AbstractMojo {
     private boolean failOnAnnotationFailure;
 
     /**
-     * Override for the JDK compiler executable; defaults to
-     * {@code <java.home>/bin/javac}.
+     * Override for the JDK compiler executable. When not set, the compiler
+     * comes from the {@code java28.home} system property or the
+     * {@code JAVA28_HOME} environment variable if either is defined; it falls
+     * back to {@code <java.home>/bin/javac}.
      */
     @Parameter(property = "auto-valhalla.javac")
     private String javac;
@@ -160,10 +159,6 @@ public class ProcessSourcesMojo extends AbstractMojo {
     }
 
     private String javacExecutable() {
-        if (isNotBlank(javac)) {
-            return trim(javac);
-        }
-        return new File(System.getProperty("java.home", "java"),
-                "bin/javac").getAbsolutePath();
+        return Javac.resolveExecutable(javac, TransformMojo.MIN_JDK);
     }
 }

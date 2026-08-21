@@ -122,6 +122,7 @@
         <version>3.15.1</version>
         <configuration>
           <goalPrefix>auto-valhalla</goalPrefix>
+          <requiredJavaVersion>8</requiredJavaVersion>
         </configuration>
       </plugin>
       <plugin>

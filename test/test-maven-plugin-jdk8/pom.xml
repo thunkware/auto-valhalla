@@ -22,6 +22,7 @@
 
   <properties>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
   </properties>
 
   <dependencies>

@@ -36,8 +36,9 @@ plugin for Maven:
   JDK 28.
 
 * **Opt in, not opt out.** Convert exactly what you choose: the `@AutoValhalla`
-  annotation, `includes` patterns, or a build-time plugin — never everything at
-  once.
+  annotation when you own the sources (build-time plugins), or the agent's
+  `includes`/`excludes` patterns when you don't (runtime agent) — never
+  everything at once.
 
 * **Catches problems at build time.** `AutoValhallaVerifier` checks the
   structural prerequisites in a unit test, and the Maven plugin fails the

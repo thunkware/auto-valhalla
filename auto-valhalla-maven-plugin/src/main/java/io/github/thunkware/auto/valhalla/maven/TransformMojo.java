@@ -1,6 +1,18 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
+
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -11,19 +23,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Turns {@code @AutoValhalla}-annotated classes into JEP 401 value classes at
@@ -101,7 +100,11 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "true")
     private boolean failOnAnnotationFailure;
 
-    /** Override for the JDK compiler executable; defaults to
+    /** Override for the JDK compiler executable. When not set, the compiler
+     *  comes from the {@code java<versionDirectory>.home} system property or
+     *  the {@code JAVA<versionDirectory>_HOME} environment variable if either
+     *  is defined; otherwise from the lowest defined {@code java<N>.home} /
+     *  {@code JAVA<N>_HOME} with N &gt;= 28; it falls back to
      *  {@code <java.home>/bin/javac}. */
     @Parameter(property = "auto-valhalla.javac")
     private String javac;
@@ -171,11 +174,11 @@ public class TransformMojo extends AbstractMojo {
                     + "+. Skipping transformation, classes remain identity classes.");
             return;
         }
-        if (versionDirectory < MIN_JDK) {
-            throw new MojoFailureException("auto-valhalla: versionDirectory must be at least "
-                    + MIN_JDK + " (a multi-release version directory below the class-file "
-                    + "feature version is rejected by the JVM); got " + versionDirectory);
-        }
+//        if (versionDirectory < MIN_JDK) {
+//            throw new MojoFailureException("auto-valhalla: versionDirectory must be at least "
+//                    + MIN_JDK + " (a multi-release version directory below the class-file "
+//                    + "feature version is rejected by the JVM); got " + versionDirectory);
+//        }
         if (versionDirectory > feature) {
             throw new MojoFailureException("auto-valhalla: versionDirectory " + versionDirectory
                     + " is higher than the JDK running Maven (" + feature
@@ -469,11 +472,7 @@ public class TransformMojo extends AbstractMojo {
     }
 
     private String javacExecutable() {
-        if (isNotBlank(javac)) {
-            return trim(javac);
-        }
-        return new File(System.getProperty("java.home", "java"),
-                "bin/javac").getAbsolutePath();
+        return Javac.resolveExecutable(javac, versionDirectory);
     }
 
     /** The Java feature version of the current JVM (28 for JDK 28), parsed from
