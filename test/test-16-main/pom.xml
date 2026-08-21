@@ -9,8 +9,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>auto-valhalla-demo-runner</artifactId>
-  <name>auto-valhalla demo runner</name>
+  <artifactId>test-16-main</artifactId>
+  <name>test-16-main</name>
 
   <description>
     Runs the cross-version demos with the agent and reports whether each class
@@ -35,12 +35,12 @@
     </dependency>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-demo5</artifactId>
+      <artifactId>test-5-lib</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-demo16</artifactId>
+      <artifactId>test-16-lib</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -69,7 +69,7 @@
             <argument>-Dauto-valhalla.annotation-mode=yolo</argument>
             <argument>-Dauto-valhalla.includes-mode=yolo</argument>
             <argument>-cp</argument>
-            <argument>${project.build.outputDirectory}:${project.basedir}/../auto-valhalla-demo5/target/auto-valhalla-demo5-${project.version}.jar:${project.basedir}/../auto-valhalla-demo16/target/auto-valhalla-demo16-${project.version}.jar:${project.basedir}/../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
+            <argument>${project.build.outputDirectory}:${project.basedir}/../test-5-lib/target/test-5-lib-${project.version}.jar:${project.basedir}/../test-16-lib/target/test-16-lib-${project.version}.jar:${project.basedir}/../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
             <argument>demo.runner.Main</argument>
           </arguments>
         </configuration>

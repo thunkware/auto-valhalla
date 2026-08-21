@@ -9,8 +9,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>auto-valhalla-demo-maven-plugin</artifactId>
-  <name>auto-valhalla maven-plugin demo</name>
+  <artifactId>test-maven-plugin</artifactId>
+  <name>test-maven-plugin</name>
 
   <description>
     A consumer project that applies the auto-valhalla-maven-plugin: the

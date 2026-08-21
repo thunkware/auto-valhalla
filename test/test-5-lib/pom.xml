@@ -9,8 +9,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>auto-valhalla-demo5</artifactId>
-  <name>auto-valhalla demo5 (Java 5 bytecode)</name>
+  <artifactId>test-5-lib</artifactId>
+  <name>test-5-lib (Java 5 bytecode)</name>
 
   <description>
     A value-class candidate compiled to genuine Java 5 bytecode with a real JDK 5, proving the agent handles legacy class files.

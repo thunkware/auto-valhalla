@@ -9,8 +9,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>auto-valhalla-demo16</artifactId>
-  <name>auto-valhalla demo16 (Java 16 bytecode)</name>
+  <artifactId>test-16-lib</artifactId>
+  <name>test-16-lib (Java 16 bytecode)</name>
 
   <description>
     Value-class candidates compiled to Java 16 bytecode,

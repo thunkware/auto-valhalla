@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 
 import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
 import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
 import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
@@ -320,7 +321,7 @@ public class TransformMojo extends AbstractMojo {
                 this.encoding,
                 resolve(mavenCompiler, CompilerConfiguration::getEncoding),
                 resolveString(compilerConfig, "encoding"));
-        return (enc != null && !enc.trim().isEmpty()) ? enc.trim() : "UTF-8";
+        return normalizeEncoding(enc);
     }
 
     private static <T> T firstNonNull(T a, Supplier<T> bSupplier, Supplier<T> cSupplier) {

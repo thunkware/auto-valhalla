@@ -68,7 +68,7 @@
          transforming fails the agent's unit tests. -->
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-demo5</artifactId>
+      <artifactId>test-5-lib</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

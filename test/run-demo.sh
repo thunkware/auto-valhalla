@@ -22,12 +22,12 @@ mvn -q package
 # jars follow Maven's artifactId-version convention; resolve them dynamically
 find_jar() { ls "$1"/target/"$2"-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1; }
 AGENT_JAR=$(find_jar auto-valhalla-agent auto-valhalla-agent)
-DEMO5_JAR=$(find_jar test/auto-valhalla-demo5 auto-valhalla-demo5)
-DEMO16_JAR=$(find_jar test/auto-valhalla-demo16 auto-valhalla-demo16)
+DEMO5_JAR=$(find_jar test/test-5-lib test-5-lib)
+DEMO16_JAR=$(find_jar test/test-16-lib test-16-lib)
 ANNO_JAR=$(find_jar auto-valhalla-api auto-valhalla-api)
 
 # the runner and the (JDK 5) annotation artifact, plus the demo5/demo16 jars
-CP="test/auto-valhalla-demo-runner/target/classes:$DEMO5_JAR:$DEMO16_JAR:$ANNO_JAR"
+CP="test/test-16-main/target/classes:$DEMO5_JAR:$DEMO16_JAR:$ANNO_JAR"
 
 echo
 echo "==== run WITHOUT agent (identity classes) ===="

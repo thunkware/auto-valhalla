@@ -1,15 +1,15 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
+import static java.util.Collections.singletonList;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
-import static java.util.Collections.singletonList;
 
 /**
  * Compile-time transformation driver. It runs the {@code auto-valhalla}

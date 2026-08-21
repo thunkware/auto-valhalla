@@ -9,8 +9,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>auto-valhalla-demo-maven-plugin-jdk8</artifactId>
-  <name>auto-valhalla maven-plugin demo (compiler pinned to JDK 8)</name>
+  <artifactId>test-maven-plugin-jdk8</artifactId>
+  <name>test-maven-plugin-jdk8 (compiler pinned to JDK 8)</name>
 
   <description>
     A consumer project where maven-compiler-plugin only builds the base

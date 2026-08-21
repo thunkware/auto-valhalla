@@ -9,8 +9,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>auto-valhalla-demo-maven-plugin-no-compiler</artifactId>
-  <name>auto-valhalla maven-plugin demo (no maven-compiler-plugin)</name>
+  <artifactId>test-maven-plugin-no-compiler</artifactId>
+  <name>test-maven-plugin-no-compiler (no maven-compiler-plugin)</name>
 
   <description>
     A consumer project that declares no maven-compiler-plugin at all: the
@@ -55,7 +55,6 @@
                  jar at its default package -->
             <goals>
               <goal>transform</goal>
-              <goal>jar</goal>
             </goals>
           </execution>
         </executions>

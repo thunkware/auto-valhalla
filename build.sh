@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 export JAVA_HOME
 export JAVA5_HOME
 
-RUNNER5_CLASSES=test/auto-valhalla-demo-runner5/target/classes
+RUNNER5_CLASSES=test/test-5-main/target/classes
 # agent / demo5 jars follow Maven's artifactId-version convention; resolved after the build
 AGENT_JAR=""
 DEMO5_JAR=""
@@ -53,7 +53,7 @@ check "$RC" "mvn install (annotation=JDK8, agent=JDK28)"
 
 AGENT_JAR=$(ls auto-valhalla-agent/target/auto-valhalla-agent-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 ATTACH_JAR=$(ls auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
-DEMO5_JAR=$(ls test/auto-valhalla-demo5/target/auto-valhalla-demo5-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+DEMO5_JAR=$(ls test/test-5-lib/target/test-5-lib-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 
 echo "== 2. agent jar class-file audit =="
 SHIM=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent.class)
@@ -80,7 +80,7 @@ echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints 
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"
 
 echo "== 4. JDK 28 agent-attach integration test =="
-mvn -q -pl test/auto-valhalla-demo-runner test >/tmp/avv-test.log 2>&1
+mvn -q -pl test/test-16-main test >/tmp/avv-test.log 2>&1
 check $? "demo-runner AgentAttachTest"
 
 echo "== 5. end-to-end demo =="
@@ -88,7 +88,7 @@ echo "== 5. end-to-end demo =="
 check $? "run-demo.sh (with and without agent)"
 
 echo "== 6. maven-plugin end-to-end =="
-PLUGIN_DEMO_JAR=$(ls test/auto-valhalla-demo-maven-plugin/target/auto-valhalla-demo-maven-plugin-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+PLUGIN_DEMO_JAR=$(ls test/test-maven-plugin/target/test-maven-plugin-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 [ -n "$PLUGIN_DEMO_JAR" ]; check $? "maven-plugin demo jar built [got $PLUGIN_DEMO_JAR]"
 unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "Multi-Release: true"; check $? "maven-plugin demo jar manifest is multi-release"
 unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "^Main-Class: demo.Main"; check $? "maven-plugin demo jar declares Main-Class"

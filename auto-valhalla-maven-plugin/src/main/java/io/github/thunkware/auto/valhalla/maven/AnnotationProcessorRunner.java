@@ -1,7 +1,8 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
 
+import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,8 +10,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
 
 /**
  * Runs the {@code auto-valhalla} annotation processor as a standalone
