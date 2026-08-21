@@ -1,7 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 /**
- * An {@code GENERATED} manifest line: one selected type and the generated file
+ * A {@code GENERATED} manifest line: one selected type and the generated file
  * it lives in (relative to the selection out dir).
  */
 final class Generated {
