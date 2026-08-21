@@ -60,8 +60,7 @@ public final class AnnotationProcessorRunner {
             return selection;
         }
 
-        runPass(input.javac, input.processorPath, input.compileClasspath,
-                sources, normalizeEncoding(input.encoding), selected);
+        runPass(input, sources, normalizeEncoding(input.encoding), selected);
 
         parseManifest(readManifest(selected), selection);
         return selection;
@@ -136,23 +135,19 @@ public final class AnnotationProcessorRunner {
      *  pass maps to an {@link IOException} that fails the build: the processor
      *  only exits non-zero when it reported a real problem (e.g. an I/O error
      *  writing the staged sources or the manifest). */
-    private static void runPass(String javac, String processorPath,
-            List<String> compileClasspath, List<File> sources, String encoding,
+    private static void runPass(Input input, List<File> sources, String encoding,
             File selected) throws IOException {
-        List<String> command = new ArrayList<>();
-        command.add(javac);
-        command.add("-proc:only");
-        command.add("-processorpath");
-        command.add(processorPath);
-        command.add("-cp");
-        command.add(Javac.joinClasspath(compileClasspath));
-        command.add("-encoding");
-        command.add(encoding);
-        command.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
-        for (File file : sources) {
-            command.add(file.getAbsolutePath());
-        }
-        Javac.ProcessResult process = Javac.run(command);
+        List<String> options = new ArrayList<>();
+        options.add("-proc:only");
+        options.add("-processorpath");
+        options.add(input.processorPath);
+        options.add("-cp");
+        options.add(Javac.joinClasspath(input.compileClasspath));
+        options.add("-encoding");
+        options.add(encoding);
+        options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
+        Javac.ProcessResult process = Javac.compile(input.fork, input.javac,
+                options, sources, encoding);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass (javac -proc:only) failed:\n"
                     + process.output);

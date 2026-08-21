@@ -86,6 +86,7 @@ All parameters are optional:
 | `versionDirectory` | `auto-valhalla.version` | `28` | the multi-release version directory, also the javac `--release` |
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
 | `javac` | `auto-valhalla.javac` | `<java.home>/bin/javac` | override the JDK compiler executable |
+| `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
 | `skip` | `auto-valhalla.skip` | `false` | skip both goals |
 | `encoding` | `auto-valhalla.encoding` | `${project.build.sourceEncoding}` | character encoding for source compilation |
 | `parameters` | `auto-valhalla.parameters` | inherited | generate metadata for reflection on method parameters (`-parameters`) |

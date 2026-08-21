@@ -58,27 +58,28 @@ public final class AutoValhallaSourceTransformer {
         for (Map.Entry<String, List<AnnotationProcessorRunner.Adapted>> entry
                 : selection.adaptedFiles().entrySet()) {
             Files.createDirectories(versionedOut.toPath());
-            List<String> command = new ArrayList<>();
-            command.add(input.javac);
-            command.add("--release");
-            command.add(Integer.toString(input.versionDirectory));
-            command.add("--enable-preview");
-            command.add("-proc:none");
-            command.add("-encoding");
-            command.add(sourceEncoding);
-            command.add("-cp");
-            command.add(Javac.joinClasspath(input.compileClasspath));
-            command.add("-d");
-            command.add(versionedOut.getAbsolutePath());
+            List<String> options = new ArrayList<>();
+            options.add("--release");
+            options.add(Integer.toString(input.versionDirectory));
+            options.add("--enable-preview");
+            options.add("-proc:none");
+            options.add("-encoding");
+            options.add(sourceEncoding);
+            options.add("-cp");
+            options.add(Javac.joinClasspath(input.compileClasspath));
+            options.add("-d");
+            options.add(versionedOut.getAbsolutePath());
             if (input.compilerArgs != null) {
                 for (String arg : input.compilerArgs) {
                     if (arg != null && !arg.trim().isEmpty()) {
-                        command.add(arg.trim());
+                        options.add(arg.trim());
                     }
                 }
             }
-            command.add(new File(selection.stagedSources(), entry.getKey()).getAbsolutePath());
-            Javac.ProcessResult process = Javac.run(command);
+            File stagedFile = new File(selection.stagedSources(), entry.getKey());
+            Javac.ProcessResult process = Javac.compile(input.fork, input.javac,
+                    options, java.util.Collections.singletonList(stagedFile),
+                    sourceEncoding);
             if (process.exit == 0) {
                 result.converted += entry.getValue().size();
             } else {

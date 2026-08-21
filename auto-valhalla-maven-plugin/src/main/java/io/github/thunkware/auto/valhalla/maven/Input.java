@@ -23,6 +23,7 @@ public final class Input {
     final List<String> compileClasspath;
     final String encoding;
     final List<String> compilerArgs;
+    final boolean fork;
 
     private Input(Builder builder) {
         this.sourceRoots = builder.sourceRoots;
@@ -34,6 +35,7 @@ public final class Input {
         this.compileClasspath = builder.compileClasspath;
         this.encoding = builder.encoding;
         this.compilerArgs = builder.compilerArgs;
+        this.fork = builder.fork;
     }
 
     public static Builder builder() {
@@ -54,6 +56,7 @@ public final class Input {
         private List<String> compileClasspath;
         private String encoding = "UTF-8";
         private List<String> compilerArgs = java.util.Collections.emptyList();
+        private boolean fork = true;
 
         /**
          * Directories containing the project's sources.
@@ -128,6 +131,17 @@ public final class Input {
          */
         public Builder compilerArgs(List<String> compilerArgs) {
             this.compilerArgs = compilerArgs;
+            return this;
+        }
+
+        /**
+         * Whether to run javac as a forked process (the default) or
+         * in-process through the {@code javax.tools.JavaCompiler} API. When
+         * false, the {@code javac} executable override is ignored and the
+         * JDK running Maven does the compiling.
+         */
+        public Builder fork(boolean fork) {
+            this.fork = fork;
             return this;
         }
 

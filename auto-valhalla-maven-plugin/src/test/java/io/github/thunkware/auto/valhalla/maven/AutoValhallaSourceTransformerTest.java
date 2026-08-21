@@ -111,6 +111,37 @@ class AutoValhallaSourceTransformerTest {
                 "nothing may be written for a rejected class");
     }
 
+    @Test
+    void compilesInProcessWhenForkDisabled() throws Exception {
+        Path src = temp.resolve("src");
+        Path classes = temp.resolve("classes");
+        Path target = temp.resolve("target");
+        Files.createDirectories(src.resolve("fixture"));
+        copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
+        copyFixture(src.resolve("fixture/Shade.java"), "fixture/Shade.java");
+
+        Result result = AutoValhallaSourceTransformer.transform(
+                Input.builder()
+                        .sourceRoots(java.util.Collections.singletonList(src.toString()))
+                        .versionDirectory(28)
+                        .outputDirectory(classes.toFile())
+                        .buildDirectory(target.toFile())
+                        .javac(javacPath)
+                        .processorPath(processorPath)
+                        .compileClasspath(java.util.Collections.singletonList(apiJar))
+                        .fork(false)
+                        .build());
+
+        assertEquals(1, result.convertedCount(), "only the annotated Point converts");
+        assertTrue(result.annotationFailures().isEmpty());
+        assertTrue(Files.isRegularFile(classes.resolve("META-INF/versions/28/fixture/Point.class")),
+                "the in-process JavaCompiler API must produce the value class");
+
+        byte[] bytes = Files.readAllBytes(classes.resolve("META-INF/versions/28/fixture/Point.class"));
+        int major = ((bytes[6] & 0xFF) << 8) | (bytes[7] & 0xFF);
+        assertEquals(72, major);
+    }
+
     private static void copyFixture(Path destination, String resource) throws Exception {
         // fixtures live in src/test/java (not in test resources), so read them
         // from the project source tree rather than the classpath

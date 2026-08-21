@@ -44,6 +44,15 @@ public class ProcessSourcesMojo extends AbstractMojo {
     private boolean skip;
 
     /**
+     * Whether to fork the {@code javac} executable (the default) or run the
+     * selection pass in-process through the {@code javax.tools.JavaCompiler}
+     * API. When false, the {@code javac} executable override is ignored and
+     * the JDK running Maven does the compiling.
+     */
+    @Parameter(defaultValue = "true", property = "auto-valhalla.fork")
+    private boolean fork;
+
+    /**
      * Maven's {@code target} directory, used for the staging area that
      * receives the adapted sources and the selection manifest.
      */
@@ -109,6 +118,7 @@ public class ProcessSourcesMojo extends AbstractMojo {
                     .processorPath(processorPath)
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())
+                    .fork(fork)
                     .build();
             result = AnnotationProcessorRunner.run(input);
         } catch (IOException e) {

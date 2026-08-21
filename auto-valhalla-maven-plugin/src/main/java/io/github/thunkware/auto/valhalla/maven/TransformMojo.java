@@ -55,6 +55,13 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "false", property = "auto-valhalla.skip")
     private boolean skip;
 
+    /** Whether to fork the {@code javac} executable (the default) or compile
+     *  in-process through the {@code javax.tools.JavaCompiler} API. When
+     *  false, the {@code javac} executable override is ignored and the JDK
+     *  running Maven does the compiling. */
+    @Parameter(defaultValue = "true", property = "auto-valhalla.fork")
+    private boolean fork;
+
     /** The compiled classes directory; the versioned value classes are written
      *  under {@code META-INF/versions/<versionDirectory>} here. */
     @Parameter(defaultValue = "${project.build.outputDirectory}", readonly = true, required = true)
@@ -178,6 +185,7 @@ public class TransformMojo extends AbstractMojo {
                             .compileClasspath(compileClasspath)
                             .encoding(resolvedEncoding)
                             .compilerArgs(extraCompilerArgs)
+                            .fork(fork)
                             .build());
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the source-level "
