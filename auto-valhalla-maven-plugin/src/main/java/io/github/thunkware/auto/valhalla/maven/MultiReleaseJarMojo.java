@@ -1,14 +1,14 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Locale;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Turns the jar built by {@code maven-jar-plugin} (in the {@code package}
@@ -72,14 +72,16 @@ public class MultiReleaseJarMojo extends AbstractMojo {
         if (!multiRelease) {
             return;
         }
-        String jarName = finalName + (finalName.toLowerCase(Locale.ROOT).endsWith(".jar")
-                ? "" : ".jar");
+        String jarName = finalName;
+        if (!jarName.endsWith(".jar")) {
+            jarName = jarName + ".jar";
+        }
         File jar = new File(buildDirectory, jarName);
         if (!jar.isFile()) {
             throw new MojoFailureException("auto-valhalla: cannot turn " + jar.getAbsolutePath()
                     + " into a multi-release jar: the jar does not exist. Ensure the "
                     + "maven-jar-plugin's jar goal ran before this goal."
-                    + (packaging.length() == 0
+                    + (packaging.isEmpty()
                             ? " (the project might use a non-jar packaging)" : ""));
         }
         boolean updated;

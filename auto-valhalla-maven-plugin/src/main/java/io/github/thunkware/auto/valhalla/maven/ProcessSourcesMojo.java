@@ -1,9 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-
+import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -12,7 +9,13 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Runs only the {@code auto-valhalla} annotation processor: a
@@ -151,8 +154,8 @@ public class ProcessSourcesMojo extends AbstractMojo {
     }
 
     private String javacExecutable() {
-        if (javac != null && !javac.trim().isEmpty()) {
-            return javac.trim();
+        if (isNotBlank(javac)) {
+            return trim(javac);
         }
         return new File(System.getProperty("java.home", "java"),
                 "bin/javac").getAbsolutePath();

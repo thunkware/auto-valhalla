@@ -1,6 +1,12 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import java.io.ByteArrayOutputStream;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaCompiler.CompilationTask;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,13 +14,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
 
 /**
  * Runs {@code javac}; helpers shared by the selection pass
@@ -26,18 +25,12 @@ import javax.tools.ToolProvider;
 final class Javac {
 
     private Javac() {
+        throw new AssertionError();
     }
 
     /** Joins classpath entries with the platform path separator. */
     static String joinClasspath(List<String> paths) {
-        StringBuilder joined = new StringBuilder();
-        for (String path : paths) {
-            if (joined.length() > 0) {
-                joined.append(File.pathSeparatorChar);
-            }
-            joined.append(path);
-        }
-        return joined.toString();
+        return String.join(File.pathSeparator, paths);
     }
 
     /** Compiles {@code files} with the given options, either by forking the
@@ -67,34 +60,24 @@ final class Javac {
                     + "fork=false requires Maven to run on a JDK");
         }
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        StandardJavaFileManager fileManager = compiler.getStandardFileManager(
-                diagnostics, Locale.getDefault(), resolveCharset(encoding));
-        try {
-            Iterable<? extends JavaFileObject> units =
-                    fileManager.getJavaFileObjectsFromFiles(files);
-            boolean ok = compiler.getTask(null, fileManager, diagnostics,
-                    options, null, units).call();
+        Charset charset = resolveCharset(encoding);
+        try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, charset)) {
+            Iterable<? extends JavaFileObject> units = fileManager.getJavaFileObjectsFromFiles(files);
+            CompilationTask task = compiler.getTask(null, fileManager, diagnostics, options, null, units);
+            boolean ok = task.call();
             return new ProcessResult(ok ? 0 : 1, format(diagnostics));
-        } catch (RuntimeException e) {
+        } catch (IOException | RuntimeException e) {
             return new ProcessResult(1, format(diagnostics) + "\n" + e);
-        } finally {
-            try {
-                fileManager.close();
-            } catch (IOException e) {
-                // closing the standard file manager cannot fail meaningfully
-            }
         }
     }
 
     private static Charset resolveCharset(String encoding) {
-        if (encoding != null && !encoding.trim().isEmpty()) {
-            try {
-                return Charset.forName(encoding.trim());
-            } catch (IllegalArgumentException e) {
-                // fall through to the default; javac reports bad -encoding names
-            }
+        try {
+            return Charset.forName(Utils.normalizeEncoding(encoding));
+        } catch (IllegalArgumentException e) {
+            // fall through to the default; javac reports bad -encoding names
+            return StandardCharsets.UTF_8;
         }
-        return StandardCharsets.UTF_8;
     }
 
     private static String format(DiagnosticCollector<JavaFileObject> diagnostics) {
@@ -119,19 +102,14 @@ final class Javac {
         Process process = builder.start();
         String output;
         try (InputStream in = process.getInputStream()) {
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            byte[] chunk = new byte[8192];
-            int read;
-            while ((read = in.read(chunk)) != -1) {
-                buffer.write(chunk, 0, read);
-            }
-            output = new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+            output = new String(Utils.toByteArray(in), StandardCharsets.UTF_8);
         }
         try {
             return new ProcessResult(process.waitFor(), output.trim());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IOException("interrupted while waiting for javac: " + e.getMessage(), e);
+            process.destroy();
+            throw new IOException("interrupted while waiting for javac: " + command, e);
         }
     }
 

@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,7 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
 
 /**
  * Runs the {@code auto-valhalla} annotation processor as a standalone
@@ -180,11 +183,6 @@ public final class AnnotationProcessorRunner {
         }
     }
 
-    private static String normalizeEncoding(String encoding) {
-        return (encoding != null && !encoding.trim().isEmpty())
-                ? encoding.trim() : "UTF-8";
-    }
-
     private static File selectedDir(File staging) {
         return new File(staging, "selected");
     }
@@ -275,7 +273,7 @@ public final class AnnotationProcessorRunner {
         return "module-info.java".equals(name) || "package-info.java".equals(name);
     }
 
-    private static void deleteRecursively(File dir) {
+    private static void deleteRecursively(File dir) throws IOException {
         if (dir == null || !dir.exists()) {
             return;
         }
@@ -285,10 +283,10 @@ public final class AnnotationProcessorRunner {
                 if (child.isDirectory()) {
                     deleteRecursively(child);
                 } else {
-                    child.delete();
+                    Files.delete(child.toPath());
                 }
             }
         }
-        dir.delete();
+        Files.delete(dir.toPath());
     }
 }

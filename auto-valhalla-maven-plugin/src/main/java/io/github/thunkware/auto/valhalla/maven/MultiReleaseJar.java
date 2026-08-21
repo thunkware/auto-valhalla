@@ -66,17 +66,12 @@ public final class MultiReleaseJar {
     }
 
     private static Map<String, Content> readEntries(File jar) throws IOException {
-        Map<String, Content> entries = new LinkedHashMap<String, Content>();
+        Map<String, Content> entries = new LinkedHashMap<>();
         try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(Files.newInputStream(jar.toPath())))) {
             ZipEntry entry;
             while ((entry = zin.getNextEntry()) != null) {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                byte[] buffer = new byte[8192];
-                int n;
-                while ((n = zin.read(buffer)) != -1) {
-                    out.write(buffer, 0, n);
-                }
-                entries.put(entry.getName(), new Content(entry.getMethod(), out.toByteArray()));
+                byte[] out = Utils.toByteArray(zin);
+                entries.put(entry.getName(), new Content(entry.getMethod(), out));
             }
         }
         return entries;
@@ -104,8 +99,8 @@ public final class MultiReleaseJar {
                 for (Map.Entry<String, Content> e : entries.entrySet()) {
                     Content content = e.getValue();
                     ZipEntry entry = new ZipEntry(e.getKey());
-                    entry.setMethod(content.method);
-                    if (content.method == ZipEntry.STORED) {
+                    entry.setMethod(content.isStored ? ZipEntry.STORED : ZipEntry.DEFLATED);
+                    if (entry.getMethod() == ZipEntry.STORED) {
                         entry.setSize(content.bytes.length);
                         entry.setCompressedSize(content.bytes.length);
                         entry.setCrc(crc(content.bytes));
@@ -146,11 +141,14 @@ public final class MultiReleaseJar {
     }
 
     private static final class Content {
-        final int method;
+        final boolean isStored;
         final byte[] bytes;
 
         Content(int method, byte[] bytes) {
-            this.method = method;
+            if (method != ZipEntry.STORED && method != ZipEntry.DEFLATED) {
+                throw new IllegalArgumentException("invalid compression method: " + method);
+            }
+            this.isStored = method == ZipEntry.STORED;
             this.bytes = bytes;
         }
     }

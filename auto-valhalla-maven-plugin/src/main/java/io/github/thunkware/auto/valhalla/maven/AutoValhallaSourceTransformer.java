@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
+import static java.util.Collections.*;
+
 /**
  * Compile-time transformation driver. It runs the {@code auto-valhalla}
  * annotation processor over the project's source roots (via
@@ -50,10 +54,8 @@ public final class AutoValhallaSourceTransformer {
             return result;
         }
 
-        File versionedOut = new File(input.outputDirectory,
-                "META-INF/versions/" + input.versionDirectory);
-        String sourceEncoding = (input.encoding != null && !input.encoding.trim().isEmpty())
-                ? input.encoding.trim() : "UTF-8";
+        File versionedOut = new File(input.outputDirectory, "META-INF/versions/" + input.versionDirectory);
+        String sourceEncoding = isNotBlank(input.encoding) ? trim(input.encoding) : "UTF-8";
 
         for (Map.Entry<String, List<AnnotationProcessorRunner.Adapted>> entry
                 : selection.adaptedFiles().entrySet()) {
@@ -71,15 +73,14 @@ public final class AutoValhallaSourceTransformer {
             options.add(versionedOut.getAbsolutePath());
             if (input.compilerArgs != null) {
                 for (String arg : input.compilerArgs) {
-                    if (arg != null && !arg.trim().isEmpty()) {
-                        options.add(arg.trim());
+                    if (isNotBlank(arg)) {
+                        options.add(trim(arg));
                     }
                 }
             }
             File stagedFile = new File(selection.stagedSources(), entry.getKey());
             Javac.ProcessResult process = Javac.compile(input.fork, input.javac,
-                    options, java.util.Collections.singletonList(stagedFile),
-                    sourceEncoding);
+                    options, singletonList(stagedFile), sourceEncoding);
             if (process.exit == 0) {
                 result.converted += entry.getValue().size();
             } else {

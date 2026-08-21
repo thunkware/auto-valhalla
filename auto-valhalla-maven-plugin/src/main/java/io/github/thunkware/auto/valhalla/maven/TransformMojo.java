@@ -1,9 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -13,7 +10,18 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Turns {@code @AutoValhalla}-annotated classes into JEP 401 value classes at
@@ -217,69 +225,73 @@ public class TransformMojo extends AbstractMojo {
         }
     }
 
+    private <E, T> Supplier<T> supplier(E bean, Function<E, T> getter) {
+        return () -> bean == null ? null : getter.apply(bean);
+    }
+
     List<String> resolveCompilerArgs() {
-        List<String> args = new ArrayList<String>();
+        List<String> args = new ArrayList<>();
         Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
 
         Boolean resolvedParameters = firstNonNull(
                 this.parameters,
-                mavenCompiler != null ? mavenCompiler.getParameters() : null,
+                supplier(mavenCompiler, CompilerConfiguration::getParameters),
                 resolveBoolean(compilerConfig, "parameters"));
 
         Boolean resolvedDebug = firstNonNull(
                 this.debug,
-                mavenCompiler != null ? mavenCompiler.getDebug() : null,
+                supplier(mavenCompiler, CompilerConfiguration::getDebug),
                 resolveBoolean(compilerConfig, "debug"));
 
         String resolvedDebuglevel = firstNonEmpty(
                 this.debuglevel,
-                mavenCompiler != null ? mavenCompiler.getDebuglevel() : null,
+                supplier(mavenCompiler, CompilerConfiguration::getDebuglevel),
                 resolveString(compilerConfig, "debuglevel"));
 
         Boolean resolvedShowWarnings = firstNonNull(
                 this.showWarnings,
-                mavenCompiler != null ? mavenCompiler.getShowWarnings() : null,
+                supplier(mavenCompiler, CompilerConfiguration::getShowWarnings),
                 resolveBoolean(compilerConfig, "showWarnings"));
 
         Boolean resolvedShowDeprecation = firstNonNull(
                 this.showDeprecation,
-                mavenCompiler != null ? mavenCompiler.getShowDeprecation() : null,
+                supplier(mavenCompiler, CompilerConfiguration::getShowDeprecation),
                 resolveBoolean(compilerConfig, "showDeprecation"));
 
         String resolvedCompilerArgument = firstNonEmpty(
                 this.compilerArgument,
-                mavenCompiler != null ? mavenCompiler.getCompilerArgument() : null,
+                supplier(mavenCompiler, CompilerConfiguration::getCompilerArgument),
                 resolveString(compilerConfig, "compilerArgument"));
 
         List<String> resolvedCompilerArgs = firstNonEmptyList(
                 this.compilerArgs,
-                mavenCompiler != null ? mavenCompiler.getCompilerArgs() : null,
-                resolveCompilerArgsList(compilerConfig));
+                supplier(mavenCompiler, CompilerConfiguration::getCompilerArgs),
+                () -> resolveCompilerArgsList(compilerConfig));
 
-        if (resolvedParameters != null && resolvedParameters.booleanValue()) {
+        if (asBoolean(resolvedParameters)) {
             args.add("-parameters");
         }
         if (resolvedDebug != null) {
-            if (resolvedDebug.booleanValue()) {
-                if (resolvedDebuglevel != null && !resolvedDebuglevel.trim().isEmpty()) {
-                    args.add("-g:" + resolvedDebuglevel.trim());
+            if (asBoolean(resolvedDebug)) {
+                if (isNotBlank(resolvedDebuglevel)) {
+                    args.add("-g:" + trim(resolvedDebuglevel));
                 } else {
                     args.add("-g");
                 }
             } else {
                 args.add("-g:none");
             }
-        } else if (resolvedDebuglevel != null && !resolvedDebuglevel.trim().isEmpty()) {
-            args.add("-g:" + resolvedDebuglevel.trim());
+        } else if (isNotBlank(resolvedDebuglevel)) {
+            args.add("-g:" + trim(resolvedDebuglevel));
         }
-        if (resolvedShowWarnings != null && !resolvedShowWarnings.booleanValue()) {
+        if (resolvedShowWarnings != null && !asBoolean(resolvedShowWarnings)) {
             args.add("-nowarn");
         }
-        if (resolvedShowDeprecation != null && resolvedShowDeprecation.booleanValue()) {
+        if (asBoolean(resolvedShowDeprecation)) {
             args.add("-deprecation");
         }
-        if (resolvedCompilerArgument != null && !resolvedCompilerArgument.trim().isEmpty()) {
-            for (String token : resolvedCompilerArgument.trim().split("\\s+")) {
+        if (isNotBlank(resolvedCompilerArgument)) {
+            for (String token : trim(resolvedCompilerArgument).split("\\s+")) {
                 if (!token.isEmpty()) {
                     args.add(token);
                 }
@@ -287,8 +299,8 @@ public class TransformMojo extends AbstractMojo {
         }
         if (resolvedCompilerArgs != null) {
             for (String arg : resolvedCompilerArgs) {
-                if (arg != null && !arg.trim().isEmpty()) {
-                    args.add(arg.trim());
+                if (isNotBlank(arg)) {
+                    args.add(trim(arg));
                 }
             }
         }
@@ -299,42 +311,46 @@ public class TransformMojo extends AbstractMojo {
         Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
         String enc = firstNonEmpty(
                 this.encoding,
-                mavenCompiler != null ? mavenCompiler.getEncoding() : null,
+                supplier(mavenCompiler, CompilerConfiguration::getEncoding),
                 resolveString(compilerConfig, "encoding"));
         return (enc != null && !enc.trim().isEmpty()) ? enc.trim() : "UTF-8";
     }
 
-    private static Boolean firstNonNull(Boolean a, Boolean b, Boolean c) {
+    private static <T> T firstNonNull(T a, Supplier<T> bSupplier, Supplier<T> cSupplier) {
         if (a != null) {
             return a;
         }
+        T b = bSupplier.get();
         if (b != null) {
             return b;
         }
-        return c;
+        return cSupplier.get();
     }
 
-    private static String firstNonEmpty(String a, String b, String c) {
-        if (a != null && !a.trim().isEmpty()) {
-            return a.trim();
+    private static String firstNonEmpty(String a, Supplier<String> bSupplier, Supplier<String> cSupplier) {
+        if (isNotBlank(a)) {
+            return trim(a);
         }
-        if (b != null && !b.trim().isEmpty()) {
-            return b.trim();
+        String b = bSupplier.get();
+        if (isNotBlank(b)) {
+            return trim(b);
         }
-        if (c != null && !c.trim().isEmpty()) {
-            return c.trim();
+        String c = cSupplier.get();
+        if (isNotBlank(c)) {
+            return trim(c);
         }
         return null;
     }
 
-    private static List<String> firstNonEmptyList(List<String> a, List<String> b, List<String> c) {
+    private static List<String> firstNonEmptyList(List<String> a, Supplier<List<String>> bSupplier, Supplier<List<String>> cSupplier) {
         if (a != null && !a.isEmpty()) {
             return a;
         }
+        List<String> b = bSupplier.get();
         if (b != null && !b.isEmpty()) {
             return b;
         }
-        return c;
+        return cSupplier.get();
     }
 
     private Xpp3Dom getCompilerPluginConfiguration() {
@@ -353,18 +369,18 @@ public class TransformMojo extends AbstractMojo {
 
     private static List<String> resolveCompilerArgsList(Xpp3Dom compilerConfig) {
         if (compilerConfig == null) {
-            return null;
+            return Collections.emptyList();
         }
         Xpp3Dom argsDom = compilerConfig.getChild("compilerArgs");
         if (argsDom == null) {
             argsDom = compilerConfig.getChild("compilerArguments");
         }
         if (argsDom != null) {
-            List<String> list = new ArrayList<String>();
+            List<String> list = new ArrayList<>();
             for (Xpp3Dom child : argsDom.getChildren()) {
                 String val = child.getValue();
-                if (val != null && !val.trim().isEmpty()) {
-                    list.add(val.trim());
+                if (isNotBlank(val)) {
+                    list.add(trim(val));
                 } else if (child.getName() != null && child.getName().startsWith("-")) {
                     list.add(child.getName());
                 }
@@ -373,25 +389,33 @@ public class TransformMojo extends AbstractMojo {
                 return list;
             }
         }
-        return null;
+        return Collections.emptyList();
     }
 
-    private static Boolean resolveBoolean(Xpp3Dom compilerConfig, String childName) {
+    private static Supplier<Boolean> resolveBoolean(Xpp3Dom compilerConfig, String childName) {
         if (compilerConfig != null) {
-            Xpp3Dom child = compilerConfig.getChild(childName);
-            if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
-                return Boolean.valueOf(child.getValue().trim());
-            }
+            return () -> {
+                Xpp3Dom child = compilerConfig.getChild(childName);
+                String value = getDomValue(child);
+                return value == null ? null : Boolean.valueOf(value);
+            };
         }
-        return null;
+        return () -> null;
     }
 
-    private static String resolveString(Xpp3Dom compilerConfig, String childName) {
+    private static Supplier<String> resolveString(Xpp3Dom compilerConfig, String childName) {
         if (compilerConfig != null) {
-            Xpp3Dom child = compilerConfig.getChild(childName);
-            if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
-                return child.getValue().trim();
-            }
+            return () -> {
+                Xpp3Dom child = compilerConfig.getChild(childName);
+                return getDomValue(child);
+            };
+        }
+        return () -> null;
+    }
+
+    private static String getDomValue(Xpp3Dom child) {
+        if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
+            return child.getValue().trim();
         }
         return null;
     }
@@ -437,8 +461,8 @@ public class TransformMojo extends AbstractMojo {
     }
 
     private String javacExecutable() {
-        if (javac != null && !javac.trim().isEmpty()) {
-            return javac.trim();
+        if (isNotBlank(javac)) {
+            return trim(javac);
         }
         return new File(System.getProperty("java.home", "java"),
                 "bin/javac").getAbsolutePath();
