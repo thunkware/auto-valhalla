@@ -46,7 +46,7 @@ import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
  */
 @Mojo(name = "transform", defaultPhase = LifecyclePhase.PROCESS_CLASSES, threadSafe = true,
         requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class AutoValhallaMojo extends AbstractMojo {
+public class TransformMojo extends AbstractMojo {
 
     /** Minimum Java feature version that can compile value classes. */
     static final int MIN_JDK = 28;

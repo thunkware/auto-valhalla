@@ -11,11 +11,11 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.junit.jupiter.api.Test;
 
-class AutoValhallaMojoTest {
+class TransformMojoTest {
 
     @Test
     void resolvesDirectParameters() {
-        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        TransformMojo mojo = new TransformMojo();
         mojo.setParameters(true);
         mojo.setDebug(true);
         mojo.setDebuglevel("lines,vars");
@@ -37,7 +37,7 @@ class AutoValhallaMojoTest {
 
     @Test
     void resolvesDebugFalseAsGNone() {
-        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        TransformMojo mojo = new TransformMojo();
         mojo.setDebug(false);
 
         List<String> args = mojo.resolveCompilerArgs();
@@ -87,7 +87,7 @@ class AutoValhallaMojoTest {
         build.addPlugin(compilerPlugin);
         project.setBuild(build);
 
-        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        TransformMojo mojo = new TransformMojo();
         mojo.setProject(project);
 
         List<String> args = mojo.resolveCompilerArgs();
@@ -120,7 +120,7 @@ class AutoValhallaMojoTest {
         build.addPlugin(compilerPlugin);
         project.setBuild(build);
 
-        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        TransformMojo mojo = new TransformMojo();
         mojo.setProject(project);
         mojo.setParameters(true);
         mojo.setEncoding("UTF-8");
@@ -142,7 +142,7 @@ class AutoValhallaMojoTest {
         compiler.setCompilerArgs(Arrays.asList("-Werror"));
         compiler.setEncoding("ISO-8859-1");
 
-        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        TransformMojo mojo = new TransformMojo();
         mojo.setMavenCompiler(compiler);
 
         List<String> args = mojo.resolveCompilerArgs();
@@ -161,7 +161,7 @@ class AutoValhallaMojoTest {
         compiler.setDebug(true);
         compiler.setEncoding("UTF-16");
 
-        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        TransformMojo mojo = new TransformMojo();
         mojo.setMavenCompiler(compiler);
         mojo.setDebug(false);
         mojo.setEncoding("UTF-8");
@@ -196,7 +196,7 @@ class AutoValhallaMojoTest {
         compiler.setParameters(true);
         compiler.setEncoding("ISO-8859-1");
 
-        AutoValhallaMojo mojo = new AutoValhallaMojo();
+        TransformMojo mojo = new TransformMojo();
         mojo.setProject(project);
         mojo.setMavenCompiler(compiler);
 

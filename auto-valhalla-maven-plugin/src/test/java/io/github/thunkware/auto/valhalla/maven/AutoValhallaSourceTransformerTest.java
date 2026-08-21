@@ -28,7 +28,7 @@ class AutoValhallaSourceTransformerTest {
 
     @BeforeAll
     static void locateJdk() throws Exception {
-        Assumptions.assumeTrue(AutoValhallaMojo.jdkFeature() >= 28,
+        Assumptions.assumeTrue(TransformMojo.jdkFeature() >= 28,
                 "value-class compilation requires JDK 28+");
         javacPath = new File(System.getProperty("java.home"), "bin/javac").getAbsolutePath();
         apiJar = io.github.thunkware.auto.valhalla.api.AutoValhalla.class

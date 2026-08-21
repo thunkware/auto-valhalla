@@ -28,7 +28,7 @@ import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
  * inspect (or post-process) what would be transformed without producing the
  * multi-release value classes.
  *
- * <p>Like {@link AutoValhallaMojo}, running Maven on a JDK older than 28 does
+ * <p>Like {@link TransformMojo}, running Maven on a JDK older than 28 does
  * not fail the build: the goal logs a warning and skips the pass. An annotated
  * class that the processor cannot adapt fails the build when
  * {@code failOnAnnotationFailure} is set (the default).
@@ -81,10 +81,10 @@ public class ProcessSourcesMojo extends AbstractMojo {
             getLog().info("auto-valhalla: skipping source processing");
             return;
         }
-        int feature = AutoValhallaMojo.jdkFeature();
-        if (feature < AutoValhallaMojo.MIN_JDK) {
+        int feature = TransformMojo.jdkFeature();
+        if (feature < TransformMojo.MIN_JDK) {
             getLog().warn("auto-valhalla: running on Java " + feature
-                    + "; Project Valhalla requires JDK " + AutoValhallaMojo.MIN_JDK
+                    + "; Project Valhalla requires JDK " + TransformMojo.MIN_JDK
                     + "+. Skipping source processing.");
             return;
         }
