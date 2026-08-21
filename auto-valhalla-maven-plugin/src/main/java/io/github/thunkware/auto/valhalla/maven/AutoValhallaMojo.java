@@ -158,7 +158,7 @@ public class AutoValhallaMojo extends AbstractMojo {
             throw new MojoExecutionException("auto-valhalla: could not resolve the project's "
                     + "compile classpath for javac: " + e.getMessage(), e);
         }
-        AutoValhallaSourceTransformer.Result result;
+        Result result;
         try {
             String processorPath = AutoValhallaProcessor.processorPath();
             if (processorPath == null) {
@@ -168,9 +168,17 @@ public class AutoValhallaMojo extends AbstractMojo {
             String resolvedEncoding = resolveEncoding();
             List<String> extraCompilerArgs = resolveCompilerArgs();
             result = AutoValhallaSourceTransformer.transform(
-                    project.getCompileSourceRoots(), versionDirectory,
-                    outputDirectory, buildDirectory, javacExecutable(), processorPath,
-                    compileClasspath, resolvedEncoding, extraCompilerArgs);
+                    Input.builder()
+                            .sourceRoots(project.getCompileSourceRoots())
+                            .versionDirectory(versionDirectory)
+                            .outputDirectory(outputDirectory)
+                            .buildDirectory(buildDirectory)
+                            .javac(javacExecutable())
+                            .processorPath(processorPath)
+                            .compileClasspath(compileClasspath)
+                            .encoding(resolvedEncoding)
+                            .compilerArgs(extraCompilerArgs)
+                            .build());
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the source-level "
                     + "transformation: " + e.getMessage(), e);

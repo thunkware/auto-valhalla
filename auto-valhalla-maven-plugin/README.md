@@ -51,6 +51,7 @@ java --enable-preview -jar myapp.jar
 | Goal | Default phase | Description |
 | --- | --- | --- |
 | `transform` | `process-classes` | Runs the `auto-valhalla-processor` (via `javac -proc:only`) over the project's sources, selects the `@AutoValhalla` classes, and compiles the adapted `value class`/`value record` copies with `javac --release 28 --enable-preview`, writing them under `META-INF/versions/28`. |
+| `process-sources` | `process-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and stages their adapted copies under `target/auto-valhalla-jdk28/selected` (with a `selection.txt` manifest). Nothing is compiled and nothing is written to the output directory — useful to inspect or post-process what would be transformed. |
 | `jar` | `package` | Adds `Multi-Release: true` to the jar manifest so the JVM serves the value variants on JDK 28+ and the identity classes on older JDKs. |
 
 ## How it works

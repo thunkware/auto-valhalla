@@ -8,7 +8,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -49,14 +49,16 @@ class AutoValhallaSourceTransformerTest {
         copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
         copyFixture(src.resolve("fixture/Shade.java"), "fixture/Shade.java");
 
-        AutoValhallaSourceTransformer.Result result = AutoValhallaSourceTransformer.transform(
-                java.util.Collections.singletonList(src.toString()),
-                28,
-                classes.toFile(),
-                target.toFile(),
-                javacPath,
-                processorPath,
-                java.util.Collections.singletonList(apiJar));
+        Result result = AutoValhallaSourceTransformer.transform(
+                Input.builder()
+                        .sourceRoots(java.util.Collections.singletonList(src.toString()))
+                        .versionDirectory(28)
+                        .outputDirectory(classes.toFile())
+                        .buildDirectory(target.toFile())
+                        .javac(javacPath)
+                        .processorPath(processorPath)
+                        .compileClasspath(java.util.Collections.singletonList(apiJar))
+                        .build());
 
         assertEquals(1, result.convertedCount(), "only the annotated Point converts");
         assertTrue(result.annotationFailures().isEmpty());
@@ -89,14 +91,16 @@ class AutoValhallaSourceTransformerTest {
         copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
         copyFixture(src.resolve("fixture/SyncPoint.java"), "fixture/SyncPoint.java");
 
-        AutoValhallaSourceTransformer.Result result = AutoValhallaSourceTransformer.transform(
-                java.util.Collections.singletonList(src.toString()),
-                28,
-                classes.toFile(),
-                target.toFile(),
-                javacPath,
-                processorPath,
-                java.util.Collections.singletonList(apiJar));
+        Result result = AutoValhallaSourceTransformer.transform(
+                Input.builder()
+                        .sourceRoots(java.util.Collections.singletonList(src.toString()))
+                        .versionDirectory(28)
+                        .outputDirectory(classes.toFile())
+                        .buildDirectory(target.toFile())
+                        .javac(javacPath)
+                        .processorPath(processorPath)
+                        .compileClasspath(java.util.Collections.singletonList(apiJar))
+                        .build());
 
         assertEquals(1, result.convertedCount(), "only Point converts");
         assertEquals(1, result.annotationFailures().size());
