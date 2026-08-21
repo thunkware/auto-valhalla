@@ -22,13 +22,6 @@
   </description>
 
   <properties>
-    <!-- The base classes stay ordinary identity classes compiled for a
-         pre-Valhalla JDK (class-file 61, loadable on JDK 17+). The structural
-         test inspects the produced class files by calling the JDK's own javap,
-         so the tests compile at the same release as the main sources. Disable
-         the preview flag inherited from the parent: disabled preview only works
-         for the current release, and the base classes must target release 17. -->
-    <maven.compiler.release>17</maven.compiler.release>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
   </properties>
 
@@ -50,6 +43,66 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <source>8</source>
+              <target>8</target>
+              <release>8</release>
+              <parameters>true</parameters>
+              <encoding>${project.build.sourceEncoding}</encoding>
+              <showDeprecation>true</showDeprecation>
+              <compilerArgs>
+                <arg>-Xlint</arg>
+              </compilerArgs>
+            </configuration>
+          </execution>
+          <execution>
+            <id>default-compile-java-28</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <release>28</release>
+              <compileSourceRoots>
+                <compileSourceRoot>${project.basedir}/target/auto-valhalla-jdk28/selected/</compileSourceRoot>
+              </compileSourceRoots>
+              <enablePreview>true</enablePreview>
+              <multiReleaseOutput>true</multiReleaseOutput>
+              <parameters>true</parameters>
+              <encoding>${project.build.sourceEncoding}</encoding>
+              <showDeprecation>true</showDeprecation>
+              <compilerArgs>
+                <arg>-Xlint</arg>
+              </compilerArgs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+        <plugin>
+            <groupId>io.github.thunkware</groupId>
+            <artifactId>auto-valhalla-maven-plugin</artifactId>
+            <version>${project.version}</version>
+            <executions>
+                <execution>
+                    <id>transform</id>
+                    <phase>process-sources</phase>
+                    <goals>
+                        <goal>transform</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
           <archive>
@@ -59,25 +112,6 @@
             </manifest>
           </archive>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>io.github.thunkware</groupId>
-        <artifactId>auto-valhalla-maven-plugin</artifactId>
-        <version>${project.version}</version>
-        <executions>
-          <execution>
-            <id>transform</id>
-            <goals>
-              <goal>transform</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>mr-jar</id>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>

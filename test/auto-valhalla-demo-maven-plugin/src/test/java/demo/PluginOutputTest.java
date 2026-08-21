@@ -42,8 +42,8 @@ class PluginOutputTest {
                 "value classes are not identity classes (no ACC_SUPER)");
 
         String basePoint = javap("target/classes/demo/Point.class");
-        assertTrue(basePoint.contains("major version: 61"),
-                "base Point keeps its pre-Valhalla class file");
+        assertTrue(basePoint.contains("major version: 52"),
+                "base Point keeps its pre-Valhalla class file (compiled at release 8)");
         assertTrue(basePoint.contains("ACC_SUPER"), "base Point stays an identity class");
         assertFalse(basePoint.contains("value class demo.Point"), "base Point must not be a value class");
     }
