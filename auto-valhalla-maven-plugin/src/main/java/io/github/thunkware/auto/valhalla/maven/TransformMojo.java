@@ -30,8 +30,8 @@ import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
  * JDK 28+ and whose original identity classes are used everywhere else.
  *
  * <p>There is no bytecode rewriting: for every selected source file the goal
- * copies it into a staging directory with its {@code class}/{@code record}
- * declarations adapted into {@code value class}/{@code value record}, and then
+ * copies it into a generated dir with its {@code class}/{@code record}
+ * declarations generated into {@code value class}/{@code value record}, and then
  * delegates to the JDK compiler ({@code javac --release <N> --enable-preview}),
  * which produces the value-class files natively. The base classes are left
  * untouched, so they keep working on JDKs older than 28.
@@ -71,9 +71,9 @@ public class TransformMojo extends AbstractMojo {
     private boolean fork;
 
     /** Whether to skip the annotation-processor selection pass and reuse the
-     *  staging area from a previous run (e.g. a prior {@code process-sources}
-     *  execution or manually staged sources under
-     *  {@code target/auto-valhalla-jdk28/selected}); only what that manifest
+     *  generated dir from a previous run (e.g. a prior {@code process-sources}
+     *  execution or manually generated sources under
+     *  {@code target/auto-valhalla-generated-sources/selected}); only what that manifest
      *  lists is compiled. */
     @Parameter(defaultValue = "false", property = "auto-valhalla.skipProcessor")
     private boolean skipProcessor;
@@ -83,7 +83,7 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.outputDirectory}", readonly = true, required = true)
     private File outputDirectory;
 
-    /** Maven's {@code target} directory, used for the staging area. */
+    /** Maven's {@code target} directory, used for the generated dir. */
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
     private File buildDirectory;
 

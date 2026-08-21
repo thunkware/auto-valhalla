@@ -86,7 +86,7 @@
     </dependency>
 
     <!-- The processor the plugin drives with javac -proc:only to select and
-         adapt the value-class sources. Compile scope so it ends up on the
+         generate the value-class sources. Compile scope so it ends up on the
          plugin's own classpath at runtime (the plugin locates it there and
          passes it to javac as -processorpath). -->
     <dependency>

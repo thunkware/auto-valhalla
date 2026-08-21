@@ -15,8 +15,8 @@ import static java.util.Collections.*;
  * Compile-time transformation driver. It runs the {@code auto-valhalla}
  * annotation processor over the project's source roots (via
  * {@link AnnotationProcessorRunner}) to select the {@code @AutoValhalla}
- * -annotated top-level types and stage adapted copies of their source files
- * (with {@code value class}/{@code value record}), then compiles each staged
+ * -annotated top-level types and generate copies of their source files
+ * (with {@code value class}/{@code value record}), then compiles each generated
  * file with the JDK 28 compiler ({@code --release <N> --enable-preview}),
  * writing the resulting value-class files under {@code META-INF/versions/<N>}
  * so {@link MultiReleaseJarMojo} can mark the jar as multi-release.
@@ -32,13 +32,13 @@ public final class AutoValhallaSourceTransformer {
 
     /**
      * Runs the source-level transformation: the annotation-processor selection
-     * pass followed by compiling each staged file with the JDK compiler
+     * pass followed by compiling each generated file with the JDK compiler
      * ({@code --release <N> --enable-preview}), writing the resulting
      * value-class files under {@code META-INF/versions/<N>}.
      *
      * @param input the run inputs; {@code versionDirectory} and
      *              {@code outputDirectory} must be set
-     * @throws IOException on I/O errors during scanning, staging, or compilation
+     * @throws IOException on I/O errors during scanning, generating, or compilation
      */
     public static Result transform(Input input) throws IOException {
         if (input.outputDirectory == null) {
@@ -46,19 +46,19 @@ public final class AutoValhallaSourceTransformer {
         }
         Result result = new Result();
 
-        AnnotationProcessorRunner.Selection selection = AnnotationProcessorRunner.run(input);
+        Selection selection = AnnotationProcessorRunner.run(input);
         result.annotationFailures.addAll(selection.failures());
         result.selected.addAll(selection.selectedTypes());
-        result.stagedSources = selection.stagedSources();
-        if (selection.adaptedFiles().isEmpty()) {
+        result.generatedSources = selection.generatedSources();
+        if (selection.generatedFiles().isEmpty()) {
             return result;
         }
 
         File versionedOut = new File(input.outputDirectory, "META-INF/versions/" + input.versionDirectory);
         String sourceEncoding = isNotBlank(input.encoding) ? trim(input.encoding) : "UTF-8";
 
-        for (Map.Entry<String, List<AnnotationProcessorRunner.Adapted>> entry
-                : selection.adaptedFiles().entrySet()) {
+        for (Map.Entry<String, List<Generated>> entry
+                : selection.generatedFiles().entrySet()) {
             Files.createDirectories(versionedOut.toPath());
             List<String> options = new ArrayList<>();
             options.add("--release");
@@ -78,14 +78,14 @@ public final class AutoValhallaSourceTransformer {
                     }
                 }
             }
-            File stagedFile = new File(selection.stagedSources(), entry.getKey());
+            File generatedFile = new File(selection.generatedSources(), entry.getKey());
             Javac.ProcessResult process = Javac.compile(input.fork, input.javac,
-                    options, singletonList(stagedFile), sourceEncoding);
+                    options, singletonList(generatedFile), sourceEncoding);
             if (process.exit == 0) {
                 result.converted += entry.getValue().size();
             } else {
-                for (AnnotationProcessorRunner.Adapted adapted : entry.getValue()) {
-                    result.annotationFailures.add(adapted.qname()
+                for (Generated generated : entry.getValue()) {
+                    result.annotationFailures.add(generated.qname()
                             + ": javac reported:\n" + process.output);
                 }
             }

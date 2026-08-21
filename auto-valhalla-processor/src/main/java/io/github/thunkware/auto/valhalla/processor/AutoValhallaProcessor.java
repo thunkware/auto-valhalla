@@ -28,10 +28,10 @@ import javax.tools.Diagnostic.Kind;
  * transformation. The {@code auto-valhalla-maven-plugin} runs it as a
  * {@code javac -proc:only} pass over the project's sources; for every top-level
  * {@code class}/{@code record} annotated with {@code @AutoValhalla}, it emits an
- * adapted copy of the source file in which the declaration keyword becomes
+ * generated copy of the source file in which the declaration keyword becomes
  * {@code value class}/{@code value record}.
  *
- * <p>Adapted sources and a selection manifest ({@code selection.txt}) are
+ * <p>Generated sources and a selection manifest ({@code selection.txt}) are
  * written under the directory given by the {@code -Aoutdir} option, preserving
  * each file's package-relative layout so the plugin can compile them with
  * {@code javac --release <N> --enable-preview -proc:none} to produce the
@@ -39,14 +39,14 @@ import javax.tools.Diagnostic.Kind;
  *
  * <p>A manifest line is one of:
  * <ul>
- *   <li>{@code ADAPTED <qname> <relPath>}</li>
+ *   <li>{@code GENERATED <qname> <relPath>}</li>
  *   <li>{@code FAIL <qname> <reason>}</li>
  * </ul>
  * The plugin reads this manifest to report failures.
  */
 public class AutoValhallaProcessor extends AbstractProcessor {
 
-    /** The {@code -A} option with the directory that receives the adapted
+    /** The {@code -A} option with the directory that receives the generated
      *  sources and the {@code selection.txt} manifest. */
     public static final String OPT_OUTDIR = "outdir";
 
@@ -130,7 +130,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
                             (ClassTree) path.getLeaf()));
         }
         for (List<Selected> unit : byUnit.values()) {
-            adaptUnit(trees, unit, out, report);
+            generateUnit(trees, unit, out, report);
         }
         try {
             Files.createDirectories(out);
@@ -143,11 +143,11 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         return false;
     }
 
-    /** Adapts every selected type of one compilation unit into a single staged
+    /** Generates every selected type of one compilation unit into a single generated
      *  copy: all {@code value} keywords are inserted before the file is written,
-     *  so several selected types in one file are all adapted and one
-     *  {@code ADAPTED} line is recorded per type. */
-    private void adaptUnit(Trees trees, List<Selected> unit, Path out, List<String> report) {
+     *  so several selected types in one file are all generated and one
+     *  {@code GENERATED} line is recorded per type. */
+    private void generateUnit(Trees trees, List<Selected> unit, Path out, List<String> report) {
         CompilationUnitTree compilationUnit = unit.get(0).unit;
         SourcePositions positions = trees.getSourcePositions();
         String source;
@@ -173,9 +173,9 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             insertIndexes.add(insertIndex);
         }
         insertIndexes.sort((a, b) -> Integer.compare(b, a));
-        StringBuilder adapted = new StringBuilder(source);
+        StringBuilder generated = new StringBuilder(source);
         for (int insertIndex : insertIndexes) {
-            adapted.insert(insertIndex, "value ");
+            generated.insert(insertIndex, "value ");
         }
         String fileName = fileName(compilationUnit);
         Selected first = unit.get(0);
@@ -184,10 +184,10 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         try {
             Path target = out.resolve(rel);
             Files.createDirectories(target.getParent());
-            Files.write(target, adapted.toString().getBytes(StandardCharsets.UTF_8));
+            Files.write(target, generated.toString().getBytes(StandardCharsets.UTF_8));
             processingEnv.getMessager().printMessage(Kind.NOTE, "Writing " + target);
             for (Selected selected : unit) {
-                report.add("ADAPTED " + selected.qname + " " + rel);
+                report.add("GENERATED " + selected.qname + " " + rel);
             }
         } catch (IOException e) {
             for (Selected selected : unit) {
@@ -205,7 +205,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
                 "auto-valhalla processor: " + selected.qname + ": " + reason);
     }
 
-    /** A selected top-level type plus the context needed to adapt its file. */
+    /** A selected top-level type plus the context needed to generate its file. */
     private static final class Selected {
 
         private final CompilationUnitTree unit;

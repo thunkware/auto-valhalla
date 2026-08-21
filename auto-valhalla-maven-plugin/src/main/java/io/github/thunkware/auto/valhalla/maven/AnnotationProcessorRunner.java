@@ -7,9 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
@@ -18,35 +16,35 @@ import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
  * Runs the {@code auto-valhalla} annotation processor as a standalone
  * {@code javac -proc:only} selection pass over the project's source roots.
  * For every top-level {@code class}/{@code record} annotated with
- * {@code @AutoValhalla}, the processor writes an adapted copy of the source
- * file (with {@code value class}/{@code value record}) under the staging area
- * ({@code <buildDirectory>/auto-valhalla-jdk28/selected}), together with the
+ * {@code @AutoValhalla}, the processor writes a generated copy of the source
+ * file (with {@code value class}/{@code value record}) under the generated dir
+ * ({@code <buildDirectory>/auto-valhalla-generated-sources/selected}), together with the
  * {@code selection.txt} manifest that this runner parses into its
  * {@link Selection} outcome.
  *
  * <p>A failed pass maps to an {@link IOException} that fails the build: the
  * processor only exits non-zero when it reported a real problem (e.g. an I/O
- * error writing the staged sources or the manifest).
+ * error writing the generated sources or the manifest).
  */
 public final class AnnotationProcessorRunner {
 
-    /** Name of the staging area under the build directory that receives the
-     *  processor's adapted sources and selection manifest. */
-    static final String STAGING_DIR = "auto-valhalla-jdk28";
+    /** Name of the generated dir under the build directory that receives the
+     *  processor's generated sources and selection manifest. */
+    static final String GENERATED_DIR = "auto-valhalla-generated-sources";
 
     private AnnotationProcessorRunner() {
     }
 
     /**
-     * Runs the selection pass over the input's source roots: the staging area
+     * Runs the selection pass over the input's source roots: the generated dir
      * is recreated, the processor selects the {@code @AutoValhalla}-annotated
-     * top-level types and stages their adapted copies, and the selection
+     * top-level types and generates their copies, and the selection
      * manifest is parsed into the returned {@link Selection}. Nothing is
      * compiled and nothing is written under an output directory; the
      * {@code versionDirectory}, {@code outputDirectory} and
      * {@code compilerArgs} input fields are ignored.
      *
-     * <p>With {@code skipProcessor} set, the staging area is not touched and
+     * <p>With {@code skipProcessor} set, the generated dir is not touched and
      * no pass runs: the manifest left by a previous run (e.g. a prior
      * {@code process-sources} execution) is parsed as-is, which fails when it
      * does not exist.
@@ -56,8 +54,8 @@ public final class AnnotationProcessorRunner {
      * @throws IOException on I/O errors during scanning or the selection pass
      */
     public static Selection run(Input input) throws IOException {
-        File staging = new File(input.buildDirectory, STAGING_DIR);
-        File selected = selectedDir(staging);
+        File generatedDir = new File(input.buildDirectory, GENERATED_DIR);
+        File selected = selectedDir(generatedDir);
 
         Selection selection = new Selection(selected);
         if (input.skipProcessor) {
@@ -65,7 +63,7 @@ public final class AnnotationProcessorRunner {
             return selection;
         }
 
-        deleteRecursively(staging);
+        deleteRecursively(generatedDir);
         Files.createDirectories(selected.toPath());
 
         List<File> sources = collectSources(input.sourceRoots);
@@ -79,75 +77,12 @@ public final class AnnotationProcessorRunner {
         return selection;
     }
 
-    /** The outcome of a selection pass: which types were selected, which
-     *  selected types the processor could not adapt (these fail the build),
-     *  where the adapted copies were staged, and the staged files grouped by
-     *  relative path for a follow-up compilation pass. */
-    public static final class Selection {
-
-        private final List<String> selectedTypes = new ArrayList<>();
-        private final List<String> failures = new ArrayList<>();
-        private final Map<String, List<Adapted>> adaptedFiles = new LinkedHashMap<>();
-        private final File stagedSources;
-
-        private Selection(File stagedSources) {
-            this.stagedSources = stagedSources;
-        }
-
-        /** Qualified names of the {@code @AutoValhalla}-annotated top-level
-         *  types the processor selected (and staged adapted copies for). */
-        public List<String> selectedTypes() {
-            return selectedTypes;
-        }
-
-        /** Formatted {@code qname: reason} descriptions of the selected types
-         *  the processor could not adapt. */
-        public List<String> failures() {
-            return failures;
-        }
-
-        /** Directory holding the staged adapted sources (the processor's out
-         *  dir); created even when nothing was staged. */
-        public File stagedSources() {
-            return stagedSources;
-        }
-
-        /** Staged files by path relative to {@link #stagedSources()}; each
-         *  entry lists the selected types living in that file. */
-        public Map<String, List<Adapted>> adaptedFiles() {
-            return adaptedFiles;
-        }
-    }
-
-    /** An {@code ADAPTED} manifest line: one selected type and the staged file
-     *  it lives in (relative to the selection out dir). */
-    public static final class Adapted {
-
-        private final String qname;
-        private final String rel;
-
-        private Adapted(String qname, String rel) {
-            this.qname = qname;
-            this.rel = rel;
-        }
-
-        /** Fully qualified name of the selected type. */
-        public String qname() {
-            return qname;
-        }
-
-        /** Staged file path relative to the selection out dir. */
-        public String rel() {
-            return rel;
-        }
-    }
-
     // -- selection pass ------------------------------------------------------
 
     /** Runs the processor's {@code javac -proc:only} selection pass. A failed
      *  pass maps to an {@link IOException} that fails the build: the processor
      *  only exits non-zero when it reported a real problem (e.g. an I/O error
-     *  writing the staged sources or the manifest). */
+     *  writing the generated sources or the manifest). */
     private static void runPass(Input input, List<File> sources, String encoding,
             File selected) throws IOException {
         List<String> options = new ArrayList<>();
@@ -169,11 +104,11 @@ public final class AnnotationProcessorRunner {
 
     private static void parseManifest(List<String> lines, Selection selection) {
         for (String line : lines) {
-            Adapted adapted = parseAdapted(line);
-            if (adapted != null) {
-                selection.selectedTypes.add(adapted.qname);
-                selection.adaptedFiles.computeIfAbsent(adapted.rel, k -> new ArrayList<>())
-                        .add(adapted);
+            Generated generated = parseGenerated(line);
+            if (generated != null) {
+                selection.selectedTypes.add(generated.qname);
+                selection.generatedFiles.computeIfAbsent(generated.rel, k -> new ArrayList<>())
+                        .add(generated);
                 continue;
             }
             SelectionFailure failure = parseFailure(line);
@@ -183,8 +118,8 @@ public final class AnnotationProcessorRunner {
         }
     }
 
-    private static File selectedDir(File staging) {
-        return new File(staging, "selected");
+    private static File selectedDir(File generatedDir) {
+        return new File(generatedDir, "selected");
     }
 
     // -- selection manifest ------------------------------------------------
@@ -200,12 +135,12 @@ public final class AnnotationProcessorRunner {
         return lines;
     }
 
-    private static Adapted parseAdapted(String line) {
+    private static Generated parseGenerated(String line) {
         List<String> tokens = tokens(line);
-        if (tokens.size() < 3 || !"ADAPTED".equals(tokens.get(0))) {
+        if (tokens.size() < 3 || !"GENERATED".equals(tokens.get(0))) {
             return null;
         }
-        return new Adapted(tokens.get(1), tokens.get(2));
+        return new Generated(tokens.get(1), tokens.get(2));
     }
 
     private static SelectionFailure parseFailure(String line) {
@@ -238,7 +173,7 @@ public final class AnnotationProcessorRunner {
     }
 
     /** A {@code FAIL} manifest line: a selected type the processor could not
-     *  adapt. */
+     *  generate. */
     private static final class SelectionFailure {
 
         private final String qname;

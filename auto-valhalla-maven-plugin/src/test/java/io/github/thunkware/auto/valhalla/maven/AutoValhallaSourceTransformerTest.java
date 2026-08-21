@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * End-to-end test of the source-level transformation: fixture sources are
  * copied to a temp project, the transformer runs the real JDK 28 compiler on
- * the adapted copies, and the produced versioned classes are checked for
+ * the generated copies, and the produced versioned classes are checked for
  * value-class semantics.
  */
 class AutoValhallaSourceTransformerTest {
@@ -143,7 +143,7 @@ class AutoValhallaSourceTransformerTest {
     }
 
     @Test
-    void transformCanSkipTheProcessorAndReuseStagedSources() throws Exception {
+    void transformCanSkipTheProcessorAndReuseGeneratedSources() throws Exception {
         Path src = temp.resolve("src");
         Path classes = temp.resolve("classes");
         Path target = temp.resolve("target");
@@ -151,7 +151,7 @@ class AutoValhallaSourceTransformerTest {
         copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
         copyFixture(src.resolve("fixture/Shade.java"), "fixture/Shade.java");
 
-        // stage the adapted sources once with a standalone selection pass...
+        // generate the sources once with a standalone selection pass...
         AnnotationProcessorRunner.run(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
@@ -174,7 +174,7 @@ class AutoValhallaSourceTransformerTest {
                         .skipProcessor(true)
                         .build());
 
-        assertEquals(1, result.convertedCount(), "the staged Point converts");
+        assertEquals(1, result.convertedCount(), "the generated Point converts");
         assertTrue(result.annotationFailures().isEmpty());
         assertTrue(Files.isRegularFile(classes.resolve("META-INF/versions/28/fixture/Point.class")));
     }

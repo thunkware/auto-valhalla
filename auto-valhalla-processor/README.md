@@ -4,13 +4,13 @@
 # auto-valhalla processor
 
 An annotation processor (`javac -processor`) that selects the top-level
-`@AutoValhalla` classes in a source tree and emits adapted copies with
+`@AutoValhalla` classes in a source tree and emits generated copies with
 `value class`/`value record` declarations, plus a `selection.txt` manifest
 describing what was selected.
 
 The [auto-valhalla-maven-plugin](../auto-valhalla-maven-plugin) bundles this
 module as a dependency, runs it with `javac -proc:only`, and then compiles the
-staged adapted sources with `javac --release <N> --enable-preview` to produce
+generated sources with `javac --release <N> --enable-preview` to produce
 the multi-release value-class variants.
 
 For the runtime javaagent alternative, see the
@@ -25,20 +25,20 @@ selects the ones annotated with `@AutoValhalla`:
 * `interface`/`enum`/`module-info`/`package-info` are never selected;
 * unannotated classes are never selected.
 
-For each selected type it writes an adapted copy of its source file — with the
+For each selected type it writes an generated copy of its source file — with the
 `value` keyword inserted before the `class`/`record` keyword — under the output
 directory, preserving the package-relative layout. Several selected types in one
-file are all adapted in a single copy. It then writes a `selection.txt` manifest
+file are all generated in a single copy. It then writes a `selection.txt` manifest
 with one line per selected type:
 
 ```
-ADAPTED <qname> <relPath>
+GENERATED <qname> <relPath>
 ```
 
 (I/O failures during selection are reported as `FAIL <qname> <reason>`
 instead.)
 
-The processor never compiles anything. Turning the adapted sources into value
+The processor never compiles anything. Turning the generated sources into value
 classes is the job of the enclosing build (the maven plugin) or your own javac
 invocation with `--enable-preview`.
 
@@ -47,23 +47,23 @@ invocation with `--enable-preview`.
 The plugin can drive it, but so can any build tool that calls javac (Gradle,
 Ant, Bazel, `make`, scripts) — useful for non-Maven builds, for custom
 multi-release jar packaging, or for a CI pre-flight gate that proves the
-annotated types adapt cleanly. The processor is not published to Maven Central
+annotated types generate cleanly. The processor is not published to Maven Central
 yet; build it from this repository first (`mvn -pl auto-valhalla-processor -am
 package`). The pass and the follow-up compile look like this:
 
 ```bash
-# 1) select and stage the adapted sources
+# 1) select and generate the sources
 javac -proc:only \
   -processorpath auto-valhalla-processor.jar \
   -cp "$CLASSES:$COMPILE_DEPS" \
-  -Aoutdir=staging \
+  -Aoutdir=generated \
   $(find src -name '*.java')
 
-# 2) compile the adapted sources as value classes
+# 2) compile the generated sources as value classes
 javac --release 28 --enable-preview -proc:none \
   -cp "$CLASSES:$COMPILE_DEPS" \
   -d classes/META-INF/versions/28 \
-  $(find staging -name '*.java')
+  $(find generated -name '*.java')
 ```
 
 Then package `classes` as a multi-release jar (`Multi-Release: true` in the
@@ -74,7 +74,7 @@ classes.
 
 | `-A` option | default | description                                                          |
 | --- | --- |----------------------------------------------------------------------|
-| `outdir` | (required) | directory that receives the adapted sources and `selection.txt`      |
+| `outdir` | (required) | directory that receives the generated sources and `selection.txt`      |
 
 ## Prerequisites
 

@@ -19,7 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * End-to-end test of the processor's {@code javac -proc:only} selection pass:
- * fixture sources are written to a temp project, the processor adapts the
+ * fixture sources are written to a temp project, the processor generates the
  * selected types, and the emitted sources and {@code selection.txt} manifest
  * are checked.
  */
@@ -47,7 +47,7 @@ class AutoValhallaProcessorTest {
     }
 
     @Test
-    void adaptsAnnotatedSourcesOnly() throws Exception {
+    void generatesAnnotatedSourcesOnly() throws Exception {
         Path src = write("fixture/Point.java", POINT);
         write("fixture/Shade.java", SHADE);
         Path out = temp.resolve("out");
@@ -56,10 +56,10 @@ class AutoValhallaProcessorTest {
         ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("ADAPTED fixture.Point fixture/Point.java\n", manifest(out));
+        assertEquals("GENERATED fixture.Point fixture/Point.java\n", manifest(out));
         assertSource(out.resolve("fixture/Point.java"), "public final value class Point");
         assertFalse(Files.exists(out.resolve("fixture/Shade.java")),
-                "an unannotated class must not be staged");
+                "an unannotated class must not be generated");
 
         if (jdkFeature() >= 28) {
             ProcessResult compile = runValueCompile(out, classes);
@@ -78,12 +78,12 @@ class AutoValhallaProcessorTest {
         ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("ADAPTED fixture.R fixture/R.java\n", manifest(out));
+        assertEquals("GENERATED fixture.R fixture/R.java\n", manifest(out));
         assertSource(out.resolve("fixture/R.java"), "public value record R(int a)");
     }
 
     @Test
-    void severalSelectedTypesInOneFileShareTheStagedFile() throws Exception {
+    void severalSelectedTypesInOneFileShareTheGeneratedFile() throws Exception {
         Path src = write("fixture/Pair.java", PAIR);
         Path out = temp.resolve("out");
 
@@ -91,8 +91,8 @@ class AutoValhallaProcessorTest {
 
         assertEquals(0, pass.exit, pass.output);
         assertEquals("""
-                ADAPTED fixture.Pair fixture/Pair.java
-                ADAPTED fixture.Side fixture/Pair.java
+                GENERATED fixture.Pair fixture/Pair.java
+                GENERATED fixture.Side fixture/Pair.java
                 """, manifest(out));
         assertSource(out.resolve("fixture/Pair.java"), "public final value class Pair");
         assertSource(out.resolve("fixture/Pair.java"), "final value class Side");
@@ -129,7 +129,7 @@ class AutoValhallaProcessorTest {
 
             /** Suitable value-class candidate, but not annotated: the processor
              *  selects {@code @AutoValhalla} classes only, so this is never
-             *  adapted. */
+             *  generated. */
             public final class Shade {
 
                 public final int r;
@@ -160,7 +160,7 @@ class AutoValhallaProcessorTest {
 
             import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
-            /** Two annotated top-level types in one file share one staged copy. */
+            /** Two annotated top-level types in one file share one generated copy. */
             @AutoValhalla
             public final class Pair {
 

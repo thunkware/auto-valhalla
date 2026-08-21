@@ -73,7 +73,7 @@
             <configuration>
               <release>28</release>
               <compileSourceRoots>
-                <compileSourceRoot>${project.basedir}/target/auto-valhalla-jdk28/selected/</compileSourceRoot>
+                <compileSourceRoot>${project.basedir}/target/auto-valhalla-generated-sources/selected/</compileSourceRoot>
               </compileSourceRoots>
               <enablePreview>true</enablePreview>
               <multiReleaseOutput>true</multiReleaseOutput>

@@ -88,7 +88,7 @@ public final class Input {
         }
 
         /**
-         * Maven {@code target} directory, for the staging area.
+         * Maven {@code target} directory, for the generated dir.
          */
         public Builder buildDirectory(File buildDirectory) {
             this.buildDirectory = buildDirectory;
@@ -150,7 +150,7 @@ public final class Input {
 
         /**
          * Whether to skip the annotation-processor selection pass and reuse
-         * the staging area from a previous run; only meaningful for
+         * the generated dir from a previous run; only meaningful for
          * {@link AutoValhallaSourceTransformer#transform(Input)}.
          */
         public Builder skipProcessor(boolean skipProcessor) {

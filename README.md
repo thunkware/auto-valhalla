@@ -44,7 +44,7 @@ plugin for Maven:
   build instead of silently keeping an identity class.
 
 * **No bytecode rewriting.** The agent lets the JVM apply its own
-  value-class rules; the build-time plugins adapt your sources and let `javac`
+  value-class rules; the build-time plugins generate your sources and let `javac`
   compile them natively.
 
 ## Quickstart
@@ -107,7 +107,7 @@ auto-valhalla applies this in two ways:
 * **At load time** — the [agent](auto-valhalla-agent) rewrites the selected
   classes when the JVM loads them, so nothing in the build changes.
 * **At build time** — the [Maven plugin](auto-valhalla-maven-plugin) compiles
-  adapted `value class`/`value record` copies with `javac --release 28
+  generated `value class`/`value record` copies with `javac --release 28
   --enable-preview` and packages them as a multi-release jar, so JDK 28+ uses
   the value variants and older JDKs use the original identity classes.
 

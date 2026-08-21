@@ -50,8 +50,8 @@ java --enable-preview -jar myapp.jar
 
 | Goal | Default phase | Description |
 | --- | --- | --- |
-| `transform` | `process-classes` | Runs the `auto-valhalla-processor` (via `javac -proc:only`) over the project's sources, selects the `@AutoValhalla` classes, and compiles the adapted `value class`/`value record` copies with `javac --release 28 --enable-preview`, writing them under `META-INF/versions/28`. |
-| `process-sources` | `process-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and stages their adapted copies under `target/auto-valhalla-jdk28/selected` (with a `selection.txt` manifest). Nothing is compiled and nothing is written to the output directory — useful to inspect or post-process what would be transformed. |
+| `transform` | `process-classes` | Runs the `auto-valhalla-processor` (via `javac -proc:only`) over the project's sources, selects the `@AutoValhalla` classes, and compiles the generated `value class`/`value record` copies with `javac --release 28 --enable-preview`, writing them under `META-INF/versions/28`. |
+| `process-sources` | `process-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and generates their copies under `target/auto-valhalla-generated-sources/selected` (with a `selection.txt` manifest). Nothing is compiled and nothing is written to the output directory — useful to inspect or post-process what would be transformed. |
 | `jar` | `package` | Adds `Multi-Release: true` to the jar manifest so the JVM serves the value variants on JDK 28+ and the identity classes on older JDKs. |
 
 ## How it works
@@ -59,7 +59,7 @@ java --enable-preview -jar myapp.jar
 There is no bytecode rewriting anywhere: the `auto-valhalla-processor`
 annotation processor (a dependency of this plugin, passed to `javac -
 processorpath`) selects the top-level types that carry the `@AutoValhalla`
-annotation, and writes adapted copies of their source files into a staging
+annotation, and writes generated copies of their source files into a generated dir
 directory with the `class`/`record` declarations turned into
 `value class`/`value record`. The `transform` goal then delegates to
 the JDK compiler — `javac --release <N> --enable-preview` — which produces the
@@ -87,7 +87,7 @@ All parameters are optional:
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
 | `javac` | `auto-valhalla.javac` | `<java.home>/bin/javac` | override the JDK compiler executable |
 | `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
-| `skipProcessor` | `auto-valhalla.skipProcessor` | `false` | (`transform` only) skip the annotation-processor pass and compile the staging area left by a previous `process-sources` run (or staged manually under `target/auto-valhalla-jdk28/selected`) |
+| `skipProcessor` | `auto-valhalla.skipProcessor` | `false` | (`transform` only) skip the annotation-processor pass and compile the generated dir left by a previous `process-sources` run (or generated manually under `target/auto-valhalla-generated-sources/selected`) |
 | `skip` | `auto-valhalla.skip` | `false` | skip both goals |
 | `encoding` | `auto-valhalla.encoding` | `${project.build.sourceEncoding}` | character encoding for source compilation |
 | `parameters` | `auto-valhalla.parameters` | inherited | generate metadata for reflection on method parameters (`-parameters`) |

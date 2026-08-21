@@ -13,7 +13,7 @@ public final class Result {
 
     final List<String> annotationFailures = new ArrayList<>();
     final List<String> selected = new ArrayList<>();
-    File stagedSources;
+    File generatedSources;
     int converted;
 
     Result() {
@@ -29,17 +29,17 @@ public final class Result {
 
     /**
      * Qualified names of the {@code @AutoValhalla}-annotated top-level
-     * types the processor selected (and staged adapted copies for).
+     * types the processor selected (and generated copies for).
      */
     public List<String> selectedTypes() {
         return selected;
     }
 
     /**
-     * Directory holding the staged adapted sources (the processor's out
-     * dir), or {@code null} when nothing was staged.
+     * Directory holding the generated sources (the processor's out
+     * dir), or {@code null} when nothing was generated.
      */
-    public File stagedSources() {
-        return stagedSources;
+    public File generatedSources() {
+        return generatedSources;
     }
 }

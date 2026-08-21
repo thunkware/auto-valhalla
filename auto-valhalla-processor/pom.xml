@@ -13,9 +13,9 @@
 
   <description>
     Annotation processor (javac's -processor) that selects the top-level
-    @AutoValhalla classes in a source tree and emits adapted value class/value
+    @AutoValhalla classes in a source tree and emits generated value class/value
     record sources plus a selection manifest. The auto-valhalla-maven-plugin
-    drives it with javac -proc:only and compiles the adapted sources with
+    drives it with javac -proc:only and compiles the generated sources with
     --enable-preview.
   </description>
 
