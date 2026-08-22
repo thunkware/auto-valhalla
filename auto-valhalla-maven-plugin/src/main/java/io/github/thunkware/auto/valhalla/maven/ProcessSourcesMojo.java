@@ -68,10 +68,9 @@ public class ProcessSourcesMojo extends AbstractMojo {
     private boolean failOnAnnotationFailure;
 
     /**
-     * Override for the JDK compiler executable. When not set, the compiler
-     * comes from the {@code java28.home} system property or the
-     * {@code JAVA28_HOME} environment variable if either is defined; it falls
-     * back to {@code <java.home>/bin/javac}.
+     *  Override for the JDK compiler executable. When Maven runs on JDK 8
+     *  through 27, {@code JAVA28_HOME} must point to the JDK 28 compiler; on
+     *  JDK 28, the running JDK compiler is used by default.
      */
     @Parameter(property = "auto-valhalla.javac")
     private String javac;
@@ -98,13 +97,7 @@ public class ProcessSourcesMojo extends AbstractMojo {
             return;
         }
         JarPluginCheck.checkOnce(session, project, getLog());
-        int feature = TransformMojo.jdkFeature();
-        if (feature < TransformMojo.MIN_JDK) {
-            getLog().warn("auto-valhalla: running on Java " + feature
-                    + "; Project Valhalla requires JDK " + TransformMojo.MIN_JDK
-                    + "+. Skipping source processing.");
-            return;
-        }
+        JdkVersion.validate();
         List<String> compileClasspath;
         try {
             compileClasspath = project.getCompileClasspathElements();
@@ -159,6 +152,6 @@ public class ProcessSourcesMojo extends AbstractMojo {
     }
 
     private String javacExecutable() {
-        return Javac.resolveExecutable(javac, TransformMojo.MIN_JDK);
+        return Javac.resolveExecutable(javac, TransformMojo.MIN_VALHALLA_JDK);
     }
 }

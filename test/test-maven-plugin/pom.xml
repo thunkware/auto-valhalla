@@ -92,13 +92,20 @@
             <artifactId>auto-valhalla-maven-plugin</artifactId>
             <version>${project.version}</version>
             <executions>
-                <execution>
-                    <id>process-sources</id>
-                    <phase>process-sources</phase>
-                    <goals>
-                        <goal>process-sources</goal>
-                    </goals>
-                </execution>
+              <execution>
+                <id>process-sources</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>process-sources</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>transform</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>transform</goal>
+                </goals>
+              </execution>
             </executions>
         </plugin>
       <plugin>

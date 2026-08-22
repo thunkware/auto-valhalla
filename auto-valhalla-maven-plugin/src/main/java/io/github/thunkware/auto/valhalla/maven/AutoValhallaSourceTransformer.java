@@ -54,7 +54,7 @@ public final class AutoValhallaSourceTransformer {
             return result;
         }
 
-        File versionedOut = new File(input.outputDirectory, "META-INF/versions/" + input.versionDirectory);
+        File versionedOut = new File(input.outputDirectory, "META-INF/versions/" + TransformMojo.MIN_VALHALLA_JDK);
         String sourceEncoding = isNotBlank(input.encoding) ? trim(input.encoding) : "UTF-8";
 
         for (Map.Entry<String, List<Generated>> entry
@@ -62,7 +62,7 @@ public final class AutoValhallaSourceTransformer {
             Files.createDirectories(versionedOut.toPath());
             List<String> options = new ArrayList<>();
             options.add("--release");
-            options.add(Integer.toString(input.versionDirectory));
+            options.add(Integer.toString(TransformMojo.MIN_VALHALLA_JDK));
             options.add("--enable-preview");
             options.add("-proc:none");
             options.add("-encoding");

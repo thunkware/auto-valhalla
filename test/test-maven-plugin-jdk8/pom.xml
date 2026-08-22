@@ -46,11 +46,10 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <!-- the base classes stay ordinary identity classes compiled for a
-               pre-Valhalla JDK; the value-class variants are produced by the
-               auto-valhalla-maven-plugin's transform goal alone -->
           <release>8</release>
           <encoding>${project.build.sourceEncoding}</encoding>
+          <debug>true</debug>
+          <parameters>true</parameters>
         </configuration>
       </plugin>
       <plugin>
@@ -59,12 +58,17 @@
         <version>${project.version}</version>
         <executions>
           <execution>
-            <id>auto-valhalla</id>
-            <!-- no phase: transform runs at its default process-classes,
-                 jar at its default package -->
+            <id>process-sources</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>process-sources</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>transform</id>
+            <phase>compile</phase>
             <goals>
               <goal>transform</goal>
-              <goal>jar</goal>
             </goals>
           </execution>
         </executions>

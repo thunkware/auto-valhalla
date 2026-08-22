@@ -47,19 +47,20 @@
   </developers>
 
   <properties>
-    <!-- The processor is loaded by the javac subprocess that the maven plugin
-         runs WITHOUT the preview flag, so it is compiled without the preview
-         flag (a preview-marked class file would not load there). It targets
-         release 17 rather than the root's 28 so the class files stay readable
-         by the maven-plugin-plugin ASM version that generates the maven
-         plugin's descriptor (the processor is an ordinary dependency of the
-         plugin); the processor only uses the stable com.sun.source API, which
-         exists since Java 9 and runs on every JDK the plugin drives. -->
-    <maven.compiler.release>17</maven.compiler.release>
+    <maven.compiler.release>8</maven.compiler.release>
+    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
   </properties>
 
   <dependencies>
+    <!-- tools.jar from JDK8 -->
+    <dependency>
+      <groupId>com.perfma.wrapped</groupId>
+      <artifactId>com.sun.tools</artifactId>
+      <version>1.8.0_jdk8u275-b01_linux_x64</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- Only used by the tests, which compile fixture sources carrying the
          annotation through the same javac that runs the processor. -->
     <dependency>

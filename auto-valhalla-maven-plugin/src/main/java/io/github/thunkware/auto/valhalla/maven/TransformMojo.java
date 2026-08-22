@@ -42,9 +42,8 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
  * other classes exist when the value classes are compiled; those other classes
  * are linked from {@code target/classes}, which is on the javac classpath.
  *
- * <p>Running Maven on a JDK older than 28 does not fail the build: the goal
- * logs a warning and leaves the classes as identity classes, mirroring the
- * javaagent's behavior on an unsupported JVM.
+ * <p>Maven may run on JDK 8 through 27 when {@code JAVA28_HOME} points to a
+ * JDK 28 installation. It may also run directly on JDK 28.
  *
  * <p>Selection and failure handling mirror the agent:
  * <ul>
@@ -57,106 +56,135 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
         requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class TransformMojo extends AbstractMojo {
 
-    /** Minimum Java feature version that can compile value classes. */
-    static final int MIN_JDK = 28;
+    /**
+     * Minimum Java feature version that can compile value classes.
+     */
+    static final int MIN_VALHALLA_JDK = 28;
 
-    /** Skip the transformation entirely. */
+    static final int MIN_MAVEN_JDK = 8;
+
+    /**
+     * Skip the transformation entirely.
+     */
     @Parameter(defaultValue = "false", property = "auto-valhalla.skip")
     private boolean skip;
 
-    /** Whether to fork the {@code javac} executable (the default) or compile
-     *  in-process through the {@code javax.tools.JavaCompiler} API. When
-     *  false, the {@code javac} executable override is ignored and the JDK
-     *  running Maven does the compiling. */
+    /**
+     * Whether to fork the {@code javac} executable (the default) or compile
+     * in-process through the {@code javax.tools.JavaCompiler} API. When
+     * false, the {@code javac} executable override is ignored and the JDK
+     * running Maven does the compiling.
+     */
     @Parameter(defaultValue = "true", property = "auto-valhalla.fork")
     private boolean fork;
 
-    /** Whether to skip the annotation-processor selection pass and reuse the
-     *  generated dir from a previous run (e.g. a prior {@code process-sources}
-     *  execution or manually generated sources under
-     *  {@code target/auto-valhalla-generated-sources/selected}); only what that manifest
-     *  lists is compiled. */
+    /**
+     * Whether to skip the annotation-processor selection pass and reuse the
+     * generated dir from a previous run (e.g. a prior {@code process-sources}
+     * execution or manually generated sources under
+     * {@code target/auto-valhalla-generated-sources/selected}); only what that manifest
+     * lists is compiled.
+     */
     @Parameter(defaultValue = "false", property = "auto-valhalla.skipProcessor")
     private boolean skipProcessor;
 
-    /** The compiled classes directory; the versioned value classes are written
-     *  under {@code META-INF/versions/<versionDirectory>} here. */
+    /**
+     * The compiled classes directory; the versioned value classes are written
+     * under {@code META-INF/versions/<versionDirectory>} here.
+     */
     @Parameter(defaultValue = "${project.build.outputDirectory}", readonly = true, required = true)
     private File outputDirectory;
 
-    /** Maven's {@code target} directory, used for the generated dir. */
+    /**
+     * Maven's {@code target} directory, used for the generated dir.
+     */
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
     private File buildDirectory;
 
-    /** The multi-release version directory ({@code META-INF/versions/<N>}) that
-     *  receives the value-class variants. Must be at least 28, and not higher
-     *  than the JDK running Maven: it becomes the compiler's {@code --release}. */
-    @Parameter(defaultValue = "28", property = "auto-valhalla.version")
-    private int versionDirectory;
-
-    /** Fail the build when an annotation-selected class cannot be compiled as a
-     *  value class. Mirrors the agent's {@code annotation.rejected}/
-     *  {@code annotation.fail} defaulting to {@code fatal}. */
+    /**
+     * Fail the build when an annotation-selected class cannot be compiled as a
+     * value class. Mirrors the agent's {@code annotation.rejected}/
+     * {@code annotation.fail} defaulting to {@code fatal}.
+     */
     @Parameter(defaultValue = "true")
     private boolean failOnAnnotationFailure;
 
-    /** Override for the JDK compiler executable. When not set, the compiler
-     *  comes from the {@code java<versionDirectory>.home} system property or
-     *  the {@code JAVA<versionDirectory>_HOME} environment variable if either
-     *  is defined; otherwise from the lowest defined {@code java<N>.home} /
-     *  {@code JAVA<N>_HOME} with N &gt;= 28; it falls back to
-     *  {@code <java.home>/bin/javac}. */
+    /**
+     * Override for the JDK compiler executable. When Maven runs on JDK 8
+     * through 27, {@code JAVA28_HOME} must point to the JDK 28 compiler; on
+     * JDK 28, the running JDK compiler is used by default.
+     */
     @Parameter(property = "auto-valhalla.javac")
     private String javac;
 
-    /** Character encoding for source compilation. Defaults to
-     *  {@code ${project.build.sourceEncoding}} or UTF-8. */
+    /**
+     * Character encoding for source compilation. Defaults to
+     * {@code ${project.build.sourceEncoding}} or UTF-8.
+     */
     @Parameter(property = "auto-valhalla.encoding", defaultValue = "${project.build.sourceEncoding}")
     private String encoding;
 
-    /** Whether to generate metadata for reflection on method parameters
-     *  ({@code -parameters}). If not explicitly specified, inherits from
-     *  {@code maven-compiler-plugin} if configured there. */
+    /**
+     * Whether to generate metadata for reflection on method parameters
+     * ({@code -parameters}). If not explicitly specified, inherits from
+     * {@code maven-compiler-plugin} if configured there.
+     */
     @Parameter(property = "auto-valhalla.parameters")
     private Boolean parameters;
 
-    /** Whether to include debugging information in the compiled class files
-     *  ({@code -g} or {@code -g:none}). If not explicitly specified, inherits
-     *  from {@code maven-compiler-plugin}. */
+    /**
+     * Whether to include debugging information in the compiled class files
+     * ({@code -g} or {@code -g:none}). If not explicitly specified, inherits
+     * from {@code maven-compiler-plugin}.
+     */
     @Parameter(property = "auto-valhalla.debug")
     private Boolean debug;
 
-    /** Keyword list to be appended to the {@code -g} command-line switch
-     *  (e.g. {@code lines,vars,source}). */
+    /**
+     * Keyword list to be appended to the {@code -g} command-line switch
+     * (e.g. {@code lines,vars,source}).
+     */
     @Parameter(property = "auto-valhalla.debuglevel")
     private String debuglevel;
 
-    /** Whether to show or suppress compiler warnings ({@code -nowarn} when false). */
+    /**
+     * Whether to show or suppress compiler warnings ({@code -nowarn} when false).
+     */
     @Parameter(property = "auto-valhalla.showWarnings")
     private Boolean showWarnings;
 
-    /** Whether to show deprecation warnings ({@code -deprecation} when true). */
+    /**
+     * Whether to show deprecation warnings ({@code -deprecation} when true).
+     */
     @Parameter(property = "auto-valhalla.showDeprecation")
     private Boolean showDeprecation;
 
-    /** A list of additional compiler arguments to pass to javac (e.g.
-     *  {@code <compilerArgs><arg>-parameters</arg></compilerArgs>}). */
+    /**
+     * A list of additional compiler arguments to pass to javac (e.g.
+     * {@code <compilerArgs><arg>-parameters</arg></compilerArgs>}).
+     */
     @Parameter
     private List<String> compilerArgs;
 
-    /** A single additional compiler argument to pass to javac. */
+    /**
+     * A single additional compiler argument to pass to javac.
+     */
     @Parameter(property = "auto-valhalla.compilerArgument")
     private String compilerArgument;
 
-    /** Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}). */
+    /**
+     * Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}).
+     */
     @Parameter(alias = "compiler")
     private CompilerConfiguration mavenCompiler;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
-    /** The current Maven session, so the jar-plugin version check runs at
-     *  most once per Maven run across all modules and goals. */
+    /**
+     * The current Maven session, so the jar-plugin version check runs at
+     * most once per Maven run across all modules and goals.
+     */
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     private MavenSession session;
 
@@ -167,24 +195,7 @@ public class TransformMojo extends AbstractMojo {
             return;
         }
         JarPluginCheck.checkOnce(session, project, getLog());
-        int feature = jdkFeature();
-        if (feature < MIN_JDK) {
-            getLog().warn("auto-valhalla: running on Java " + feature
-                    + "; Project Valhalla requires JDK " + MIN_JDK
-                    + "+. Skipping transformation, classes remain identity classes.");
-            return;
-        }
-//        if (versionDirectory < MIN_JDK) {
-//            throw new MojoFailureException("auto-valhalla: versionDirectory must be at least "
-//                    + MIN_JDK + " (a multi-release version directory below the class-file "
-//                    + "feature version is rejected by the JVM); got " + versionDirectory);
-//        }
-        if (versionDirectory > feature) {
-            throw new MojoFailureException("auto-valhalla: versionDirectory " + versionDirectory
-                    + " is higher than the JDK running Maven (" + feature
-                    + "); javac cannot emit class files newer than the compiler. Set "
-                    + "auto-valhalla.version to at most " + feature + ".");
-        }
+        JdkVersion.validate();
         List<String> compileClasspath;
         try {
             compileClasspath = project.getCompileClasspathElements();
@@ -192,33 +203,35 @@ public class TransformMojo extends AbstractMojo {
             throw new MojoExecutionException("auto-valhalla: could not resolve the project's "
                     + "compile classpath for javac: " + e.getMessage(), e);
         }
+
+
+        String processorPath = AutoValhallaProcessor.processorPath();
+        if (processorPath == null) {
+            throw new MojoExecutionException("auto-valhalla: could not locate the "
+                    + "auto-valhalla-processor jar for javac's -processorpath");
+        }
+        String resolvedEncoding = resolveEncoding();
+        List<String> extraCompilerArgs = resolveCompilerArgs();
+        Input input = Input.builder()
+                .sourceRoots(project.getCompileSourceRoots())
+                .outputDirectory(outputDirectory)
+                .buildDirectory(buildDirectory)
+                .javac(javacExecutable())
+                .processorPath(processorPath)
+                .compileClasspath(compileClasspath)
+                .encoding(resolvedEncoding)
+                .compilerArgs(extraCompilerArgs)
+                .fork(fork)
+                .skipProcessor(skipProcessor)
+                .build();
         Result result;
         try {
-            String processorPath = AutoValhallaProcessor.processorPath();
-            if (processorPath == null) {
-                throw new MojoExecutionException("auto-valhalla: could not locate the "
-                        + "auto-valhalla-processor jar for javac's -processorpath");
-            }
-            String resolvedEncoding = resolveEncoding();
-            List<String> extraCompilerArgs = resolveCompilerArgs();
-            result = AutoValhallaSourceTransformer.transform(
-                    Input.builder()
-                            .sourceRoots(project.getCompileSourceRoots())
-                            .versionDirectory(versionDirectory)
-                            .outputDirectory(outputDirectory)
-                            .buildDirectory(buildDirectory)
-                            .javac(javacExecutable())
-                            .processorPath(processorPath)
-                            .compileClasspath(compileClasspath)
-                            .encoding(resolvedEncoding)
-                            .compilerArgs(extraCompilerArgs)
-                            .fork(fork)
-                            .skipProcessor(skipProcessor)
-                            .build());
+            result = AutoValhallaSourceTransformer.transform(input);
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the source-level "
                     + "transformation: " + e.getMessage(), e);
         }
+
         for (String failure : result.annotationFailures()) {
             getLog().error("auto-valhalla: " + failure
                     + "; leaving as an identity class");
@@ -230,7 +243,7 @@ public class TransformMojo extends AbstractMojo {
         }
         if (result.convertedCount() > 0) {
             getLog().info("auto-valhalla: compiled " + result.convertedCount()
-                    + " class(es) into value classes under META-INF/versions/" + versionDirectory);
+                    + " class(es) into value classes under META-INF/versions/" + MIN_VALHALLA_JDK);
         } else {
             getLog().info("auto-valhalla: no classes converted into value classes");
         }
@@ -472,11 +485,13 @@ public class TransformMojo extends AbstractMojo {
     }
 
     private String javacExecutable() {
-        return Javac.resolveExecutable(javac, versionDirectory);
+        return Javac.resolveExecutable(javac, MIN_VALHALLA_JDK);
     }
 
-    /** The Java feature version of the current JVM (28 for JDK 28), parsed from
-     *  the specification version so it works on every JDK. */
+    /**
+     * The Java feature version of the current JVM (28 for JDK 28), parsed from
+     * the specification version so it works on every JDK.
+     */
     static int jdkFeature() {
         String spec = System.getProperty("java.specification.version", "1.8");
         if (spec.startsWith("1.")) {

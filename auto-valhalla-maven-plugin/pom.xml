@@ -53,7 +53,7 @@
          plugin jar needs no JDK 28 classes of its own. -->
     <maven.compiler.release>8</maven.compiler.release>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
-    <java.base.jdk>28</java.base.jdk>
+    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -129,11 +129,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.6</version>
-        <configuration>
-          <!-- the test JVM must accept the preview-version value-class files
-               produced by the transformer tests -->
-          <argLine>--enable-preview</argLine>
-        </configuration>
       </plugin>
       <!-- Version and formatter config come from the root pom, which skips it
            everywhere else. -->

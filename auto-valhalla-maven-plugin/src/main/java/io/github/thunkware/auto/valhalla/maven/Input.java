@@ -15,7 +15,6 @@ import java.util.List;
 public final class Input {
 
     final List<String> sourceRoots;
-    final int versionDirectory;
     final File outputDirectory;
     final File buildDirectory;
     final String javac;
@@ -28,7 +27,6 @@ public final class Input {
 
     private Input(Builder builder) {
         this.sourceRoots = builder.sourceRoots;
-        this.versionDirectory = builder.versionDirectory;
         this.outputDirectory = builder.outputDirectory;
         this.buildDirectory = builder.buildDirectory;
         this.javac = builder.javac;
@@ -50,7 +48,6 @@ public final class Input {
     public static final class Builder {
 
         private List<String> sourceRoots;
-        private int versionDirectory = 28;
         private File outputDirectory;
         private File buildDirectory;
         private String javac;
@@ -66,15 +63,6 @@ public final class Input {
          */
         public Builder sourceRoots(List<String> sourceRoots) {
             this.sourceRoots = sourceRoots;
-            return this;
-        }
-
-        /**
-         * The multi-release version directory ({@code META-INF/versions/<N>});
-         * also the {@code --release} the value classes target.
-         */
-        public Builder versionDirectory(int versionDirectory) {
-            this.versionDirectory = versionDirectory;
             return this;
         }
 

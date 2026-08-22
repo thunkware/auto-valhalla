@@ -85,7 +85,7 @@ All parameters are optional:
 | --- | --- | --- | --- |
 | `versionDirectory` | `auto-valhalla.version` | `28` | the multi-release version directory, also the javac `--release` |
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
-| `javac` | `auto-valhalla.javac` | `java28.home`/`JAVA28_HOME`, else `<java.home>/bin/javac` | override the JDK compiler executable; without it, the `java<version>.home` system property or `JAVA<version>_HOME` environment variable matching `versionDirectory` is used when defined (e.g. `java29.home`/`JAVA29_HOME` when `auto-valhalla.version=29`) |
+| `javac` | `auto-valhalla.javac` | `JAVA28_HOME/bin/javac` on JDK 8–27, else `<java.home>/bin/javac` on JDK 28 | override the JDK compiler executable; Maven may run on JDK 8 through 27 only when `JAVA28_HOME` points to JDK 28 |
 | `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
 | `skipProcessor` | `auto-valhalla.skipProcessor` | `false` | (`transform` only) skip the annotation-processor pass and compile the generated dir left by a previous `process-sources` run (or generated manually under `target/auto-valhalla-generated-sources/selected`) |
 | `skip` | `auto-valhalla.skip` | `false` | skip both goals |

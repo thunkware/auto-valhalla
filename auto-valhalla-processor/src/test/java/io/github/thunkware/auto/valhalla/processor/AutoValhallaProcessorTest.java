@@ -5,14 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,7 +34,15 @@ class AutoValhallaProcessorTest {
 
     @BeforeAll
     static void locateJdk() {
-        javacPath = new File(System.getProperty("java.home"), "bin/javac").getAbsolutePath();
+        String configuredHome = System.getenv("JAVA28_HOME");
+        File javaHome = configuredHome == null || configuredHome.trim().isEmpty()
+                ? new File(System.getProperty("java.home"))
+                : new File(configuredHome);
+        File javac = new File(javaHome, "bin/javac");
+        if (!javac.isFile()) {
+            javac = new File(javaHome, "../bin/javac");
+        }
+        javacPath = javac.getAbsoluteFile().getAbsolutePath();
         apiJar = io.github.thunkware.auto.valhalla.api.AutoValhalla.class
                 .getProtectionDomain().getCodeSource().getLocation().getPath();
         processorPath = AutoValhallaProcessor.processorPath();
@@ -43,7 +54,8 @@ class AutoValhallaProcessorTest {
     @Test
     void processorPathIsLoadableLocation() {
         assertNotNull(processorPath, "processorPath must be resolvable from the classpath");
-        assertTrue(Files.exists(Path.of(processorPath)), "processor path must exist: " + processorPath);
+        assertTrue(Files.exists(Paths.get(processorPath)),
+                "processor path must exist: " + processorPath);
     }
 
     @Test
@@ -90,98 +102,92 @@ class AutoValhallaProcessorTest {
         ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("""
-                GENERATED fixture.Pair fixture/Pair.java
-                GENERATED fixture.Side fixture/Pair.java
-                """, manifest(out));
+        assertEquals("GENERATED fixture.Pair fixture/Pair.java\n"
+                + "GENERATED fixture.Side fixture/Pair.java\n", manifest(out));
         assertSource(out.resolve("fixture/Pair.java"), "public final value class Pair");
         assertSource(out.resolve("fixture/Pair.java"), "final value class Side");
     }
 
     // -- fixture sources -----------------------------------------------------
 
-    private static final String POINT = """
-            package fixture;
+    private static final String POINT =
+            "package fixture;\n"
+                    + "\n"
+                    + "import io.github.thunkware.auto.valhalla.api.AutoValhalla;\n"
+                    + "\n"
+                    + "/** Suitable identity class fixture: final class, final fields. */\n"
+                    + "@AutoValhalla\n"
+                    + "public final class Point {\n"
+                    + "\n"
+                    + "    public final int x;\n"
+                    + "    public final int y;\n"
+                    + "\n"
+                    + "    public Point(int x, int y) {\n"
+                    + "        this.x = x;\n"
+                    + "        this.y = y;\n"
+                    + "    }\n"
+                    + "\n"
+                    + "    @Override\n"
+                    + "    public String toString() {\n"
+                    + "        return \"Point(\" + x + \", \" + y + \")\";\n"
+                    + "    }\n"
+                    + "}\n";
 
-            import io.github.thunkware.auto.valhalla.api.AutoValhalla;
+    private static final String SHADE =
+            "package fixture;\n"
+                    + "\n"
+                    + "/** Suitable value-class candidate, but not annotated: the processor\n"
+                    + " *  selects {@code @AutoValhalla} classes only, so this is never\n"
+                    + " *  generated. */\n"
+                    + "public final class Shade {\n"
+                    + "\n"
+                    + "    public final int r;\n"
+                    + "    public final int g;\n"
+                    + "    public final int b;\n"
+                    + "\n"
+                    + "    public Shade(int r, int g, int b) {\n"
+                    + "        this.r = r;\n"
+                    + "        this.g = g;\n"
+                    + "        this.b = b;\n"
+                    + "    }\n"
+                    + "}\n";
 
-            /** Suitable identity class fixture: final class, final fields. */
-            @AutoValhalla
-            public final class Point {
+    private static final String RECORD =
+            "package fixture;\n"
+                    + "\n"
+                    + "import io.github.thunkware.auto.valhalla.api.AutoValhalla;\n"
+                    + "\n"
+                    + "/** A record selected by annotation. */\n"
+                    + "@AutoValhalla\n"
+                    + "public record R(int a) {\n"
+                    + "}\n";
 
-                public final int x;
-                public final int y;
-
-                public Point(int x, int y) {
-                    this.x = x;
-                    this.y = y;
-                }
-
-                @Override
-                public String toString() {
-                    return "Point(" + x + ", " + y + ")";
-                }
-            }
-            """;
-
-    private static final String SHADE = """
-            package fixture;
-
-            /** Suitable value-class candidate, but not annotated: the processor
-             *  selects {@code @AutoValhalla} classes only, so this is never
-             *  generated. */
-            public final class Shade {
-
-                public final int r;
-                public final int g;
-                public final int b;
-
-                public Shade(int r, int g, int b) {
-                    this.r = r;
-                    this.g = g;
-                    this.b = b;
-                }
-            }
-            """;
-
-    private static final String RECORD = """
-            package fixture;
-
-            import io.github.thunkware.auto.valhalla.api.AutoValhalla;
-
-            /** A record selected by annotation. */
-            @AutoValhalla
-            public record R(int a) {
-            }
-            """;
-
-    private static final String PAIR = """
-            package fixture;
-
-            import io.github.thunkware.auto.valhalla.api.AutoValhalla;
-
-            /** Two annotated top-level types in one file share one generated copy. */
-            @AutoValhalla
-            public final class Pair {
-
-                public final int a;
-
-                public Pair(int a) {
-                    this.a = a;
-                }
-            }
-
-            /** Same file, also annotated. */
-            @AutoValhalla
-            final class Side {
-
-                final int b;
-
-                Side(int b) {
-                    this.b = b;
-                }
-            }
-            """;
+    private static final String PAIR =
+            "package fixture;\n"
+                    + "\n"
+                    + "import io.github.thunkware.auto.valhalla.api.AutoValhalla;\n"
+                    + "\n"
+                    + "/** Two annotated top-level types in one file share one generated copy. */\n"
+                    + "@AutoValhalla\n"
+                    + "public final class Pair {\n"
+                    + "\n"
+                    + "    public final int a;\n"
+                    + "\n"
+                    + "    public Pair(int a) {\n"
+                    + "        this.a = a;\n"
+                    + "    }\n"
+                    + "}\n"
+                    + "\n"
+                    + "/** Same file, also annotated. */\n"
+                    + "@AutoValhalla\n"
+                    + "final class Side {\n"
+                    + "\n"
+                    + "    final int b;\n"
+                    + "\n"
+                    + "    Side(int b) {\n"
+                    + "        this.b = b;\n"
+                    + "    }\n"
+                    + "}\n";
 
     // -- helpers --------------------------------------------------------------
 
@@ -218,7 +224,7 @@ class AutoValhallaProcessorTest {
         command.add("-encoding");
         command.add("UTF-8");
         command.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + out.toAbsolutePath());
-        try (var files = Files.walk(srcRoot)) {
+        try (Stream<Path> files = Files.walk(srcRoot)) {
             files.filter(p -> p.toString().endsWith(".java"))
                     .sorted()
                     .forEach(p -> command.add(p.toAbsolutePath().toString()));
@@ -239,7 +245,7 @@ class AutoValhallaProcessorTest {
         command.add(apiJar);
         command.add("-d");
         command.add(classes.toAbsolutePath().toString());
-        try (var files = Files.walk(out)) {
+        try (Stream<Path> files = Files.walk(out)) {
             files.filter(p -> p.toString().endsWith(".java"))
                     .sorted()
                     .forEach(p -> command.add(p.toAbsolutePath().toString()));

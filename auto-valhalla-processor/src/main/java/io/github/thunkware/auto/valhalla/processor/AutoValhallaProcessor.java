@@ -6,10 +6,13 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,8 +63,9 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             return null;
         }
         try {
-            return Path.of(AutoValhallaProcessor.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI()).toFile().getAbsolutePath();
+            URI uri = AutoValhallaProcessor.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI();
+            return Paths.get(uri).toFile().getAbsolutePath();
         } catch (Exception e) {
             return null;
         }
@@ -75,12 +79,12 @@ public class AutoValhallaProcessor extends AbstractProcessor {
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return Set.of("*");
+        return Collections.singleton("*");
     }
 
     @Override
     public Set<String> getSupportedOptions() {
-        return Set.of(OPT_OUTDIR);
+        return Collections.singleton(OPT_OUTDIR);
     }
 
     @Override
@@ -104,7 +108,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             return false;
         }
         List<String> report = new ArrayList<>();
-        Path out = Path.of(outdir.trim());
+        Path out = Paths.get(outdir.trim());
 
         Trees trees = Trees.instance(processingEnv);
         Map<CompilationUnitTree, List<Selected>> byUnit = new LinkedHashMap<>();
@@ -231,7 +235,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         }
         TypeElement type = (TypeElement) root;
         ElementKind kind = type.getKind();
-        if (kind != ElementKind.CLASS && kind != ElementKind.RECORD) {
+        if (kind != ElementKind.CLASS && !kind.name().equals("RECORD")) {
             return null;
         }
         if (type.getEnclosingElement().getKind() != ElementKind.PACKAGE) {

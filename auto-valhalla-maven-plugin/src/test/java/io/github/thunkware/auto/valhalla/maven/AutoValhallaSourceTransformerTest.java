@@ -51,7 +51,6 @@ class AutoValhallaSourceTransformerTest {
         Result result = AutoValhallaSourceTransformer.transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
-                        .versionDirectory(28)
                         .outputDirectory(classes.toFile())
                         .buildDirectory(target.toFile())
                         .javac(javacPath)
@@ -93,7 +92,6 @@ class AutoValhallaSourceTransformerTest {
         Result result = AutoValhallaSourceTransformer.transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
-                        .versionDirectory(28)
                         .outputDirectory(classes.toFile())
                         .buildDirectory(target.toFile())
                         .javac(javacPath)
@@ -122,7 +120,6 @@ class AutoValhallaSourceTransformerTest {
         Result result = AutoValhallaSourceTransformer.transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
-                        .versionDirectory(28)
                         .outputDirectory(classes.toFile())
                         .buildDirectory(target.toFile())
                         .javac(javacPath)
@@ -164,7 +161,6 @@ class AutoValhallaSourceTransformerTest {
         Result result = AutoValhallaSourceTransformer.transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
-                        .versionDirectory(28)
                         .outputDirectory(classes.toFile())
                         .buildDirectory(target.toFile())
                         .javac(javacPath)
