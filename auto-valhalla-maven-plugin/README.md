@@ -51,7 +51,7 @@ java --enable-preview -jar myapp.jar
 | Goal | Default phase | Description |
 | --- | --- | --- |
 | `transform` | `process-classes` | Runs the `auto-valhalla-processor` (via `javac -proc:only`) over the project's sources, selects the `@AutoValhalla` classes, and compiles the generated `value class`/`value record` copies with `javac --release 28 --enable-preview`, writing them under `META-INF/versions/28`. |
-| `process-sources` | `process-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and generates their copies under `target/auto-valhalla-generated-sources/selected` (with a `selection.txt` manifest). Nothing is compiled and nothing is written to the output directory — useful to inspect or post-process what would be transformed. |
+| `process-sources` | `process-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and generates their copies under `target/auto-valhalla-generated-sources`. Nothing is compiled and nothing is written to the output directory — useful to inspect or post-process what would be transformed. |
 | `jar` | `package` | Adds `Multi-Release: true` to the jar manifest so the JVM serves the value variants on JDK 28+ and the identity classes on older JDKs. |
 
 ## How it works
@@ -87,7 +87,7 @@ All parameters are optional:
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
 | `javac` | `auto-valhalla.javac` | `JAVA28_HOME/bin/javac` on JDK 8–27, else `<java.home>/bin/javac` on JDK 28 | override the JDK compiler executable; Maven may run on JDK 8 through 27 only when `JAVA28_HOME` points to JDK 28 |
 | `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
-| `skipProcessor` | `auto-valhalla.skipProcessor` | `false` | (`transform` only) skip the annotation-processor pass and compile the generated dir left by a previous `process-sources` run (or generated manually under `target/auto-valhalla-generated-sources/selected`) |
+| `skipProcessor` | `auto-valhalla.skipProcessor` | `false` | (`transform` only) skip the annotation-processor pass and compile the generated dir left by a previous `process-sources` run (or generated manually under `target/auto-valhalla-generated-sources`) |
 | `skip` | `auto-valhalla.skip` | `false` | skip both goals |
 | `encoding` | `auto-valhalla.encoding` | `${project.build.sourceEncoding}` | character encoding for source compilation |
 | `parameters` | `auto-valhalla.parameters` | inherited | generate metadata for reflection on method parameters (`-parameters`) |

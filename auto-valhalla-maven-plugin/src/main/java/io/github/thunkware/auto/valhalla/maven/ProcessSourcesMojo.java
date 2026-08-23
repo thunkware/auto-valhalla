@@ -1,10 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -17,14 +13,18 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
+import javax.inject.Inject;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
 /**
  * Runs only the {@code auto-valhalla} annotation processor: a
  * {@code javac -proc:only} selection pass over the project's source roots that
  * selects the {@code @AutoValhalla}-annotated top-level types and generates
  * generated copies of their source files (with {@code value class}/
  * {@code value record}) under
- * {@code <buildDirectory>/auto-valhalla-generated-sources/selected}, together with the
- * {@code selection.txt} manifest.
+ * {@code <buildDirectory>/auto-valhalla-generated-sources}.
  *
  * <p>Unlike the {@code transform} goal, nothing is compiled and nothing is
  * written under the project's output directory, so this goal is useful to
@@ -47,8 +47,7 @@ public class ProcessSourcesMojo extends AbstractMojo {
     private boolean skip;
 
     /**
-     * Maven's {@code target} directory, used for the generated dir that
-     * receives the generated sources and the selection manifest.
+     * Maven's {@code target} directory, used for the generated sources.
      */
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
     private File buildDirectory;

@@ -23,7 +23,7 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * End-to-end test of the processor's {@code javac -proc:only} selection pass:
  * fixture sources are written to a temp project, the processor generates the
- * selected types, and the emitted sources and {@code selection.txt} manifest
+ * selected types and emitted sources
  * are checked.
  */
 class AutoValhallaProcessorTest {
@@ -68,7 +68,6 @@ class AutoValhallaProcessorTest {
         ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("GENERATED fixture.Point fixture/Point.java\n", manifest(out));
         assertSource(out.resolve("fixture/Point.java"), "public final value class Point");
         assertFalse(Files.exists(out.resolve("fixture/Shade.java")),
                 "an unannotated class must not be generated");
@@ -90,7 +89,6 @@ class AutoValhallaProcessorTest {
         ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("GENERATED fixture.R fixture/R.java\n", manifest(out));
         assertSource(out.resolve("fixture/R.java"), "public value record R(int a)");
     }
 
@@ -102,8 +100,6 @@ class AutoValhallaProcessorTest {
         ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
-        assertEquals("GENERATED fixture.Pair fixture/Pair.java\n"
-                + "GENERATED fixture.Side fixture/Pair.java\n", manifest(out));
         assertSource(out.resolve("fixture/Pair.java"), "public final value class Pair");
         assertSource(out.resolve("fixture/Pair.java"), "final value class Side");
     }
@@ -204,13 +200,6 @@ class AutoValhallaProcessorTest {
         String source = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
         assertTrue(source.contains(expected),
                 "expected source to contain [" + expected + "] but was:\n" + source);
-    }
-
-    private static String manifest(Path out) throws Exception {
-        Path manifest = out.resolve(AutoValhallaProcessor.SELECTION_FILE);
-        return Files.exists(manifest)
-                ? new String(Files.readAllBytes(manifest), StandardCharsets.UTF_8)
-                : "";
     }
 
     private static ProcessResult runPass(Path srcRoot, Path out) throws Exception {

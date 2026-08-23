@@ -1,19 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
-
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import javax.inject.Inject;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -25,6 +12,20 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+
+import javax.inject.Inject;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Turns {@code @AutoValhalla}-annotated classes into JEP 401 value classes at
@@ -75,10 +76,9 @@ public class TransformMojo extends AbstractMojo {
      * Whether to skip the annotation-processor selection pass and reuse the
      * generated dir from a previous run (e.g. a prior {@code process-sources}
      * execution or manually generated sources under
-     * {@code target/auto-valhalla-generated-sources/selected}); only what that manifest
-     * lists is compiled.
+     * {@code target/auto-valhalla-generated-sources}).
      */
-    @Parameter(defaultValue = "false", property = "auto-valhalla.skipProcessor")
+    @Parameter(defaultValue = "true", property = "auto-valhalla.skipProcessor")
     private boolean skipProcessor;
 
     /**

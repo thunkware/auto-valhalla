@@ -2,8 +2,6 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
-import org.apache.maven.plugin.logging.Log;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+import org.apache.maven.plugin.logging.Log;
 
 /**
  * Runs the {@code auto-valhalla} annotation processor as a standalone
@@ -18,9 +17,7 @@ import java.util.stream.Stream;
  * For every top-level {@code class}/{@code record} annotated with
  * {@code @AutoValhalla}, the processor writes a generated copy of the source
  * file (with {@code value class}/{@code value record}) under the generated dir
- * ({@code <buildDirectory>/auto-valhalla-generated-sources/selected}), together with the
- * {@code selection.txt} manifest that this runner parses into its
- * {@link Selection} outcome.
+ * ({@code <buildDirectory>/auto-valhalla-generated-sources}).
  *
  * <p>A failed pass maps to an {@link IOException} that fails the build: the
  * processor only exits non-zero when it reported a real problem (e.g. an I/O
@@ -43,16 +40,14 @@ public final class AnnotationProcessorRunner {
     /**
      * Runs the selection pass over the input's source roots: the generated dir
      * is recreated, the processor selects the {@code @AutoValhalla}-annotated
-     * top-level types and generates their copies, and the selection
-     * manifest is parsed into the returned {@link Selection}. Nothing is
+     * top-level types and generates their copies, and the generated source
+     * files are collected into the returned {@link Selection}. Nothing is
      * compiled and nothing is written under an output directory; the
      * {@code versionDirectory}, {@code outputDirectory} and
      * {@code compilerArgs} input fields are ignored.
      *
      * <p>With {@code skipProcessor} set, the generated dir is not touched and
-     * no pass runs: the manifest left by a previous run (e.g. a prior
-     * {@code process-sources} execution) is parsed as-is, which fails when it
-     * does not exist.
+     * no pass runs: generated files left by a previous run are reused.
      *
      * @param input the run inputs (source roots, build directory, javac,
      *              processor path, compile classpath, encoding)
@@ -63,7 +58,7 @@ public final class AnnotationProcessorRunner {
 
         Selection selection = new Selection(generatedDir);
         if (input.skipProcessor) {
-            parseManifest(readManifest(generatedDir), selection);
+            collectGeneratedFiles(generatedDir, selection);
             return selection;
         }
 
@@ -77,8 +72,7 @@ public final class AnnotationProcessorRunner {
         }
 
         runPass(input, sources, input.encoding, generatedDir);
-
-        parseManifest(readManifest(generatedDir), selection);
+        collectGeneratedFiles(generatedDir, selection);
         return selection;
     }
 
@@ -124,84 +118,17 @@ public final class AnnotationProcessorRunner {
         }
     }
 
-    private static void parseManifest(List<String> lines, Selection selection) {
-        for (String line : lines) {
-            Generated generated = parseGenerated(line);
-            if (generated != null) {
-                selection.selectedTypes.add(generated.qname);
-                selection.generatedFiles.computeIfAbsent(generated.rel, k -> new ArrayList<>())
-                        .add(generated);
-                continue;
-            }
-            SelectionFailure failure = parseFailure(line);
-            if (failure != null) {
-                selection.failures.add(failure.qname + ": " + failure.reason);
-            }
-        }
-    }
-
-    // -- selection manifest ------------------------------------------------
-
-    private static List<String> readManifest(File selected) throws IOException {
-        Path manifest = selected.toPath().resolve(AutoValhallaProcessor.SELECTION_FILE);
-        if (!Files.exists(manifest)) {
-            throw new IOException("the auto-valhalla selection pass produced no "
-                    + AutoValhallaProcessor.SELECTION_FILE + " manifest at " + manifest);
-        }
-        List<String> lines = new ArrayList<>(Files.readAllLines(manifest));
-        lines.removeIf(line -> line.trim().isEmpty());
-        return lines;
-    }
-
-    private static Generated parseGenerated(String line) {
-        List<String> tokens = tokens(line);
-        if (tokens.size() < 3 || !"GENERATED".equals(tokens.get(0))) {
-            return null;
-        }
-        return new Generated(tokens.get(1), tokens.get(2));
-    }
-
-    private static SelectionFailure parseFailure(String line) {
-        List<String> tokens = tokens(line);
-        if (tokens.size() < 3 || !"FAIL".equals(tokens.get(0))) {
-            return null;
-        }
-        int space = line.indexOf(' ');
-        int second = line.indexOf(' ', space + 1);
-        return new SelectionFailure(tokens.get(1),
-                second < 0 ? "" : line.substring(second + 1));
-    }
-
-    private static List<String> tokens(String line) {
-        List<String> tokens = new ArrayList<>();
-        int i = 0;
-        while (i < line.length()) {
-            while (i < line.length() && Character.isWhitespace(line.charAt(i))) {
-                i++;
-            }
-            int start = i;
-            while (i < line.length() && !Character.isWhitespace(line.charAt(i))) {
-                i++;
-            }
-            if (i > start) {
-                tokens.add(line.substring(start, i));
-            }
-        }
-        return tokens;
-    }
-
-    /**
-     * A {@code FAIL} manifest line: a selected type the processor could not
-     * generate.
-     */
-    private static final class SelectionFailure {
-
-        private final String qname;
-        private final String reason;
-
-        private SelectionFailure(String qname, String reason) {
-            this.qname = qname;
-            this.reason = reason;
+    private static void collectGeneratedFiles(File generatedDir, Selection selection)
+            throws IOException {
+        try (Stream<Path> stream = Files.walk(generatedDir.toPath())) {
+            stream.filter(path -> path.toString().endsWith(".java"))
+                    .sorted()
+                    .forEach(path -> {
+                        String rel = generatedDir.toPath().relativize(path).toString();
+                        selection.selectedTypes.add(rel);
+                        selection.generatedFiles.computeIfAbsent(rel, k -> new ArrayList<>())
+                                .add(new Generated(rel, rel));
+                    });
         }
     }
 
@@ -228,20 +155,4 @@ public final class AnnotationProcessorRunner {
         return "module-info.java".equals(name) || "package-info.java".equals(name);
     }
 
-    private static void deleteRecursively(File dir) throws IOException {
-        if (dir == null || !dir.exists()) {
-            return;
-        }
-        File[] children = dir.listFiles();
-        if (children != null) {
-            for (File child : children) {
-                if (child.isDirectory()) {
-                    deleteRecursively(child);
-                } else {
-                    Files.delete(child.toPath());
-                }
-            }
-        }
-        Files.delete(dir.toPath());
-    }
 }

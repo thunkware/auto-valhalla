@@ -34,23 +34,17 @@ import javax.tools.Diagnostic.Kind;
  * generated copy of the source file in which the declaration keyword becomes
  * {@code value class}/{@code value record}.
  *
- * <p>Generated sources and a selection manifest ({@code selection.txt}) are
- * written under the directory given by the {@code -Aoutdir} option, preserving
+ * <p>Generated sources are written under the directory given by the
+ * {@code -Aoutdir} option, preserving
  * each file's package-relative layout so the plugin can compile them with
  * {@code javac --release <N> --enable-preview -proc:none} to produce the
  * versioned value-class files.
  *
- * <p>A manifest line is one of:
- * <ul>
- *   <li>{@code GENERATED <qname> <relPath>}</li>
- *   <li>{@code FAIL <qname> <reason>}</li>
- * </ul>
- * The plugin reads this manifest to report failures.
  */
 public class AutoValhallaProcessor extends AbstractProcessor {
 
     /** The {@code -A} option with the directory that receives the generated
-     *  sources and the {@code selection.txt} manifest. */
+     *  sources. */
     public static final String OPT_OUTDIR = "outdir";
 
     /** The absolute path of the location this class was loaded from (the jar or
@@ -70,9 +64,6 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             return null;
         }
     }
-
-    /** Name of the selection manifest written into the out directory. */
-    public static final String SELECTION_FILE = "selection.txt";
 
     private static final String ANNOTATION = "io.github.thunkware.auto.valhalla.api.AutoValhalla";
     private static final String ANNOTATION_SIMPLE = "AutoValhalla";
@@ -107,7 +98,6 @@ public class AutoValhallaProcessor extends AbstractProcessor {
                     "auto-valhalla processor requires the -A" + OPT_OUTDIR + " option");
             return false;
         }
-        List<String> report = new ArrayList<>();
         Path out = Paths.get(outdir.trim());
 
         Trees trees = Trees.instance(processingEnv);
@@ -126,7 +116,8 @@ public class AutoValhallaProcessor extends AbstractProcessor {
 
             TreePath path = trees.getPath(type);
             if (path == null || !(path.getLeaf() instanceof ClassTree)) {
-                report.add("FAIL " + qname + " no tree path");
+                processingEnv.getMessager().printMessage(
+                        Diagnostic.Kind.ERROR, "auto-valhalla: " + qname + ": no tree path");
                 continue;
             }
             byUnit.computeIfAbsent(path.getCompilationUnit(), k -> new ArrayList<>())
@@ -134,24 +125,15 @@ public class AutoValhallaProcessor extends AbstractProcessor {
                             (ClassTree) path.getLeaf()));
         }
         for (List<Selected> unit : byUnit.values()) {
-            generateUnit(trees, unit, out, report);
-        }
-        try {
-            Files.createDirectories(out);
-            String content = report.isEmpty() ? "" : String.join("\n", report) + "\n";
-            Files.write(out.resolve(SELECTION_FILE), content.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                    "auto-valhalla processor cannot write " + SELECTION_FILE + ": " + e);
+            generateUnit(trees, unit, out);
         }
         return false;
     }
 
     /** Generates every selected type of one compilation unit into a single generated
      *  copy: all {@code value} keywords are inserted before the file is written,
-     *  so several selected types in one file are all generated and one
-     *  {@code GENERATED} line is recorded per type. */
-    private void generateUnit(Trees trees, List<Selected> unit, Path out, List<String> report) {
+     *  so several selected types in one file are all generated. */
+    private void generateUnit(Trees trees, List<Selected> unit, Path out) {
         CompilationUnitTree compilationUnit = unit.get(0).unit;
         SourcePositions positions = trees.getSourcePositions();
         String source;
@@ -159,7 +141,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             source = compilationUnit.getSourceFile().getCharContent(true).toString();
         } catch (IOException e) {
             for (Selected selected : unit) {
-                failIo(selected, "cannot read source: " + e, report);
+                failIo(selected, "cannot read source: " + e);
             }
             return;
         }
@@ -191,11 +173,10 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             Files.write(target, generated.toString().getBytes(StandardCharsets.UTF_8));
             processingEnv.getMessager().printMessage(Kind.NOTE, "Writing " + target);
             for (Selected selected : unit) {
-                report.add("GENERATED " + selected.qname + " " + rel);
             }
         } catch (IOException e) {
             for (Selected selected : unit) {
-                failIo(selected, "cannot write " + rel + ": " + e, report);
+                failIo(selected, "cannot write " + rel + ": " + e);
             }
         }
     }
@@ -203,8 +184,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
     /** Records an I/O failure for a selected type in the manifest and raises a
      *  javac error so the {@code -proc:only} pass fails the build (an I/O
      *  problem is a tooling error, not a per-type rejection). */
-    private void failIo(Selected selected, String reason, List<String> report) {
-        report.add("FAIL " + selected.qname + " " + reason);
+    private void failIo(Selected selected, String reason) {
         processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                 "auto-valhalla processor: " + selected.qname + ": " + reason);
     }

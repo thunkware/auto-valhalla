@@ -5,8 +5,7 @@
 
 An annotation processor (`javac -processor`) that selects the top-level
 `@AutoValhalla` classes in a source tree and emits generated copies with
-`value class`/`value record` declarations, plus a `selection.txt` manifest
-describing what was selected.
+`value class`/`value record` declarations.
 
 The [auto-valhalla-maven-plugin](../auto-valhalla-maven-plugin) bundles this
 module as a dependency, runs it with `javac -proc:only`, and then compiles the
@@ -25,18 +24,10 @@ selects the ones annotated with `@AutoValhalla`:
 * `interface`/`enum`/`module-info`/`package-info` are never selected;
 * unannotated classes are never selected.
 
-For each selected type it writes an generated copy of its source file — with the
+For each selected type it writes a generated copy of its source file — with the
 `value` keyword inserted before the `class`/`record` keyword — under the output
 directory, preserving the package-relative layout. Several selected types in one
-file are all generated in a single copy. It then writes a `selection.txt` manifest
-with one line per selected type:
-
-```
-GENERATED <qname> <relPath>
-```
-
-(I/O failures during selection are reported as `FAIL <qname> <reason>`
-instead.)
+file share one generated copy.
 
 The processor never compiles anything. Turning the generated sources into value
 classes is the job of the enclosing build (the maven plugin) or your own javac
@@ -74,7 +65,7 @@ classes.
 
 | `-A` option | default | description                                                          |
 | --- | --- |----------------------------------------------------------------------|
-| `outdir` | (required) | directory that receives the generated sources and `selection.txt`      |
+| `outdir` | (required) | directory that receives the generated sources      |
 
 ## Prerequisites
 
