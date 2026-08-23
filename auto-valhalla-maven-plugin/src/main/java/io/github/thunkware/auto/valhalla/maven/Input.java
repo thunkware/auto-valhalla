@@ -10,10 +10,9 @@ import org.apache.maven.project.MavenProject;
  * The inputs of a run, shared by {@link AnnotationProcessorRunner#run(Input)}
  * and {@link AutoValhallaSourceTransformer#transform(Input)}. Built with the
  * fluent {@link Builder}: {@code Input.builder()...build()}. The source roots,
- * build directory, javac executable, processor path and compile classpath are
- * required; {@code encoding} defaults to UTF-8 and {@code compilerArgs} to
- * none. {@code outputDirectory} and the optional Maven compiler context are
- * only used by {@link AutoValhallaSourceTransformer#transform(Input)}.
+ * build directory, output directory, javac executable, processor path, compile
+ * classpath and Maven compiler context are required; {@code encoding} defaults
+ * to UTF-8 and {@code compilerArgs} to none.
  */
 public final class Input {
 
@@ -25,9 +24,7 @@ public final class Input {
     final List<String> compileClasspath;
     final String encoding;
     final List<String> compilerArgs;
-    final boolean fork;
     final boolean skipProcessor;
-    final boolean useMavenCompiler;
     final MavenSession session;
     final MavenProject project;
     final BuildPluginManager pluginManager;
@@ -41,9 +38,7 @@ public final class Input {
         this.compileClasspath = builder.compileClasspath;
         this.encoding = Utils.normalizeEncoding(builder.encoding);
         this.compilerArgs = builder.compilerArgs;
-        this.fork = builder.fork;
         this.skipProcessor = builder.skipProcessor;
-        this.useMavenCompiler = builder.useMavenCompiler;
         this.session = builder.session;
         this.project = builder.project;
         this.pluginManager = builder.pluginManager;
@@ -66,9 +61,7 @@ public final class Input {
         private List<String> compileClasspath;
         private String encoding = "UTF-8";
         private List<String> compilerArgs = java.util.Collections.emptyList();
-        private boolean fork = true;
         private boolean skipProcessor;
-        private boolean useMavenCompiler;
         private MavenSession session;
         private MavenProject project;
         private BuildPluginManager pluginManager;
@@ -141,28 +134,12 @@ public final class Input {
         }
 
         /**
-         * Whether to run javac as a forked process (the default) or
-         * in-process through the {@code javax.tools.JavaCompiler} API. When
-         * false, the {@code javac} executable override is ignored and the
-         * JDK running Maven does the compiling.
-         */
-        public Builder fork(boolean fork) {
-            this.fork = fork;
-            return this;
-        }
-
-        /**
          * Whether to skip the annotation-processor selection pass and reuse
          * the generated dir from a previous run; only meaningful for
          * {@link AutoValhallaSourceTransformer#transform(Input)}.
          */
         public Builder skipProcessor(boolean skipProcessor) {
             this.skipProcessor = skipProcessor;
-            return this;
-        }
-
-        public Builder useMavenCompiler(boolean useMavenCompiler) {
-            this.useMavenCompiler = useMavenCompiler;
             return this;
         }
 
@@ -197,8 +174,10 @@ public final class Input {
             if (compileClasspath == null) {
                 throw new IllegalStateException("compileClasspath is required");
             }
-            if (useMavenCompiler
-                    && (session == null || project == null || pluginManager == null)) {
+            if (outputDirectory == null) {
+                throw new IllegalStateException("outputDirectory is required");
+            }
+            if (session == null || project == null || pluginManager == null) {
                 throw new IllegalStateException("Maven compiler context is required");
             }
             return new Input(this);

@@ -58,7 +58,6 @@
       <groupId>com.perfma.wrapped</groupId>
       <artifactId>com.sun.tools</artifactId>
       <version>1.8.0_jdk8u275-b01_linux_x64</version>
-      <scope>provided</scope>
     </dependency>
 
     <!-- Only used by the tests, which compile fixture sources carrying the

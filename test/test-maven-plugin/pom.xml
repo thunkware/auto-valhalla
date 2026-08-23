@@ -71,7 +71,6 @@
         <artifactId>auto-valhalla-maven-plugin</artifactId>
         <version>${project.version}</version>
         <configuration>
-          <useMavenCompiler>true</useMavenCompiler>
         </configuration>
         <executions>
           <execution>

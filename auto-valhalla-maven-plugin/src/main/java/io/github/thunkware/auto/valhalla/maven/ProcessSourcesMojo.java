@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import javax.inject.Inject;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -46,15 +47,6 @@ public class ProcessSourcesMojo extends AbstractMojo {
     private boolean skip;
 
     /**
-     * Whether to fork the {@code javac} executable (the default) or run the
-     * selection pass in-process through the {@code javax.tools.JavaCompiler}
-     * API. When false, the {@code javac} executable override is ignored and
-     * the JDK running Maven does the compiling.
-     */
-    @Parameter(defaultValue = "true", property = "auto-valhalla.fork")
-    private boolean fork;
-
-    /**
      * Maven's {@code target} directory, used for the generated dir that
      * receives the generated sources and the selection manifest.
      */
@@ -87,13 +79,6 @@ public class ProcessSourcesMojo extends AbstractMojo {
     @Parameter(property = "auto-valhalla.encoding", defaultValue = "${project.build.sourceEncoding}")
     private String encoding;
 
-    /**
-     * Whether to run the selection pass through the consuming project's
-     * {@code maven-compiler-plugin} instead of the built-in javac runner.
-     */
-    @Parameter(defaultValue = "false", property = "auto-valhalla.useMavenCompiler")
-    private boolean useMavenCompiler;
-
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
@@ -116,7 +101,7 @@ public class ProcessSourcesMojo extends AbstractMojo {
         List<String> compileClasspath;
         try {
             compileClasspath = project.getCompileClasspathElements();
-        } catch (org.apache.maven.artifact.DependencyResolutionRequiredException e) {
+        } catch (DependencyResolutionRequiredException e) {
             throw new MojoExecutionException("auto-valhalla: could not resolve the project's "
                     + "compile classpath for javac: " + e.getMessage(), e);
         }
@@ -135,8 +120,6 @@ public class ProcessSourcesMojo extends AbstractMojo {
                     .processorPath(processorPath)
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())
-                    .fork(fork)
-                    .useMavenCompiler(useMavenCompiler)
                     .session(session)
                     .project(project)
                     .pluginManager(pluginManager)

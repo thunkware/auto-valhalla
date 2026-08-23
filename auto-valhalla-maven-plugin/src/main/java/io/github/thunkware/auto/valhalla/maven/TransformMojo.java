@@ -1,6 +1,19 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
+
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javax.inject.Inject;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -12,20 +25,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Turns {@code @AutoValhalla}-annotated classes into JEP 401 value classes at
@@ -71,15 +70,6 @@ public class TransformMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "false", property = "auto-valhalla.skip")
     private boolean skip;
-
-    /**
-     * Whether to fork the {@code javac} executable (the default) or compile
-     * in-process through the {@code javax.tools.JavaCompiler} API. When
-     * false, the {@code javac} executable override is ignored and the JDK
-     * running Maven does the compiling.
-     */
-    @Parameter(defaultValue = "true", property = "auto-valhalla.fork")
-    private boolean fork;
 
     /**
      * Whether to skip the annotation-processor selection pass and reuse the
@@ -191,11 +181,6 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     private MavenSession session;
 
-    /** Whether generated sources are compiled by invoking the project's
-     *  {@code maven-compiler-plugin} instead of the built-in javac runner. */
-    @Parameter(defaultValue = "false", property = "auto-valhalla.useMavenCompiler")
-    private boolean useMavenCompiler;
-
     @Inject
     private BuildPluginManager pluginManager;
 
@@ -231,9 +216,7 @@ public class TransformMojo extends AbstractMojo {
                 .compileClasspath(compileClasspath)
                 .encoding(resolvedEncoding)
                 .compilerArgs(extraCompilerArgs)
-                .fork(fork)
                 .skipProcessor(skipProcessor)
-                .useMavenCompiler(useMavenCompiler)
                 .session(session)
                 .project(project)
                 .pluginManager(pluginManager)

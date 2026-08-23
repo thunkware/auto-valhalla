@@ -34,11 +34,9 @@ public final class AnnotationProcessorRunner {
      */
     static final String GENERATED_DIR = "auto-valhalla-generated-sources";
 
-    private final Javac javac;
     private final MavenCompilerJavac mavenCompilerJavac;
 
     AnnotationProcessorRunner(Log log) {
-        this.javac = new Javac(log);
         this.mavenCompilerJavac = new MavenCompilerJavac(log);
     }
 
@@ -103,18 +101,6 @@ public final class AnnotationProcessorRunner {
         options.add("-encoding");
         options.add(encoding);
         options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
-        if (input.useMavenCompiler) {
-            withMavenCompiler(input, encoding, options);
-            return;
-        }
-        ProcessResult process = javac.compile(input, options, sources);
-        if (process.exit != 0) {
-            throw new IOException("the auto-valhalla selection pass (javac -proc:only) failed:\n"
-                    + process.output);
-        }
-    }
-
-    private void withMavenCompiler(Input input, String encoding, List<String> options) throws IOException {
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
@@ -133,7 +119,8 @@ public final class AnnotationProcessorRunner {
         ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass "
-                    + "(maven-compiler-plugin) failed:\n" + process.output);
+                    + "(maven-compiler-plugin) failed:\n"
+                    + process.output);
         }
     }
 

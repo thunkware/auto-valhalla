@@ -6,12 +6,9 @@ import org.apache.maven.plugin.logging.Log;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 import static java.util.Collections.singletonList;
 
 /**
@@ -31,12 +28,10 @@ import static java.util.Collections.singletonList;
 public final class AutoValhallaSourceTransformer {
 
     private final AnnotationProcessorRunner runner;
-    private final Javac javac;
     private final MavenCompilerJavac mavenCompilerJavac;
 
     AutoValhallaSourceTransformer(Log log) {
         this.runner = new AnnotationProcessorRunner(log);
-        this.javac = new Javac(log);
         this.mavenCompilerJavac = new MavenCompilerJavac(log);
     }
 
@@ -63,44 +58,7 @@ public final class AutoValhallaSourceTransformer {
             return result;
         }
 
-        if (input.useMavenCompiler) {
-            return withMavenCompilerPlugin(input, selection, result);
-        }
-
-        File versionsDirectory = getVersionsDirectory(input);
-        for (Map.Entry<String, List<Generated>> entry
-                : selection.generatedFiles().entrySet()) {
-            Files.createDirectories(versionsDirectory.toPath());
-            List<String> options = new ArrayList<>();
-            options.add("--release");
-            options.add(Integer.toString(TransformMojo.MIN_VALHALLA_JDK));
-            options.add("--enable-preview");
-            options.add("-proc:none");
-            options.add("-encoding");
-            options.add(input.encoding);
-            options.add("-cp");
-            options.add(Javac.joinClasspath(input.compileClasspath));
-            options.add("-d");
-            options.add(versionsDirectory.getAbsolutePath());
-            if (input.compilerArgs != null) {
-                for (String arg : input.compilerArgs) {
-                    if (isNotBlank(arg)) {
-                        options.add(trim(arg));
-                    }
-                }
-            }
-            File generatedFile = new File(selection.generatedSources(), entry.getKey());
-            ProcessResult process = javac.compile(input, options, singletonList(generatedFile));
-            if (process.exit == 0) {
-                result.converted += entry.getValue().size();
-            } else {
-                for (Generated generated : entry.getValue()) {
-                    result.annotationFailures.add(generated.qname()
-                            + ": javac reported:\n" + process.output);
-                }
-            }
-        }
-        return result;
+        return withMavenCompilerPlugin(input, selection, result);
     }
 
     private static File getVersionsDirectory(Input input) {
@@ -111,8 +69,7 @@ public final class AutoValhallaSourceTransformer {
         File versionsDirectory = getVersionsDirectory(input);
         String sourceEncoding = Utils.normalizeEncoding(input.encoding);
         int generatedCount = 0;
-        for (Map.Entry<String, List<Generated>> entry
-                : selection.generatedFiles().entrySet()) {
+        for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles().entrySet()) {
             generatedCount += entry.getValue().size();
         }
         Files.createDirectories(versionsDirectory.toPath());
@@ -133,8 +90,7 @@ public final class AutoValhallaSourceTransformer {
         if (process.exit == 0) {
             result.converted += generatedCount;
         } else {
-            for (Map.Entry<String, List<Generated>> entry
-                    : selection.generatedFiles().entrySet()) {
+            for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles().entrySet()) {
                 for (Generated generated : entry.getValue()) {
                     result.annotationFailures.add(generated.qname()
                             + ": maven-compiler-plugin reported:\n"

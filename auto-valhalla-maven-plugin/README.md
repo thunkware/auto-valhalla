@@ -87,7 +87,6 @@ All parameters are optional:
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
 | `javac` | `auto-valhalla.javac` | `JAVA28_HOME/bin/javac` on JDK 8–27, else `<java.home>/bin/javac` on JDK 28 | override the JDK compiler executable; Maven may run on JDK 8 through 27 only when `JAVA28_HOME` points to JDK 28 |
 | `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
-| `useMavenCompiler` | `auto-valhalla.useMavenCompiler` | `false` | compile generated value-class sources through the consuming project's `maven-compiler-plugin`; the plugin is invoked with an isolated release 28/preview configuration |
 | `skipProcessor` | `auto-valhalla.skipProcessor` | `false` | (`transform` only) skip the annotation-processor pass and compile the generated dir left by a previous `process-sources` run (or generated manually under `target/auto-valhalla-generated-sources/selected`) |
 | `skip` | `auto-valhalla.skip` | `false` | skip both goals |
 | `encoding` | `auto-valhalla.encoding` | `${project.build.sourceEncoding}` | character encoding for source compilation |

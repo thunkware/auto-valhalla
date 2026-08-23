@@ -86,6 +86,7 @@ final class MavenCompilerJavac {
         child(root, "executable", input.executable);
         child(root, "encoding", input.encoding);
         child(root, "useIncrementalCompilation", "false");
+        child(root, "forceLegacyJavacApi", "true");
 
         Xpp3Dom args = new Xpp3Dom("compilerArgs");
         for (String value : input.compilerArgs) {
