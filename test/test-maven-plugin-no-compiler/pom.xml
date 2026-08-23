@@ -26,6 +26,7 @@
          must target a pre-Valhalla release without preview -->
     <maven.compiler.release>8</maven.compiler.release>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -54,6 +55,7 @@
             <!-- no phase: transform runs at its default process-classes,
                  jar at its default package -->
             <goals>
+              <goal>process-sources</goal>
               <goal>transform</goal>
             </goals>
           </execution>

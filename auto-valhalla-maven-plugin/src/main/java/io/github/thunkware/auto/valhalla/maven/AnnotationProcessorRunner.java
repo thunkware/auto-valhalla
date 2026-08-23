@@ -2,8 +2,6 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
-import org.apache.maven.plugin.logging.Log;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+import org.apache.maven.plugin.logging.Log;
 
 /**
  * Runs the {@code auto-valhalla} annotation processor as a standalone
