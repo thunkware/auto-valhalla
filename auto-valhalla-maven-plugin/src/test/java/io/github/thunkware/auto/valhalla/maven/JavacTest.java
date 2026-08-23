@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /** Unit tests for {@link Javac#resolveExecutable(String, int)}. */
 class JavacTest {
+
+    private final Javac javac = new Javac(new SystemStreamLog());
 
     @TempDir
     Path temp;
@@ -29,7 +32,7 @@ class JavacTest {
         System.setProperty("java28.home", provisionJdkLayout("jdk28").toString());
         String override = new File("somewhere", "javac").getPath();
 
-        assertEquals(override, Javac.resolveExecutable("  " + override + " ", 28));
+        assertEquals(override, javac.resolveExecutable("  " + override + " ", 28));
     }
 
     @Test
@@ -38,7 +41,7 @@ class JavacTest {
         System.setProperty("java28.home", home.toString());
 
         assertEquals(home.resolve("bin/javac").toFile().getAbsolutePath(),
-                Javac.resolveExecutable(null, 28));
+                javac.resolveExecutable(null, 28));
     }
 
     @Test
@@ -49,9 +52,9 @@ class JavacTest {
         System.setProperty("java29.home", home29.toString());
 
         assertEquals(home28.resolve("bin/javac").toFile().getAbsolutePath(),
-                Javac.resolveExecutable(null, 28));
+                javac.resolveExecutable(null, 28));
         assertEquals(home29.resolve("bin/javac").toFile().getAbsolutePath(),
-                Javac.resolveExecutable(null, 29));
+                javac.resolveExecutable(null, 29));
     }
 
     @Test
@@ -60,7 +63,7 @@ class JavacTest {
         System.setProperty("java100.home", home.toString());
 
         assertEquals(home.resolve("bin/javac").toFile().getAbsolutePath(),
-                Javac.resolveExecutable(null, 28));
+                javac.resolveExecutable(null, 28));
     }
 
     @Test
@@ -68,7 +71,7 @@ class JavacTest {
         System.setProperty("java28.home", temp.toString());
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> Javac.resolveExecutable(null, 28));
+                () -> javac.resolveExecutable(null, 28));
         assertTrue(e.getMessage().contains("java28.home"), e.getMessage());
     }
 
@@ -77,7 +80,7 @@ class JavacTest {
         System.setProperty("java28.home", "  ");
 
         String expected = new File(System.getProperty("java.home"), "bin/javac").getAbsolutePath();
-        assertEquals(expected, Javac.resolveExecutable(null, 28));
+        assertEquals(expected, javac.resolveExecutable(null, 28));
     }
 
     /** Creates a minimal JDK layout ({@code bin/javac}) under the temp dir and

@@ -1,18 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
-
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -24,6 +12,20 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+
+import javax.inject.Inject;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Turns {@code @AutoValhalla}-annotated classes into JEP 401 value classes at
@@ -194,6 +196,9 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "false", property = "auto-valhalla.useMavenCompiler")
     private boolean useMavenCompiler;
 
+    @Inject
+    private BuildPluginManager pluginManager;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
@@ -210,7 +215,6 @@ public class TransformMojo extends AbstractMojo {
                     + "compile classpath for javac: " + e.getMessage(), e);
         }
 
-
         String processorPath = AutoValhallaProcessor.processorPath();
         if (processorPath == null) {
             throw new MojoExecutionException("auto-valhalla: could not locate the "
@@ -218,16 +222,6 @@ public class TransformMojo extends AbstractMojo {
         }
         String resolvedEncoding = resolveEncoding();
         List<String> extraCompilerArgs = resolveCompilerArgs();
-        BuildPluginManager pluginManager = null;
-        if (useMavenCompiler) {
-            try {
-                pluginManager = (BuildPluginManager) session.lookup(
-                        BuildPluginManager.class.getName());
-            } catch (org.codehaus.plexus.component.repository.exception.ComponentLookupException e) {
-                throw new MojoExecutionException("auto-valhalla: could not locate Maven's "
-                        + "BuildPluginManager", e);
-            }
-        }
         Input input = Input.builder()
                 .sourceRoots(project.getCompileSourceRoots())
                 .outputDirectory(outputDirectory)
@@ -246,7 +240,8 @@ public class TransformMojo extends AbstractMojo {
                 .build();
         Result result;
         try {
-            result = AutoValhallaSourceTransformer.transform(input);
+            AutoValhallaSourceTransformer autoValhallaSourceTransformer = new AutoValhallaSourceTransformer(getLog());
+            result = autoValhallaSourceTransformer.transform(input);
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the source-level "
                     + "transformation: " + e.getMessage(), e);

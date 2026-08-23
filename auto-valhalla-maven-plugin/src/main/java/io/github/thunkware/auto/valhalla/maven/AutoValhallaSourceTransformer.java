@@ -1,8 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
-import static java.util.Collections.singletonList;
+import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
+import org.apache.maven.plugin.logging.Log;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +9,10 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
+import static java.util.Collections.singletonList;
 
 /**
  * Compile-time transformation driver. It runs the {@code auto-valhalla}
@@ -27,7 +30,14 @@ import java.util.Map;
  */
 public final class AutoValhallaSourceTransformer {
 
-    private AutoValhallaSourceTransformer() {
+    private final AnnotationProcessorRunner runner;
+    private final Javac javac;
+    private final MavenCompilerJavac mavenCompilerJavac;
+
+    AutoValhallaSourceTransformer(Log log) {
+        this.runner = new AnnotationProcessorRunner(log);
+        this.javac = new Javac(log);
+        this.mavenCompilerJavac = new MavenCompilerJavac(log);
     }
 
     /**
@@ -39,13 +49,13 @@ public final class AutoValhallaSourceTransformer {
      * @param input the run inputs; {@code outputDirectory} must be set
      * @throws IOException on I/O errors during scanning, generating, or compilation
      */
-    public static Result transform(Input input) throws IOException {
+    public Result transform(Input input) throws IOException {
         if (input.outputDirectory == null) {
             throw new IllegalStateException("outputDirectory is required for transform");
         }
         Result result = new Result();
 
-        Selection selection = AnnotationProcessorRunner.run(input);
+        Selection selection = runner.run(input);
         result.annotationFailures.addAll(selection.failures());
         result.selected.addAll(selection.selectedTypes());
         result.generatedSources = selection.generatedSources();
@@ -80,7 +90,7 @@ public final class AutoValhallaSourceTransformer {
                 }
             }
             File generatedFile = new File(selection.generatedSources(), entry.getKey());
-            Javac.ProcessResult process = Javac.compile(input, options, singletonList(generatedFile));
+            ProcessResult process = javac.compile(input, options, singletonList(generatedFile));
             if (process.exit == 0) {
                 result.converted += entry.getValue().size();
             } else {
@@ -97,7 +107,7 @@ public final class AutoValhallaSourceTransformer {
         return new File(input.outputDirectory, "META-INF/versions/" + TransformMojo.MIN_VALHALLA_JDK);
     }
 
-    private static Result withMavenCompilerPlugin(Input input, Selection selection, Result result) throws IOException {
+    private Result withMavenCompilerPlugin(Input input, Selection selection, Result result) throws IOException {
         File versionsDirectory = getVersionsDirectory(input);
         String sourceEncoding = Utils.normalizeEncoding(input.encoding);
         int generatedCount = 0;
@@ -106,20 +116,20 @@ public final class AutoValhallaSourceTransformer {
             generatedCount += entry.getValue().size();
         }
         Files.createDirectories(versionsDirectory.toPath());
-        Javac.ProcessResult process = MavenCompilerJavac.compile(
-                MavenCompilerInput.builder()
-                        .session(input.session)
-                        .project(input.project)
-                        .pluginManager(input.pluginManager)
-                        .sourceRoots(singletonList(selection.generatedSources().getAbsolutePath()))
-                        .outputDirectory(versionsDirectory)
-                        .executable(input.javac)
-                        .encoding(sourceEncoding)
-                        .release(Integer.toString(TransformMojo.MIN_VALHALLA_JDK))
-                        .enablePreview(true)
-                        .proc("none")
-                        .compilerArgs(input.compilerArgs)
-                        .build());
+        MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
+                .session(input.session)
+                .project(input.project)
+                .pluginManager(input.pluginManager)
+                .sourceRoots(singletonList(selection.generatedSources().getAbsolutePath()))
+                .outputDirectory(versionsDirectory)
+                .executable(input.javac)
+                .encoding(sourceEncoding)
+                .release(Integer.toString(TransformMojo.MIN_VALHALLA_JDK))
+                .enablePreview(true)
+                .proc("none")
+                .compilerArgs(input.compilerArgs)
+                .build();
+        ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
         if (process.exit == 0) {
             result.converted += generatedCount;
         } else {

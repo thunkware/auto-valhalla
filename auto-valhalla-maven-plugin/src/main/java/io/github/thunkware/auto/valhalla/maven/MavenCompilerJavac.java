@@ -1,10 +1,12 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
@@ -19,11 +21,13 @@ final class MavenCompilerJavac {
     private static final String ARTIFACT_ID = "maven-compiler-plugin";
     private static final String DEFAULT_VERSION = "3.13.0";
 
-    private MavenCompilerJavac() {
-        throw new AssertionError();
+    private final Log log;
+
+    MavenCompilerJavac(Log log) {
+        this.log = log;
     }
 
-    static Javac.ProcessResult compile(MavenCompilerInput input) {
+    ProcessResult compile(MavenCompilerInput input) {
         MavenSession session = input.session;
         MavenProject project = input.project;
         BuildPluginManager pluginManager = input.pluginManager;
@@ -43,10 +47,13 @@ final class MavenCompilerJavac {
                     session.getRepositorySession());
             MojoExecution execution = new MojoExecution(descriptor, "auto-valhalla-generated");
             execution.setConfiguration(configuration(input));
+            log.info("--- Running " + ARTIFACT_ID + " ---");
             pluginManager.executeMojo(session, execution);
-            return new Javac.ProcessResult(0, "");
+            log.info("--- Finished running " + ARTIFACT_ID + " ---");
+            return new ProcessResult(0, "");
         } catch (Exception e) {
-            return new Javac.ProcessResult(1, e.getMessage() == null ? e.toString() : e.getMessage());
+            log.debug(e);
+            return new ProcessResult(1, e.getMessage() == null ? e.toString() : e.getMessage());
         }
     }
 
@@ -79,7 +86,6 @@ final class MavenCompilerJavac {
         child(root, "executable", input.executable);
         child(root, "encoding", input.encoding);
         child(root, "useIncrementalCompilation", "false");
-        child(root, "forceJavacCompilerUse", "true");
 
         Xpp3Dom args = new Xpp3Dom("compilerArgs");
         for (String value : input.compilerArgs) {

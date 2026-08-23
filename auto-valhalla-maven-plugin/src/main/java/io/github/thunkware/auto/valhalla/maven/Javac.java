@@ -16,6 +16,7 @@ import javax.tools.JavaCompiler.CompilationTask;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
+import org.apache.maven.plugin.logging.Log;
 
 /**
  * Runs {@code javac}; helpers shared by the selection pass
@@ -26,8 +27,10 @@ import javax.tools.ToolProvider;
  */
 final class Javac {
 
-    private Javac() {
-        throw new AssertionError();
+    private final Log log;
+
+    Javac(Log log) {
+        this.log = log;
     }
 
     /** Joins classpath entries with the platform path separator. */
@@ -149,7 +152,7 @@ final class Javac {
      *  {@code javac} executable or (when {@code fork} is false) through the
      *  JDK running the JVM. The returned result carries the exit code and the
      *  merged compiler output. */
-    static ProcessResult compile(Input input, List<String> options, List<File> files)
+    ProcessResult compile(Input input, List<String> options, List<File> files)
             throws IOException {
         if (input.fork) {
             List<String> command = new ArrayList<>();
@@ -207,7 +210,7 @@ final class Javac {
     }
 
     /** Runs the command, capturing its merged stdout/stderr. */
-    static ProcessResult run(List<String> command) throws IOException {
+    ProcessResult run(List<String> command) throws IOException {
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.redirectErrorStream(true);
         Process process = builder.start();

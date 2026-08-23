@@ -8,6 +8,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class AutoValhallaSourceTransformerTest {
         copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
         copyFixture(src.resolve("fixture/Shade.java"), "fixture/Shade.java");
 
-        Result result = AutoValhallaSourceTransformer.transform(
+        Result result = new AutoValhallaSourceTransformer(new SystemStreamLog()).transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
                         .outputDirectory(classes.toFile())
@@ -89,7 +90,7 @@ class AutoValhallaSourceTransformerTest {
         copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
         copyFixture(src.resolve("fixture/SyncPoint.java"), "fixture/SyncPoint.java");
 
-        Result result = AutoValhallaSourceTransformer.transform(
+        Result result = new AutoValhallaSourceTransformer(new SystemStreamLog()).transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
                         .outputDirectory(classes.toFile())
@@ -117,7 +118,7 @@ class AutoValhallaSourceTransformerTest {
         copyFixture(src.resolve("fixture/Point.java"), "fixture/Point.java");
         copyFixture(src.resolve("fixture/Shade.java"), "fixture/Shade.java");
 
-        Result result = AutoValhallaSourceTransformer.transform(
+        Result result = new AutoValhallaSourceTransformer(new SystemStreamLog()).transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
                         .outputDirectory(classes.toFile())
@@ -148,7 +149,7 @@ class AutoValhallaSourceTransformerTest {
         copyFixture(src.resolve("fixture/Shade.java"), "fixture/Shade.java");
 
         // generate the sources once with a standalone selection pass...
-        AnnotationProcessorRunner.run(
+        new AnnotationProcessorRunner(new SystemStreamLog()).run(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
                         .buildDirectory(target.toFile())
@@ -158,7 +159,7 @@ class AutoValhallaSourceTransformerTest {
                         .build());
 
         // ...then transform with the processor skipped
-        Result result = AutoValhallaSourceTransformer.transform(
+        Result result = new AutoValhallaSourceTransformer(new SystemStreamLog()).transform(
                 Input.builder()
                         .sourceRoots(java.util.Collections.singletonList(src.toString()))
                         .outputDirectory(classes.toFile())

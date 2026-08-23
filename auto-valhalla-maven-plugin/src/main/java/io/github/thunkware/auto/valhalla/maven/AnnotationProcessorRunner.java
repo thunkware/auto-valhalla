@@ -1,6 +1,9 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import org.apache.maven.plugin.logging.Log;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,7 +34,12 @@ public final class AnnotationProcessorRunner {
      */
     static final String GENERATED_DIR = "auto-valhalla-generated-sources";
 
-    private AnnotationProcessorRunner() {
+    private final Javac javac;
+    private final MavenCompilerJavac mavenCompilerJavac;
+
+    AnnotationProcessorRunner(Log log) {
+        this.javac = new Javac(log);
+        this.mavenCompilerJavac = new MavenCompilerJavac(log);
     }
 
     /**
@@ -52,27 +60,27 @@ public final class AnnotationProcessorRunner {
      *              processor path, compile classpath, encoding)
      * @throws IOException on I/O errors during scanning or the selection pass
      */
-    static Selection run(Input input) throws IOException {
+    Selection run(Input input) throws IOException {
         File generatedDir = new File(input.buildDirectory, GENERATED_DIR);
-        File selected = selectedDir(generatedDir);
 
-        Selection selection = new Selection(selected);
+        Selection selection = new Selection(generatedDir);
         if (input.skipProcessor) {
-            parseManifest(readManifest(selected), selection);
+            parseManifest(readManifest(generatedDir), selection);
             return selection;
         }
 
-        deleteRecursively(generatedDir);
-        Files.createDirectories(selected.toPath());
+        // don't delete. mvn clean might not be run, and mvn compiler might skip if all source files are up-to-date
+        // deleteRecursively(generatedDir);
+        Files.createDirectories(generatedDir.toPath());
 
         List<File> sources = collectSources(input.sourceRoots);
         if (sources.isEmpty()) {
             return selection;
         }
 
-        runPass(input, sources, input.encoding, selected);
+        runPass(input, sources, input.encoding, generatedDir);
 
-        parseManifest(readManifest(selected), selection);
+        parseManifest(readManifest(generatedDir), selection);
         return selection;
     }
 
@@ -84,7 +92,7 @@ public final class AnnotationProcessorRunner {
      * only exits non-zero when it reported a real problem (e.g. an I/O error
      * writing the generated sources or the manifest).
      */
-    private static void runPass(Input input, List<File> sources, String encoding,
+    private void runPass(Input input, List<File> sources, String encoding,
                                 File selected) throws IOException {
         List<String> options = new ArrayList<>();
         options.add("-proc:only");
@@ -99,14 +107,14 @@ public final class AnnotationProcessorRunner {
             withMavenCompiler(input, encoding, options);
             return;
         }
-        Javac.ProcessResult process = Javac.compile(input, options, sources);
+        ProcessResult process = javac.compile(input, options, sources);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass (javac -proc:only) failed:\n"
                     + process.output);
         }
     }
 
-    private static void withMavenCompiler(Input input, String encoding, List<String> options) throws IOException {
+    private void withMavenCompiler(Input input, String encoding, List<String> options) throws IOException {
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
@@ -114,7 +122,7 @@ public final class AnnotationProcessorRunner {
                 .project(input.project)
                 .pluginManager(input.pluginManager)
                 .sourceRoots(input.sourceRoots)
-                .outputDirectory(input.buildDirectory)
+                .outputDirectory(input.outputDirectory)
                 .executable(input.javac)
                 .encoding(encoding)
                 .compilerArgs(options.subList(1, options.size()))
@@ -122,7 +130,7 @@ public final class AnnotationProcessorRunner {
                 .enablePreview(true)
                 .proc("only")
                 .build();
-        Javac.ProcessResult process = MavenCompilerJavac.compile(mavenCompilerInput);
+        ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass "
                     + "(maven-compiler-plugin) failed:\n" + process.output);
@@ -145,17 +153,13 @@ public final class AnnotationProcessorRunner {
         }
     }
 
-    private static File selectedDir(File generatedDir) {
-        return new File(generatedDir, "selected");
-    }
-
     // -- selection manifest ------------------------------------------------
 
     private static List<String> readManifest(File selected) throws IOException {
         Path manifest = selected.toPath().resolve(AutoValhallaProcessor.SELECTION_FILE);
         if (!Files.exists(manifest)) {
             throw new IOException("the auto-valhalla selection pass produced no "
-                    + AutoValhallaProcessor.SELECTION_FILE + " manifest");
+                    + AutoValhallaProcessor.SELECTION_FILE + " manifest at " + manifest);
         }
         List<String> lines = new ArrayList<>(Files.readAllLines(manifest));
         lines.removeIf(line -> line.trim().isEmpty());
