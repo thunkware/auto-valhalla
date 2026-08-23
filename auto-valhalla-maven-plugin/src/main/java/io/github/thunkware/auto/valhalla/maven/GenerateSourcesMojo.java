@@ -32,9 +32,9 @@ import org.apache.maven.project.MavenProject;
  * inspect (or post-process) what would be transformed without producing the
  * multi-release value classes.
  */
-@Mojo(name = "process-sources", defaultPhase = LifecyclePhase.PROCESS_SOURCES, threadSafe = true,
+@Mojo(name = "generate-sources", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true,
         requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class ProcessSourcesMojo extends AbstractMojo {
+public class GenerateSourcesMojo extends AbstractMojo {
 
     /**
      * Skip the annotation-processor pass entirely.

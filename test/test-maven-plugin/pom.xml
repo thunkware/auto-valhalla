@@ -74,10 +74,10 @@
         </configuration>
         <executions>
           <execution>
-            <id>process-sources</id>
-            <phase>process-sources</phase>
+            <id>generate-sources</id>
+            <phase>generate-sources</phase>
             <goals>
-              <goal>process-sources</goal>
+              <goal>generate-sources</goal>
             </goals>
           </execution>
           <execution>

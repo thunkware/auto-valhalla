@@ -55,7 +55,7 @@
             <!-- no phase: transform runs at its default process-classes,
                  jar at its default package -->
             <goals>
-              <goal>process-sources</goal>
+              <goal>generate-sources</goal>
               <goal>transform</goal>
             </goals>
           </execution>

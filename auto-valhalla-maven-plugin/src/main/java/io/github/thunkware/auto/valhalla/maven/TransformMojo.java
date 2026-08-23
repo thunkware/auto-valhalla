@@ -75,7 +75,7 @@ public class TransformMojo extends AbstractMojo {
 
     /**
      * Whether to skip the annotation-processor selection pass and reuse the
-     * generated dir from a previous run (e.g. a prior {@code process-sources}
+     * generated dir from a previous run (e.g. a prior {@code generate-sources}
      * execution or manually generated sources under
      * {@code target/auto-valhalla-generated-sources}).
      */
