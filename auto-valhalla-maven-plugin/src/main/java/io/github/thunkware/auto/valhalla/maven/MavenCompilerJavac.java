@@ -41,23 +41,29 @@ final class MavenCompilerJavac {
             plugin.setVersion(DEFAULT_VERSION);
         }
 
+        MavenCompilerLogInterceptor logInterceptor = new MavenCompilerLogInterceptor(log);
         try {
             MojoDescriptor descriptor = pluginManager.getMojoDescriptor(
                     plugin, "compile", project.getRemotePluginRepositories(),
                     session.getRepositorySession());
             MojoExecution execution = new MojoExecution(descriptor, "auto-valhalla-generated");
             execution.setConfiguration(configuration(input));
-            log.info("--- Running " + ARTIFACT_ID + " ---");
+
+            log.info("auto-valhalla: Running " + ARTIFACT_ID);
+            logInterceptor.installLogInterceptor(pluginManager);
             pluginManager.executeMojo(session, execution);
-            log.info("--- Finished running " + ARTIFACT_ID + " ---");
+
             return new ProcessResult(0, "");
         } catch (Exception e) {
             log.debug(e);
             return new ProcessResult(1, e.getMessage() == null ? e.toString() : e.getMessage());
+
+        } finally {
+            logInterceptor.cleanUp();
         }
     }
 
-    private static Xpp3Dom configuration(MavenCompilerInput input) {
+    private Xpp3Dom configuration(MavenCompilerInput input) {
         Xpp3Dom root = new Xpp3Dom("configuration");
         child(root, "basedir", "${project.basedir}");
         child(root, "buildDirectory", "${project.build.directory}");
@@ -71,6 +77,7 @@ final class MavenCompilerJavac {
             child(sourceRoots, "compileSourceRoot", sourceRoot);
         }
         root.addChild(sourceRoots);
+        log.debug("outputDirectory: " + input.outputDirectory.getAbsolutePath());
         child(root, "outputDirectory", input.outputDirectory.getAbsolutePath());
         if (input.release != null) {
             child(root, "release", input.release);

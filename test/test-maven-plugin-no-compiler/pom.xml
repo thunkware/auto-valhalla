@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>test-maven-plugin-no-compiler</artifactId>
-  <name>test-maven-plugin-no-compiler (no maven-compiler-plugin)</name>
+  <name>test-maven-plugin-no-compiler</name>
 
   <description>
     A consumer project that declares no maven-compiler-plugin at all: the

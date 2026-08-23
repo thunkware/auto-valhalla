@@ -11,20 +11,12 @@ import java.util.List;
  */
 public final class Result {
 
-    final List<String> annotationFailures = new ArrayList<>();
     final List<String> selected = new ArrayList<>();
     File generatedSources;
     int converted;
 
-    Result() {
-    }
-
     public int convertedCount() {
         return converted;
-    }
-
-    public List<String> annotationFailures() {
-        return annotationFailures;
     }
 
     /**

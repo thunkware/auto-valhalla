@@ -1,6 +1,20 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
+import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.Utils.plural;
+import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
+
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javax.inject.Inject;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -12,20 +26,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
 
 /**
  * Turns {@code @AutoValhalla}-annotated classes into JEP 401 value classes at
@@ -93,14 +93,6 @@ public class TransformMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
     private File buildDirectory;
-
-    /**
-     * Fail the build when an annotation-selected class cannot be compiled as a
-     * value class. Mirrors the agent's {@code annotation.rejected}/
-     * {@code annotation.fail} defaulting to {@code fatal}.
-     */
-    @Parameter(defaultValue = "true")
-    private boolean failOnAnnotationFailure;
 
     /**
      * Override for the JDK compiler executable. When Maven runs on JDK 8
@@ -230,18 +222,10 @@ public class TransformMojo extends AbstractMojo {
                     + "transformation: " + e.getMessage(), e);
         }
 
-        for (String failure : result.annotationFailures()) {
-            getLog().error("auto-valhalla: " + failure
-                    + "; leaving as an identity class");
-        }
-        if (!result.annotationFailures().isEmpty() && failOnAnnotationFailure) {
-            throw new MojoFailureException("auto-valhalla: " + result.annotationFailures().size()
-                    + " annotation-selected class(es) could not be compiled as value classes:\n  - "
-                    + String.join("\n  - ", result.annotationFailures()));
-        }
-        if (result.convertedCount() > 0) {
-            getLog().info("auto-valhalla: compiled " + result.convertedCount()
-                    + " class(es) into value classes under META-INF/versions/" + MIN_VALHALLA_JDK);
+        int count = result.convertedCount();
+        if (count > 0) {
+            getLog().info("auto-valhalla: compiled " + count
+                    + " class" + plural(count) + " into value classes under META-INF/versions/" + MIN_VALHALLA_JDK);
         } else {
             getLog().info("auto-valhalla: no classes converted into value classes");
         }

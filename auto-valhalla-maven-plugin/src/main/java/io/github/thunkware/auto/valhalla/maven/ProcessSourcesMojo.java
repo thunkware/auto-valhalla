@@ -1,6 +1,12 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.Utils.plural;
+
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -12,11 +18,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Runs only the {@code auto-valhalla} annotation processor: a
@@ -30,11 +31,6 @@ import java.util.List;
  * written under the project's output directory, so this goal is useful to
  * inspect (or post-process) what would be transformed without producing the
  * multi-release value classes.
- *
- * <p>Like {@link TransformMojo}, running Maven on a JDK older than 28 does
- * not fail the build: the goal logs a warning and skips the pass. An annotated
- * class that the processor cannot generate fails the build when
- * {@code failOnAnnotationFailure} is set (the default).
  */
 @Mojo(name = "process-sources", defaultPhase = LifecyclePhase.PROCESS_SOURCES, threadSafe = true,
         requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
@@ -64,9 +60,9 @@ public class ProcessSourcesMojo extends AbstractMojo {
     private boolean failOnAnnotationFailure;
 
     /**
-     *  Override for the JDK compiler executable. When Maven runs on JDK 8
-     *  through 27, {@code JAVA28_HOME} must point to the JDK 28 compiler; on
-     *  JDK 28, the running JDK compiler is used by default.
+     * Override for the JDK compiler executable. When Maven runs on JDK 8
+     * through 27, {@code JAVA28_HOME} must point to the JDK 28 compiler; on
+     * JDK 28, the running JDK compiler is used by default.
      */
     @Parameter(property = "auto-valhalla.javac")
     private String javac;
@@ -81,8 +77,10 @@ public class ProcessSourcesMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
-    /** The current Maven session, so the jar-plugin version check runs at
-     *  most once per Maven run across all modules and goals. */
+    /**
+     * The current Maven session, so the jar-plugin version check runs at
+     * most once per Maven run across all modules and goals.
+     */
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     private MavenSession session;
 
@@ -109,7 +107,7 @@ public class ProcessSourcesMojo extends AbstractMojo {
             throw new MojoExecutionException("auto-valhalla: could not locate the "
                     + "auto-valhalla-processor jar for javac's -processorpath");
         }
-        Selection result;
+        Selection selection;
         try {
             Input input = Input.builder()
                     .sourceRoots(project.getCompileSourceRoots())
@@ -123,25 +121,20 @@ public class ProcessSourcesMojo extends AbstractMojo {
                     .project(project)
                     .pluginManager(pluginManager)
                     .build();
-            result = new AnnotationProcessorRunner(getLog()).run(input);
+            AnnotationProcessorRunner runner = new AnnotationProcessorRunner(getLog());
+            selection = runner.run(input);
         } catch (IOException e) {
             throw new MojoExecutionException("auto-valhalla: failed during the "
                     + "annotation-processor pass: " + e.getMessage(), e);
         }
-        for (String failure : result.failures()) {
-            getLog().error("auto-valhalla: " + failure);
-        }
-        if (!result.failures().isEmpty() && failOnAnnotationFailure) {
-            throw new MojoFailureException("auto-valhalla: " + result.failures().size()
-                    + " annotation-selected class(es) could not be generated:\n  - "
-                    + String.join("\n  - ", result.failures()));
-        }
-        if (result.selectedTypes().isEmpty()) {
+
+        if (selection.selectedTypes().isEmpty()) {
             getLog().info("auto-valhalla: no @AutoValhalla-annotated classes found");
         } else {
-            getLog().info("auto-valhalla: processed " + result.selectedTypes().size()
-                    + " @AutoValhalla-annotated class(es); generated sources under "
-                    + result.generatedSources().getAbsolutePath());
+            int count = selection.selectedTypes().size();
+            getLog().info("auto-valhalla: processed " + count
+                    + " @AutoValhalla-annotated class" + plural(count) + "; generated sources under "
+                    + selection.generatedSources().getAbsolutePath());
         }
     }
 

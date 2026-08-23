@@ -38,4 +38,8 @@ final class Utils {
     public static String normalizeEncoding(String encoding) {
         return isNotBlank(encoding) ? trim(encoding) : "UTF-8";
     }
+
+    public static String plural(int n) {
+        return n <= 1 ? "" : "es";
+    }
 }

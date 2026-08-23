@@ -1,15 +1,14 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
-import org.apache.maven.plugin.logging.Log;
+import static java.util.Collections.singletonList;
 
+import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
-
-import static java.util.Collections.singletonList;
+import org.apache.maven.plugin.logging.Log;
 
 /**
  * Compile-time transformation driver. It runs the {@code auto-valhalla}
@@ -51,7 +50,6 @@ public final class AutoValhallaSourceTransformer {
         Result result = new Result();
 
         Selection selection = runner.run(input);
-        result.annotationFailures.addAll(selection.failures());
         result.selected.addAll(selection.selectedTypes());
         result.generatedSources = selection.generatedSources();
         if (selection.generatedFiles().isEmpty()) {
@@ -90,13 +88,7 @@ public final class AutoValhallaSourceTransformer {
         if (process.exit == 0) {
             result.converted += generatedCount;
         } else {
-            for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles().entrySet()) {
-                for (Generated generated : entry.getValue()) {
-                    result.annotationFailures.add(generated.qname()
-                            + ": maven-compiler-plugin reported:\n"
-                            + process.output);
-                }
-            }
+            throw new IOException("maven-compiler-plugin failed:" + process.output);
         }
         return result;
     }

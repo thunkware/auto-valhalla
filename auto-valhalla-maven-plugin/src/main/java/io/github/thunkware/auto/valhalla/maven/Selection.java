@@ -15,7 +15,6 @@ import java.util.Map;
 final class Selection {
 
     public final List<String> selectedTypes = new ArrayList<>();
-    public final List<String> failures = new ArrayList<>();
     public final Map<String, List<Generated>> generatedFiles = new LinkedHashMap<>();
     public final File generatedSources;
 
@@ -29,14 +28,6 @@ final class Selection {
      */
     public List<String> selectedTypes() {
         return selectedTypes;
-    }
-
-    /**
-     * Formatted {@code qname: reason} descriptions of the selected types
-     * the processor could not generate.
-     */
-    public List<String> failures() {
-        return failures;
     }
 
     /**

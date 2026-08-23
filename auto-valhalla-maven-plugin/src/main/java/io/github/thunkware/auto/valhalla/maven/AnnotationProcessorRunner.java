@@ -2,6 +2,8 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import org.apache.maven.plugin.logging.Log;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,7 +11,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-import org.apache.maven.plugin.logging.Log;
 
 /**
  * Runs the {@code auto-valhalla} annotation processor as a standalone
@@ -71,7 +72,7 @@ public final class AnnotationProcessorRunner {
             return selection;
         }
 
-        runPass(input, sources, input.encoding, generatedDir);
+        runPass(input, input.encoding, generatedDir);
         collectGeneratedFiles(generatedDir, selection);
         return selection;
     }
@@ -84,8 +85,7 @@ public final class AnnotationProcessorRunner {
      * only exits non-zero when it reported a real problem (e.g. an I/O error
      * writing the generated sources or the manifest).
      */
-    private void runPass(Input input, List<File> sources, String encoding,
-                                File selected) throws IOException {
+    private void runPass(Input input, String encoding, File selected) throws IOException {
         List<String> options = new ArrayList<>();
         options.add("-proc:only");
         options.add("-processorpath");
