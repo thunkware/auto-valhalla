@@ -71,7 +71,7 @@ public final class AnnotationProcessorRunner {
             return selection;
         }
 
-        runPass(input, input.encoding, generatedDir);
+        runPass(input, generatedDir);
         collectGeneratedFiles(generatedDir, selection);
         return selection;
     }
@@ -84,7 +84,7 @@ public final class AnnotationProcessorRunner {
      * only exits non-zero when it reported a real problem (e.g. an I/O error
      * writing the generated sources or the manifest).
      */
-    private void runPass(Input input, String encoding, File selected) throws IOException {
+    private void runPass(Input input, File selected) throws IOException {
         List<String> options = new ArrayList<>();
         options.add("-proc:only");
         options.add("-processorpath");
@@ -92,7 +92,7 @@ public final class AnnotationProcessorRunner {
         options.add("-cp");
         options.add(Javac.joinClasspath(input.compileClasspath));
         options.add("-encoding");
-        options.add(encoding);
+        options.add(input.encoding);
         options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
@@ -103,9 +103,9 @@ public final class AnnotationProcessorRunner {
                 .sourceRoots(input.sourceRoots)
                 .outputDirectory(input.outputDirectory)
                 .executable(input.javac)
-                .encoding(encoding)
+                .encoding(input.encoding)
                 .compilerArgs(options.subList(1, options.size()))
-                .release(Integer.toString(TransformMojo.MIN_VALHALLA_JDK))
+                .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("only")
                 .build();

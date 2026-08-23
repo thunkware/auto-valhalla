@@ -39,7 +39,7 @@
     <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
     <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
     <git-commit-id-plugin.version>4.0.5</git-commit-id-plugin.version>
-    <spotless-maven-plugin.version>3.8.0</spotless-maven-plugin.version>
+    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
     <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
   </properties>
 

@@ -60,7 +60,7 @@ public final class AutoValhallaSourceTransformer {
     }
 
     private static File getVersionsDirectory(Input input) {
-        return new File(input.outputDirectory, "META-INF/versions/" + TransformMojo.MIN_VALHALLA_JDK);
+        return new File(input.outputDirectory, "META-INF/versions/" + CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
     }
 
     private Result withMavenCompilerPlugin(Input input, Selection selection, Result result) throws IOException {
@@ -79,7 +79,7 @@ public final class AutoValhallaSourceTransformer {
                 .outputDirectory(versionsDirectory)
                 .executable(input.javac)
                 .encoding(sourceEncoding)
-                .release(Integer.toString(TransformMojo.MIN_VALHALLA_JDK))
+                .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("none")
                 .compilerArgs(input.compilerArgs)

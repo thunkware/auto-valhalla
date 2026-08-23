@@ -1,12 +1,14 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.plugin.logging.Log;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 
 final class MavenCompilerLogInterceptor {
 
@@ -29,7 +31,12 @@ final class MavenCompilerLogInterceptor {
             oldMavenPluginManager = (MavenPluginManager) field.get(buildPluginManager);
 
             InvocationHandler handler = (proxy, method, args) -> {
-                Object result = method.invoke(oldMavenPluginManager, args);
+                Object result;
+                try {
+                    result = method.invoke(oldMavenPluginManager, args);
+                } catch (InvocationTargetException e) {
+                    throw e.getCause();
+                }
                 if (method.getName().equals("getConfiguredMojo") && result instanceof Mojo
                         && result.getClass().getName().equals("org.apache.maven.plugin.compiler.CompilerMojo")) {
 

@@ -22,7 +22,8 @@ overview of the whole project, see the [auto-valhalla README](../README.md).
   <executions>
     <execution>
       <goals>
-        <goal>transform</goal>
+        <goal>generate-sources</goal>
+        <goal>compile-generated-sources</goal>
         <goal>jar</goal>
       </goals>
     </execution>
@@ -37,7 +38,7 @@ exactly the annotated top-level classes and nothing else:
 The plugin is also available directly from the command line:
 
 ```bash
-mvn auto-valhalla:transform auto-valhalla:jar
+mvn auto-valhalla:generate-sources auto-valhalla:compile-generated-sources auto-valhalla:jar
 ```
 
 At runtime, run on JDK 28 with `--enable-preview`:
@@ -50,8 +51,8 @@ java --enable-preview -jar myapp.jar
 
 | Goal | Default phase | Description |
 | --- | --- | --- |
-| `transform` | `process-classes` | Runs the `auto-valhalla-processor` (via `javac -proc:only`) over the project's sources, selects the `@AutoValhalla` classes, and compiles the generated `value class`/`value record` copies with `javac --release 28 --enable-preview`, writing them under `META-INF/versions/28`. |
 | `generate-sources` | `generate-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and generates their copies under `target/auto-valhalla-generated-sources`. Nothing is compiled and nothing is written to the output directory — useful to inspect or post-process what would be transformed. |
+| `compile-generated-sources` | `process-classes` | Compiles generated sources left by `generate-sources` under `target/auto-valhalla-generated-sources` into `META-INF/versions/28`. |
 | `jar` | `package` | Adds `Multi-Release: true` to the jar manifest so the JVM serves the value variants on JDK 28+ and the identity classes on older JDKs. |
 
 ## How it works
@@ -61,7 +62,7 @@ annotation processor (a dependency of this plugin, passed to `javac -
 processorpath`) selects the top-level types that carry the `@AutoValhalla`
 annotation, and writes generated copies of their source files into a generated dir
 directory with the `class`/`record` declarations turned into
-`value class`/`value record`. The `transform` goal then delegates to
+`value class`/`value record`. The `compile-generated-sources` goal then delegates to
 the JDK compiler — `javac --release <N> --enable-preview` — which produces the
 value-class files natively and enforces the value-class rules. The base classes
 are left untouched, so they keep working on JDKs older than 28.
@@ -87,8 +88,7 @@ All parameters are optional:
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
 | `javac` | `auto-valhalla.javac` | `JAVA28_HOME/bin/javac` on JDK 8–27, else `<java.home>/bin/javac` on JDK 28 | override the JDK compiler executable; Maven may run on JDK 8 through 27 only when `JAVA28_HOME` points to JDK 28 |
 | `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
-| `skipProcessor` | `auto-valhalla.skipProcessor` | `false` | (`transform` only) skip the annotation-processor pass and compile the generated dir left by a previous `generate-sources` run (or generated manually under `target/auto-valhalla-generated-sources`) |
-| `skip` | `auto-valhalla.skip` | `false` | skip both goals |
+| `skip` | `auto-valhalla.skip` | `false` | skip the goal |
 | `encoding` | `auto-valhalla.encoding` | `${project.build.sourceEncoding}` | character encoding for source compilation |
 | `parameters` | `auto-valhalla.parameters` | inherited | generate metadata for reflection on method parameters (`-parameters`) |
 | `debug` | `auto-valhalla.debug` | inherited | include debugging information (`-g` or `-g:none`) |

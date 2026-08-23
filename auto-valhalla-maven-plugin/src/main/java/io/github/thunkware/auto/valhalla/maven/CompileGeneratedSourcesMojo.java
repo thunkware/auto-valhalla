@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -56,9 +57,9 @@ import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
  *       a value class) fails the build ({@code failOnAnnotationFailure}).</li>
  * </ul>
  */
-@Mojo(name = "transform", defaultPhase = LifecyclePhase.PROCESS_CLASSES, threadSafe = true,
-        requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class TransformMojo extends AbstractMojo {
+@Mojo(name = "compile-generated-sources", defaultPhase = LifecyclePhase.PROCESS_CLASSES,
+        threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
+public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     /**
      * Minimum Java feature version that can compile value classes.
@@ -72,15 +73,6 @@ public class TransformMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "false", property = "auto-valhalla.skip")
     private boolean skip;
-
-    /**
-     * Whether to skip the annotation-processor selection pass and reuse the
-     * generated dir from a previous run (e.g. a prior {@code generate-sources}
-     * execution or manually generated sources under
-     * {@code target/auto-valhalla-generated-sources}).
-     */
-    @Parameter(defaultValue = "true", property = "auto-valhalla.skipProcessor")
-    private boolean skipProcessor;
 
     /**
      * The compiled classes directory; the versioned value classes are written
@@ -179,6 +171,11 @@ public class TransformMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        execute(false);
+    }
+
+    protected final void execute(boolean skipProcessor)
+            throws MojoExecutionException, MojoFailureException {
         if (skip) {
             getLog().info("auto-valhalla: skipping transformation");
             return;
@@ -188,7 +185,7 @@ public class TransformMojo extends AbstractMojo {
         List<String> compileClasspath;
         try {
             compileClasspath = project.getCompileClasspathElements();
-        } catch (org.apache.maven.artifact.DependencyResolutionRequiredException e) {
+        } catch (DependencyResolutionRequiredException e) {
             throw new MojoExecutionException("auto-valhalla: could not resolve the project's "
                     + "compile classpath for javac: " + e.getMessage(), e);
         }

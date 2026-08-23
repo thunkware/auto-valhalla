@@ -15,7 +15,7 @@
   <description>
     A consumer project where maven-compiler-plugin only builds the base
     classes at release 8: there is no java 28 compiler execution. The
-    auto-valhalla-maven-plugin's transform goal does the value-class
+    auto-valhalla-maven-plugin's compile-generated-sources goal does the value-class
     compilation itself, writing the variants under META-INF/versions/28,
     and the jar goal marks the packaged jar multi-release.
   </description>
@@ -58,17 +58,10 @@
         <version>${project.version}</version>
         <executions>
           <execution>
-            <id>generate-sources</id>
-            <phase>generate-sources</phase>
+            <id>transform</id>
             <goals>
               <goal>generate-sources</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>transform</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>transform</goal>
+              <goal>compile-generated-sources</goal>
             </goals>
           </execution>
         </executions>

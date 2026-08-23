@@ -13,7 +13,7 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.junit.jupiter.api.Test;
 
-class TransformMojoTest {
+class CompileGeneratedSourcesMojoTest {
 
     @Test
     void allowsOlderMavenJdksWhenJava28HomeIsSet() throws Exception {
@@ -36,7 +36,7 @@ class TransformMojoTest {
 
     @Test
     void resolvesDirectParameters() {
-        TransformMojo mojo = new TransformMojo();
+        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setParameters(true);
         mojo.setDebug(true);
         mojo.setDebuglevel("lines,vars");
@@ -58,7 +58,7 @@ class TransformMojoTest {
 
     @Test
     void resolvesDebugFalseAsGNone() {
-        TransformMojo mojo = new TransformMojo();
+        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setDebug(false);
 
         List<String> args = mojo.resolveCompilerArgs();
@@ -108,7 +108,7 @@ class TransformMojoTest {
         build.addPlugin(compilerPlugin);
         project.setBuild(build);
 
-        TransformMojo mojo = new TransformMojo();
+        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setProject(project);
 
         List<String> args = mojo.resolveCompilerArgs();
@@ -141,7 +141,7 @@ class TransformMojoTest {
         build.addPlugin(compilerPlugin);
         project.setBuild(build);
 
-        TransformMojo mojo = new TransformMojo();
+        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setProject(project);
         mojo.setParameters(true);
         mojo.setEncoding("UTF-8");
@@ -163,7 +163,7 @@ class TransformMojoTest {
         compiler.setCompilerArgs(Arrays.asList("-Werror"));
         compiler.setEncoding("ISO-8859-1");
 
-        TransformMojo mojo = new TransformMojo();
+        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setMavenCompiler(compiler);
 
         List<String> args = mojo.resolveCompilerArgs();
@@ -182,7 +182,7 @@ class TransformMojoTest {
         compiler.setDebug(true);
         compiler.setEncoding("UTF-16");
 
-        TransformMojo mojo = new TransformMojo();
+        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setMavenCompiler(compiler);
         mojo.setDebug(false);
         mojo.setEncoding("UTF-8");
@@ -217,7 +217,7 @@ class TransformMojoTest {
         compiler.setParameters(true);
         compiler.setEncoding("ISO-8859-1");
 
-        TransformMojo mojo = new TransformMojo();
+        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setProject(project);
         mojo.setMavenCompiler(compiler);
 

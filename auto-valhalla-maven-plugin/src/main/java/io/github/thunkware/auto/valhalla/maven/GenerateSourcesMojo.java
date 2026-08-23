@@ -143,6 +143,6 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String javacExecutable() {
-        return Javac.resolveExecutable(javac, TransformMojo.MIN_VALHALLA_JDK);
+        return Javac.resolveExecutable(javac, CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
     }
 }

@@ -16,7 +16,7 @@
     A consumer project that declares no maven-compiler-plugin at all: the
     base classes are compiled by the default lifecycle binding, steered to a
     pre-Valhalla release purely through properties. The auto-valhalla
-    -maven-plugin's transform goal selects the @AutoValhalla classes and
+    -maven-plugin's generate-sources goal selects the @AutoValhalla classes and
     compiles their value-class variants under META-INF/versions/28, and the
     jar goal marks the packaged jar multi-release.
   </description>
@@ -51,12 +51,10 @@
         <version>${project.version}</version>
         <executions>
           <execution>
-            <id>auto-valhalla</id>
-            <!-- no phase: transform runs at its default process-classes,
-                 jar at its default package -->
+            <id>transform</id>
             <goals>
               <goal>generate-sources</goal>
-              <goal>transform</goal>
+              <goal>compile-generated-sources</goal>
             </goals>
           </execution>
         </executions>

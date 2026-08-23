@@ -1,7 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.TransformMojo.MIN_MAVEN_JDK;
-import static io.github.thunkware.auto.valhalla.maven.TransformMojo.MIN_VALHALLA_JDK;
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_MAVEN_JDK;
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
 
 import org.apache.maven.plugin.MojoFailureException;
@@ -9,7 +9,7 @@ import org.apache.maven.plugin.MojoFailureException;
 final class JdkVersion {
 
     static void validate() throws MojoFailureException {
-        validate(TransformMojo.jdkFeature(), System.getenv("JAVA28_HOME"));
+        validate(CompileGeneratedSourcesMojo.jdkFeature(), System.getenv("JAVA28_HOME"));
     }
 
     static void validate(int feature, String java28Home)

@@ -70,21 +70,13 @@
         <groupId>io.github.thunkware</groupId>
         <artifactId>auto-valhalla-maven-plugin</artifactId>
         <version>${project.version}</version>
-        <configuration>
-        </configuration>
         <executions>
           <execution>
-            <id>generate-sources</id>
-            <phase>generate-sources</phase>
+            <id>transform</id>
+            <phase>process-classes</phase>
             <goals>
               <goal>generate-sources</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>transform</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>transform</goal>
+              <goal>compile-generated-sources</goal>
             </goals>
           </execution>
         </executions>
