@@ -1,7 +1,5 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
-
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -27,8 +25,10 @@ import java.util.stream.Stream;
  */
 public final class AnnotationProcessorRunner {
 
-    /** Name of the generated dir under the build directory that receives the
-     *  processor's generated sources and selection manifest. */
+    /**
+     * Name of the generated dir under the build directory that receives the
+     * processor's generated sources and selection manifest.
+     */
     static final String GENERATED_DIR = "auto-valhalla-generated-sources";
 
     private AnnotationProcessorRunner() {
@@ -70,7 +70,7 @@ public final class AnnotationProcessorRunner {
             return selection;
         }
 
-        runPass(input, sources, normalizeEncoding(input.encoding), selected);
+        runPass(input, sources, input.encoding, selected);
 
         parseManifest(readManifest(selected), selection);
         return selection;
@@ -78,12 +78,14 @@ public final class AnnotationProcessorRunner {
 
     // -- selection pass ------------------------------------------------------
 
-    /** Runs the processor's {@code javac -proc:only} selection pass. A failed
-     *  pass maps to an {@link IOException} that fails the build: the processor
-     *  only exits non-zero when it reported a real problem (e.g. an I/O error
-     *  writing the generated sources or the manifest). */
+    /**
+     * Runs the processor's {@code javac -proc:only} selection pass. A failed
+     * pass maps to an {@link IOException} that fails the build: the processor
+     * only exits non-zero when it reported a real problem (e.g. an I/O error
+     * writing the generated sources or the manifest).
+     */
     private static void runPass(Input input, List<File> sources, String encoding,
-            File selected) throws IOException {
+                                File selected) throws IOException {
         List<String> options = new ArrayList<>();
         options.add("-proc:only");
         options.add("-processorpath");
@@ -93,11 +95,37 @@ public final class AnnotationProcessorRunner {
         options.add("-encoding");
         options.add(encoding);
         options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
-        Javac.ProcessResult process = Javac.compile(input.fork, input.javac,
-                options, sources, encoding);
+        if (input.useMavenCompiler) {
+            withMavenCompiler(input, encoding, options);
+            return;
+        }
+        Javac.ProcessResult process = Javac.compile(input, options, sources);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass (javac -proc:only) failed:\n"
                     + process.output);
+        }
+    }
+
+    private static void withMavenCompiler(Input input, String encoding, List<String> options) throws IOException {
+        options.add("-processor");
+        options.add(AutoValhallaProcessor.class.getName());
+        MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
+                .session(input.session)
+                .project(input.project)
+                .pluginManager(input.pluginManager)
+                .sourceRoots(input.sourceRoots)
+                .outputDirectory(input.buildDirectory)
+                .executable(input.javac)
+                .encoding(encoding)
+                .compilerArgs(options.subList(1, options.size()))
+                .release(Integer.toString(TransformMojo.MIN_VALHALLA_JDK))
+                .enablePreview(true)
+                .proc("only")
+                .build();
+        Javac.ProcessResult process = MavenCompilerJavac.compile(mavenCompilerInput);
+        if (process.exit != 0) {
+            throw new IOException("the auto-valhalla selection pass "
+                    + "(maven-compiler-plugin) failed:\n" + process.output);
         }
     }
 
@@ -171,8 +199,10 @@ public final class AnnotationProcessorRunner {
         return tokens;
     }
 
-    /** A {@code FAIL} manifest line: a selected type the processor could not
-     *  generate. */
+    /**
+     * A {@code FAIL} manifest line: a selected type the processor could not
+     * generate.
+     */
     private static final class SelectionFailure {
 
         private final String qname;

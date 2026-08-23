@@ -56,6 +56,9 @@
         <groupId>io.github.thunkware</groupId>
         <artifactId>auto-valhalla-maven-plugin</artifactId>
         <version>${project.version}</version>
+        <configuration>
+          <useMavenCompiler>true</useMavenCompiler>
+        </configuration>
         <executions>
           <execution>
             <id>process-sources</id>

@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -188,6 +189,11 @@ public class TransformMojo extends AbstractMojo {
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     private MavenSession session;
 
+    /** Whether generated sources are compiled by invoking the project's
+     *  {@code maven-compiler-plugin} instead of the built-in javac runner. */
+    @Parameter(defaultValue = "false", property = "auto-valhalla.useMavenCompiler")
+    private boolean useMavenCompiler;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
@@ -212,6 +218,16 @@ public class TransformMojo extends AbstractMojo {
         }
         String resolvedEncoding = resolveEncoding();
         List<String> extraCompilerArgs = resolveCompilerArgs();
+        BuildPluginManager pluginManager = null;
+        if (useMavenCompiler) {
+            try {
+                pluginManager = (BuildPluginManager) session.lookup(
+                        BuildPluginManager.class.getName());
+            } catch (org.codehaus.plexus.component.repository.exception.ComponentLookupException e) {
+                throw new MojoExecutionException("auto-valhalla: could not locate Maven's "
+                        + "BuildPluginManager", e);
+            }
+        }
         Input input = Input.builder()
                 .sourceRoots(project.getCompileSourceRoots())
                 .outputDirectory(outputDirectory)
@@ -223,6 +239,10 @@ public class TransformMojo extends AbstractMojo {
                 .compilerArgs(extraCompilerArgs)
                 .fork(fork)
                 .skipProcessor(skipProcessor)
+                .useMavenCompiler(useMavenCompiler)
+                .session(session)
+                .project(project)
+                .pluginManager(pluginManager)
                 .build();
         Result result;
         try {

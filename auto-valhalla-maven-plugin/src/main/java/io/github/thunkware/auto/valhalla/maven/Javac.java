@@ -149,19 +149,18 @@ final class Javac {
      *  {@code javac} executable or (when {@code fork} is false) through the
      *  JDK running the JVM. The returned result carries the exit code and the
      *  merged compiler output. */
-    static ProcessResult compile(boolean fork, String javacExecutable,
-            List<String> options, List<File> files, String encoding)
+    static ProcessResult compile(Input input, List<String> options, List<File> files)
             throws IOException {
-        if (fork) {
+        if (input.fork) {
             List<String> command = new ArrayList<>();
-            command.add(javacExecutable);
+            command.add(input.javac);
             command.addAll(options);
             for (File file : files) {
                 command.add(file.getAbsolutePath());
             }
             return run(command);
         }
-        return compileInProcess(options, files, encoding);
+        return compileInProcess(options, files, input.encoding);
     }
 
     private static ProcessResult compileInProcess(List<String> options,
@@ -230,7 +229,7 @@ final class Javac {
         final int exit;
         final String output;
 
-        private ProcessResult(int exit, String output) {
+        ProcessResult(int exit, String output) {
             this.exit = exit;
             this.output = output;
         }

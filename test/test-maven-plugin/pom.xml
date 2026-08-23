@@ -64,50 +64,32 @@
               </compilerArgs>
             </configuration>
           </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.github.thunkware</groupId>
+        <artifactId>auto-valhalla-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <configuration>
+          <useMavenCompiler>true</useMavenCompiler>
+        </configuration>
+        <executions>
           <execution>
-            <id>default-compile-java-28</id>
+            <id>process-sources</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>process-sources</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>transform</id>
             <phase>compile</phase>
             <goals>
-              <goal>compile</goal>
+              <goal>transform</goal>
             </goals>
-            <configuration>
-              <release>28</release>
-              <compileSourceRoots>
-                <compileSourceRoot>${project.basedir}/target/auto-valhalla-generated-sources/selected/</compileSourceRoot>
-              </compileSourceRoots>
-              <enablePreview>true</enablePreview>
-              <multiReleaseOutput>true</multiReleaseOutput>
-              <parameters>true</parameters>
-              <encoding>${project.build.sourceEncoding}</encoding>
-              <showDeprecation>true</showDeprecation>
-              <compilerArgs>
-                <arg>-Xlint</arg>
-              </compilerArgs>
-            </configuration>
           </execution>
         </executions>
       </plugin>
-        <plugin>
-            <groupId>io.github.thunkware</groupId>
-            <artifactId>auto-valhalla-maven-plugin</artifactId>
-            <version>${project.version}</version>
-            <executions>
-              <execution>
-                <id>process-sources</id>
-                <phase>process-sources</phase>
-                <goals>
-                  <goal>process-sources</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>transform</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>transform</goal>
-                </goals>
-              </execution>
-            </executions>
-        </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>

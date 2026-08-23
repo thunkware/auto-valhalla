@@ -2,6 +2,9 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import java.io.File;
 import java.util.List;
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.plugin.BuildPluginManager;
+import org.apache.maven.project.MavenProject;
 
 /**
  * The inputs of a run, shared by {@link AnnotationProcessorRunner#run(Input)}
@@ -9,8 +12,8 @@ import java.util.List;
  * fluent {@link Builder}: {@code Input.builder()...build()}. The source roots,
  * build directory, javac executable, processor path and compile classpath are
  * required; {@code encoding} defaults to UTF-8 and {@code compilerArgs} to
- * none. {@code versionDirectory} and {@code outputDirectory} are only used by
- * {@link AutoValhallaSourceTransformer#transform(Input)}.
+ * none. {@code outputDirectory} and the optional Maven compiler context are
+ * only used by {@link AutoValhallaSourceTransformer#transform(Input)}.
  */
 public final class Input {
 
@@ -24,6 +27,10 @@ public final class Input {
     final List<String> compilerArgs;
     final boolean fork;
     final boolean skipProcessor;
+    final boolean useMavenCompiler;
+    final MavenSession session;
+    final MavenProject project;
+    final BuildPluginManager pluginManager;
 
     private Input(Builder builder) {
         this.sourceRoots = builder.sourceRoots;
@@ -32,10 +39,14 @@ public final class Input {
         this.javac = builder.javac;
         this.processorPath = builder.processorPath;
         this.compileClasspath = builder.compileClasspath;
-        this.encoding = builder.encoding;
+        this.encoding = Utils.normalizeEncoding(builder.encoding);
         this.compilerArgs = builder.compilerArgs;
         this.fork = builder.fork;
         this.skipProcessor = builder.skipProcessor;
+        this.useMavenCompiler = builder.useMavenCompiler;
+        this.session = builder.session;
+        this.project = builder.project;
+        this.pluginManager = builder.pluginManager;
     }
 
     public static Builder builder() {
@@ -57,6 +68,10 @@ public final class Input {
         private List<String> compilerArgs = java.util.Collections.emptyList();
         private boolean fork = true;
         private boolean skipProcessor;
+        private boolean useMavenCompiler;
+        private MavenSession session;
+        private MavenProject project;
+        private BuildPluginManager pluginManager;
 
         /**
          * Directories containing the project's sources.
@@ -146,6 +161,26 @@ public final class Input {
             return this;
         }
 
+        public Builder useMavenCompiler(boolean useMavenCompiler) {
+            this.useMavenCompiler = useMavenCompiler;
+            return this;
+        }
+
+        public Builder session(MavenSession session) {
+            this.session = session;
+            return this;
+        }
+
+        public Builder project(MavenProject project) {
+            this.project = project;
+            return this;
+        }
+
+        public Builder pluginManager(BuildPluginManager pluginManager) {
+            this.pluginManager = pluginManager;
+            return this;
+        }
+
         public Input build() {
             if (sourceRoots == null || sourceRoots.isEmpty()) {
                 throw new IllegalStateException("sourceRoots is required");
@@ -161,6 +196,10 @@ public final class Input {
             }
             if (compileClasspath == null) {
                 throw new IllegalStateException("compileClasspath is required");
+            }
+            if (useMavenCompiler
+                    && (session == null || project == null || pluginManager == null)) {
+                throw new IllegalStateException("Maven compiler context is required");
             }
             return new Input(this);
         }
