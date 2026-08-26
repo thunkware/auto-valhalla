@@ -1,6 +1,8 @@
 // TODO remove
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.mojo;
 
+import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
+import io.github.thunkware.auto.valhalla.maven.support.MultiReleaseJar;
 import java.io.File;
 import java.io.IOException;
 import org.apache.maven.execution.MavenSession;

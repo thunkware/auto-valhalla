@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.model;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -12,13 +12,13 @@ import java.util.Map;
  * where the generated copies are written, and the generated files grouped by
  * relative path for a follow-up compilation pass.
  */
-final class Selection {
+public final class Selection {
 
     public final List<String> selectedTypes = new ArrayList<>();
     public final Map<String, List<Generated>> generatedFiles = new LinkedHashMap<>();
     public final File generatedSources;
 
-    Selection(File generatedSources) {
+    public Selection(File generatedSources) {
         this.generatedSources = generatedSources;
     }
 

@@ -1,18 +1,19 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.support;
 
-import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_MAVEN_JDK;
-import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo.MIN_MAVEN_JDK;
+import static io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
 
+import io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo;
 import org.apache.maven.plugin.MojoFailureException;
 
-final class JdkVersion {
+public final class JdkVersion {
 
-    static void validate() throws MojoFailureException {
+    public static void validate() throws MojoFailureException {
         validate(CompileGeneratedSourcesMojo.jdkFeature(), System.getenv("JAVA28_HOME"));
     }
 
-    static void validate(int feature, String java28Home)
+    public static void validate(int feature, String java28Home)
             throws MojoFailureException {
         if (feature < MIN_MAVEN_JDK) {
             throw new MojoFailureException("auto-valhalla: Maven must run on JDK 8 through "

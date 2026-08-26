@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import java.util.List;
 

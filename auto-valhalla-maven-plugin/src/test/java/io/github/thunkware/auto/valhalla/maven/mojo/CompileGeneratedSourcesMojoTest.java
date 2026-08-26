@@ -1,9 +1,11 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.mojo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.thunkware.auto.valhalla.maven.compiler.CompilerConfiguration;
+import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.maven.model.Build;

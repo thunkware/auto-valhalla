@@ -1,6 +1,8 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.compiler;
 
-import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
+import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
+import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -15,7 +17,7 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
  * {@code maven-compiler-plugin}. The generated source directory and versioned
  * output directory are supplied as execution-local configuration.
  */
-final class MavenCompilerJavac {
+public final class MavenCompilerJavac {
 
     private static final String GROUP_ID = "org.apache.maven.plugins";
     private static final String ARTIFACT_ID = "maven-compiler-plugin";
@@ -23,11 +25,11 @@ final class MavenCompilerJavac {
 
     private final Log log;
 
-    MavenCompilerJavac(Log log) {
+    public MavenCompilerJavac(Log log) {
         this.log = log;
     }
 
-    ProcessResult compile(MavenCompilerInput input) {
+    public ProcessResult compile(MavenCompilerInput input) {
         MavenSession session = input.session;
         MavenProject project = input.project;
         BuildPluginManager pluginManager = input.pluginManager;

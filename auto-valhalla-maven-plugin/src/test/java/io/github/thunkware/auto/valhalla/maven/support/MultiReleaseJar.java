@@ -1,5 +1,5 @@
 // TODO remove
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.support;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

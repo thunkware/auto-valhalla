@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -10,13 +10,13 @@ import org.apache.maven.plugin.logging.Log;
 /**
  * Resolves the JDK compiler executable used by the Maven compiler plugin.
  */
-final class Javac {
+public final class Javac {
 
-    Javac(Log log) {
+    public Javac(Log log) {
     }
 
     /** Joins classpath entries with the platform path separator. */
-    static String joinClasspath(List<String> paths) {
+    public static String joinClasspath(List<String> paths) {
         return String.join(File.pathSeparator, paths);
     }
 
@@ -37,7 +37,7 @@ final class Javac {
      *
      *  @throws IllegalArgumentException when homes are configured but none of
      *          them contains a {@code bin/javac} */
-    static String resolveExecutable(String override, int preferredVersion) {
+    public static String resolveExecutable(String override, int preferredVersion) {
         if (override != null && !override.trim().isEmpty()) {
             return override.trim();
         }
@@ -131,12 +131,12 @@ final class Javac {
         }
     }
 
-    static final class ProcessResult {
+    public static final class ProcessResult {
 
-        final int exit;
-        final String output;
+        public final int exit;
+        public final String output;
 
-        ProcessResult(int exit, String output) {
+        public ProcessResult(int exit, String output) {
             this.exit = exit;
             this.output = output;
         }

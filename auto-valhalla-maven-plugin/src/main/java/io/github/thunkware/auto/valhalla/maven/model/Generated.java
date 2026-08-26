@@ -1,15 +1,15 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.model;
 
 /**
  * A {@code GENERATED} manifest line: one selected type and the generated file
  * it lives in (relative to the selection out dir).
  */
-final class Generated {
+public final class Generated {
 
     public final String qname;
     public final String rel;
 
-    Generated(String qname, String rel) {
+    public Generated(String qname, String rel) {
         this.qname = qname;
         this.rel = rel;
     }

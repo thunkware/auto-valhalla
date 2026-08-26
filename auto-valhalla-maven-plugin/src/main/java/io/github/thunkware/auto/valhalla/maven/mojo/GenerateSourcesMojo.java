@@ -1,7 +1,14 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.mojo;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.plural;
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
 
+import io.github.thunkware.auto.valhalla.maven.compiler.AnnotationProcessorRunner;
+import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
+import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.model.Selection;
+import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
+import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
+import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;

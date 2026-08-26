@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.support;
 
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
@@ -13,7 +13,7 @@ import org.apache.maven.project.MavenProject;
  * own. Runs at most once per Maven run (guarded by a marker in the session's
  * user properties), no matter how many modules or auto-valhalla goals fire.
  */
-final class JarPluginChecker {
+public final class JarPluginChecker {
 
     /** First maven-jar-plugin release with automatic multi-release jar
      *  handling based on the META-INF/versions directory. */
@@ -31,7 +31,7 @@ final class JarPluginChecker {
      * version pinned by Maven's super POM when the project never declares the
      * jar plugin).
      */
-    static void checkOnce(MavenSession session, MavenProject project, Log log) {
+    public static void checkOnce(MavenSession session, MavenProject project, Log log) {
         if (session.getUserProperties().containsKey(CHECKED_KEY)) {
             return;
         }
@@ -63,7 +63,7 @@ final class JarPluginChecker {
      * {@code 3.4.0-beta}) are ignored. Versions that do not start with a
      * number never warn.
      */
-    static boolean versionTooLow(String version) {
+    public static boolean versionTooLow(String version) {
         String[] tokens = version.split("[.-]");
         if (tokens.length == 0 || parseToken(tokens[0]) < 0) {
             return false;

@@ -1,10 +1,10 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.support;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-final class Utils {
+public final class Utils {
 
     private Utils() {
         throw new AssertionError();

@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.model;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -11,9 +11,9 @@ import java.util.List;
  */
 public final class Result {
 
-    final List<String> selected = new ArrayList<>();
-    File generatedSources;
-    int converted;
+    public final List<String> selected = new ArrayList<>();
+    public File generatedSources;
+    public int converted;
 
     public int convertedCount() {
         return converted;

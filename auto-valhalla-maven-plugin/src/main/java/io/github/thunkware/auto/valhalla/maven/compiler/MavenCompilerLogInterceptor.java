@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;

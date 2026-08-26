@@ -1,11 +1,18 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.mojo;
 
-import static io.github.thunkware.auto.valhalla.maven.Utils.asBoolean;
-import static io.github.thunkware.auto.valhalla.maven.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.Utils.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.Utils.plural;
-import static io.github.thunkware.auto.valhalla.maven.Utils.trim;
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.asBoolean;
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.trim;
 
+import io.github.thunkware.auto.valhalla.maven.compiler.AutoValhallaSourceTransformer;
+import io.github.thunkware.auto.valhalla.maven.compiler.CompilerConfiguration;
+import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
+import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.model.Result;
+import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
+import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -63,9 +70,9 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     /**
      * Minimum Java feature version that can compile value classes.
      */
-    static final int MIN_VALHALLA_JDK = 28;
+    public static final int MIN_VALHALLA_JDK = 28;
 
-    static final int MIN_MAVEN_JDK = 8;
+    public static final int MIN_MAVEN_JDK = 8;
 
     /**
      * Skip the transformation entirely.
@@ -471,7 +478,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
      * The Java feature version of the current JVM (28 for JDK 28), parsed from
      * the specification version so it works on every JDK.
      */
-    static int jdkFeature() {
+    public static int jdkFeature() {
         String spec = System.getProperty("java.specification.version", "1.8");
         if (spec.startsWith("1.")) {
             spec = spec.substring(2);

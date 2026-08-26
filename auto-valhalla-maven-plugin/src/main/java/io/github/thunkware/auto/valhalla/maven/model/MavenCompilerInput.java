@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.model;
 
 import java.io.File;
 import java.util.List;
@@ -10,23 +10,23 @@ import org.apache.maven.project.MavenProject;
  * Parameters for one invocation of the consuming project's
  * {@code maven-compiler-plugin}.
  */
-final class MavenCompilerInput {
+public final class MavenCompilerInput {
 
-    final MavenSession session;
-    final MavenProject project;
-    final BuildPluginManager pluginManager;
-    final List<String> sourceRoots;
-    final File outputDirectory;
-    final File buildDirectory;
-    final String executable;
-    final String processorPath;
-    final List<String> compileClasspath;
-    final String encoding;
-    final List<String> compilerArgs;
-    final String release;
-    final boolean enablePreview;
-    final String proc;
-    final boolean skipProcessor;
+    public final MavenSession session;
+    public final MavenProject project;
+    public final BuildPluginManager pluginManager;
+    public final List<String> sourceRoots;
+    public final File outputDirectory;
+    public final File buildDirectory;
+    public final String executable;
+    public final String processorPath;
+    public final List<String> compileClasspath;
+    public final String encoding;
+    public final List<String> compilerArgs;
+    public final String release;
+    public final boolean enablePreview;
+    public final String proc;
+    public final boolean skipProcessor;
 
     private MavenCompilerInput(Builder builder) {
         this.session = builder.session;
@@ -46,11 +46,11 @@ final class MavenCompilerInput {
         this.skipProcessor = builder.skipProcessor;
     }
 
-    static Builder builder() {
+    public static Builder builder() {
         return new Builder();
     }
 
-    static final class Builder {
+    public static final class Builder {
 
         private MavenSession session;
         private MavenProject project;
@@ -68,82 +68,82 @@ final class MavenCompilerInput {
         private String proc;
         private boolean skipProcessor;
 
-        Builder session(MavenSession session) {
+        public Builder session(MavenSession session) {
             this.session = session;
             return this;
         }
 
-        Builder project(MavenProject project) {
+        public Builder project(MavenProject project) {
             this.project = project;
             return this;
         }
 
-        Builder pluginManager(BuildPluginManager pluginManager) {
+        public Builder pluginManager(BuildPluginManager pluginManager) {
             this.pluginManager = pluginManager;
             return this;
         }
 
-        Builder sourceRoots(List<String> sourceRoots) {
+        public Builder sourceRoots(List<String> sourceRoots) {
             this.sourceRoots = sourceRoots;
             return this;
         }
 
-        Builder outputDirectory(File outputDirectory) {
+        public Builder outputDirectory(File outputDirectory) {
             this.outputDirectory = outputDirectory;
             return this;
         }
 
-        Builder buildDirectory(File buildDirectory) {
+        public Builder buildDirectory(File buildDirectory) {
             this.buildDirectory = buildDirectory;
             return this;
         }
 
-        Builder executable(String executable) {
+        public Builder executable(String executable) {
             this.executable = executable;
             return this;
         }
 
-        Builder processorPath(String processorPath) {
+        public Builder processorPath(String processorPath) {
             this.processorPath = processorPath;
             return this;
         }
 
-        Builder compileClasspath(List<String> compileClasspath) {
+        public Builder compileClasspath(List<String> compileClasspath) {
             this.compileClasspath = compileClasspath;
             return this;
         }
 
-        Builder encoding(String encoding) {
+        public Builder encoding(String encoding) {
             this.encoding = encoding;
             return this;
         }
 
-        Builder compilerArgs(List<String> compilerArgs) {
+        public Builder compilerArgs(List<String> compilerArgs) {
             this.compilerArgs = compilerArgs;
             return this;
         }
 
-        Builder release(String release) {
+        public Builder release(String release) {
             this.release = release;
             return this;
         }
 
-        Builder enablePreview(boolean enablePreview) {
+        public Builder enablePreview(boolean enablePreview) {
             this.enablePreview = enablePreview;
             return this;
         }
 
-        Builder proc(String proc) {
+        public Builder proc(String proc) {
             this.proc = proc;
             return this;
         }
 
-        Builder skipProcessor(boolean skipProcessor) {
+        public Builder skipProcessor(boolean skipProcessor) {
             this.skipProcessor = skipProcessor;
             return this;
         }
 
-        MavenCompilerInput build() {
+        public MavenCompilerInput build() {
             if (session == null || project == null || pluginManager == null) {
                 throw new IllegalStateException("Maven compiler context is required");
             }

@@ -1,8 +1,14 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.compiler;
 
+import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import static java.util.Collections.singletonList;
 
-import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
+import io.github.thunkware.auto.valhalla.maven.model.Generated;
+import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.model.Result;
+import io.github.thunkware.auto.valhalla.maven.model.Selection;
+import io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo;
+import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,7 +35,7 @@ public final class AutoValhallaSourceTransformer {
     private final AnnotationProcessorRunner runner;
     private final MavenCompilerJavac mavenCompilerJavac;
 
-    AutoValhallaSourceTransformer(Log log) {
+    public AutoValhallaSourceTransformer(Log log) {
         this.runner = new AnnotationProcessorRunner(log);
         this.mavenCompilerJavac = new MavenCompilerJavac(log);
     }

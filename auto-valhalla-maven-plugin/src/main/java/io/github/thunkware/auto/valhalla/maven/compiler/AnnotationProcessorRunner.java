@@ -1,6 +1,11 @@
-package io.github.thunkware.auto.valhalla.maven;
+package io.github.thunkware.auto.valhalla.maven.compiler;
 
-import io.github.thunkware.auto.valhalla.maven.Javac.ProcessResult;
+import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
+
+import io.github.thunkware.auto.valhalla.maven.model.Generated;
+import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.model.Selection;
+import io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -29,11 +34,11 @@ public final class AnnotationProcessorRunner {
      * Name of the generated dir under the build directory that receives the
      * processor's generated sources and selection manifest.
      */
-    static final String GENERATED_DIR = "auto-valhalla-generated-sources";
+    public static final String GENERATED_DIR = "auto-valhalla-generated-sources";
 
     private final MavenCompilerJavac mavenCompilerJavac;
 
-    AnnotationProcessorRunner(Log log) {
+    public AnnotationProcessorRunner(Log log) {
         this.mavenCompilerJavac = new MavenCompilerJavac(log);
     }
 
@@ -53,7 +58,7 @@ public final class AnnotationProcessorRunner {
      *              processor path, compile classpath, encoding)
      * @throws IOException on I/O errors during scanning or the selection pass
      */
-    Selection run(MavenCompilerInput input) throws IOException {
+    public Selection run(MavenCompilerInput input) throws IOException {
         File generatedDir = new File(input.buildDirectory, GENERATED_DIR);
 
         Selection selection = new Selection(generatedDir);
