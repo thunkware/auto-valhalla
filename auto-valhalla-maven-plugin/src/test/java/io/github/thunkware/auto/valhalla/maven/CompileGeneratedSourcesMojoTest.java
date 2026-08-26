@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Plugin;
@@ -33,37 +32,6 @@ class CompileGeneratedSourcesMojoTest {
     void rejectsJdksNewerThanTwentyEight() {
         assertThrows(MojoFailureException.class,
                 () -> JdkVersion.validate(29, null));
-    }
-
-    @Test
-    void resolvesDirectParameters() {
-        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
-        mojo.setParameters(true);
-        mojo.setDebug(true);
-        mojo.setDebuglevel("lines,vars");
-        mojo.setShowWarnings(false);
-        mojo.setShowDeprecation(true);
-        mojo.setCompilerArgument("-Xlint:all");
-        mojo.setCompilerArgs(Arrays.asList("-Werror"));
-        mojo.setEncoding("ISO-8859-1");
-
-        List<String> args = mojo.resolveCompilerArgs();
-        assertTrue(args.contains("-parameters"));
-        assertTrue(args.contains("-g:lines,vars"));
-        assertTrue(args.contains("-nowarn"));
-        assertTrue(args.contains("-deprecation"));
-        assertTrue(args.contains("-Xlint:all"));
-        assertTrue(args.contains("-Werror"));
-        assertEquals("ISO-8859-1", mojo.resolveEncoding());
-    }
-
-    @Test
-    void resolvesDebugFalseAsGNone() {
-        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
-        mojo.setDebug(false);
-
-        List<String> args = mojo.resolveCompilerArgs();
-        assertTrue(args.contains("-g:none"));
     }
 
     @Test
@@ -122,37 +90,6 @@ class CompileGeneratedSourcesMojoTest {
     }
 
     @Test
-    void directParametersOverrideInheritedCompilerPluginConfig() {
-        MavenProject project = new MavenProject();
-        Build build = new Build();
-        Plugin compilerPlugin = new Plugin();
-        compilerPlugin.setGroupId("org.apache.maven.plugins");
-        compilerPlugin.setArtifactId("maven-compiler-plugin");
-
-        Xpp3Dom config = new Xpp3Dom("configuration");
-        Xpp3Dom parameters = new Xpp3Dom("parameters");
-        parameters.setValue("false");
-        config.addChild(parameters);
-
-        Xpp3Dom encoding = new Xpp3Dom("encoding");
-        encoding.setValue("UTF-16");
-        config.addChild(encoding);
-
-        compilerPlugin.setConfiguration(config);
-        build.addPlugin(compilerPlugin);
-        project.setBuild(build);
-
-        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
-        mojo.setProject(project);
-        mojo.setParameters(true);
-        mojo.setEncoding("UTF-8");
-
-        List<String> args = mojo.resolveCompilerArgs();
-        assertTrue(args.contains("-parameters"));
-        assertEquals("UTF-8", mojo.resolveEncoding());
-    }
-
-    @Test
     void resolvesNestedMavenCompilerConfiguration() {
         Xpp3Dom compiler = nestedCompiler(
                 "parameters", "true",
@@ -179,20 +116,6 @@ class CompileGeneratedSourcesMojoTest {
         assertTrue(args.contains("-Xlint:all"));
         assertTrue(args.contains("-Werror"));
         assertEquals("ISO-8859-1", mojo.resolveEncoding());
-    }
-
-    @Test
-    void directParametersOverrideNestedCompilerConfig() {
-        Xpp3Dom compiler = nestedCompiler("debug", "true", "encoding", "UTF-16");
-
-        CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
-        mojo.setMavenCompiler(compiler);
-        mojo.setDebug(false);
-        mojo.setEncoding("UTF-8");
-
-        List<String> args = mojo.resolveCompilerArgs();
-        assertTrue(args.contains("-g:none"));
-        assertEquals("UTF-8", mojo.resolveEncoding());
     }
 
     @Test

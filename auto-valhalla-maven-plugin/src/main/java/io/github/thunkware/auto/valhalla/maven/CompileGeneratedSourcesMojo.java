@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
@@ -103,61 +102,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     private String javac;
 
     /**
-     * Character encoding for source compilation. Defaults to
-     * {@code ${project.build.sourceEncoding}} or UTF-8.
-     */
-    @Parameter(property = "auto-valhalla.encoding", defaultValue = "${project.build.sourceEncoding}")
-    private String encoding;
-
-    /**
-     * Whether to generate metadata for reflection on method parameters
-     * ({@code -parameters}). If not explicitly specified, inherits from
-     * {@code maven-compiler-plugin} if configured there.
-     */
-    @Parameter(property = "auto-valhalla.parameters")
-    private Boolean parameters;
-
-    /**
-     * Whether to include debugging information in the compiled class files
-     * ({@code -g} or {@code -g:none}). If not explicitly specified, inherits
-     * from {@code maven-compiler-plugin}.
-     */
-    @Parameter(property = "auto-valhalla.debug")
-    private Boolean debug;
-
-    /**
-     * Keyword list to be appended to the {@code -g} command-line switch
-     * (e.g. {@code lines,vars,source}).
-     */
-    @Parameter(property = "auto-valhalla.debuglevel")
-    private String debuglevel;
-
-    /**
-     * Whether to show or suppress compiler warnings ({@code -nowarn} when false).
-     */
-    @Parameter(property = "auto-valhalla.showWarnings")
-    private Boolean showWarnings;
-
-    /**
-     * Whether to show deprecation warnings ({@code -deprecation} when true).
-     */
-    @Parameter(property = "auto-valhalla.showDeprecation")
-    private Boolean showDeprecation;
-
-    /**
-     * A list of additional compiler arguments to pass to javac (e.g.
-     * {@code <compilerArgs><arg>-parameters</arg></compilerArgs>}).
-     */
-    @Parameter
-    private List<String> compilerArgs;
-
-    /**
-     * A single additional compiler argument to pass to javac.
-     */
-    @Parameter(property = "auto-valhalla.compilerArgument")
-    private String compilerArgument;
-
-    /**
      * Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}).
      */
     @Parameter(alias = "compiler")
@@ -237,46 +181,35 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         }
     }
 
-    private <E, T> Supplier<T> resolve(E bean, Function<E, T> getter) {
-        return () -> bean == null ? null : getter.apply(bean);
-    }
-
     List<String> resolveCompilerArgs() {
         List<String> args = new ArrayList<>();
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
 
         Boolean resolvedParameters = firstNonNull(
-                this.parameters,
                 resolveBoolean(mavenCompiler, "parameters"),
                 resolveBoolean(compilerConfig, "parameters"));
 
         Boolean resolvedDebug = firstNonNull(
-                this.debug,
                 resolveBoolean(mavenCompiler, "debug"),
                 resolveBoolean(compilerConfig, "debug"));
 
         String resolvedDebuglevel = firstNonEmpty(
-                this.debuglevel,
                 resolveString(mavenCompiler, "debuglevel"),
                 resolveString(compilerConfig, "debuglevel"));
 
         Boolean resolvedShowWarnings = firstNonNull(
-                this.showWarnings,
                 resolveBoolean(mavenCompiler, "showWarnings"),
                 resolveBoolean(compilerConfig, "showWarnings"));
 
         Boolean resolvedShowDeprecation = firstNonNull(
-                this.showDeprecation,
                 resolveBoolean(mavenCompiler, "showDeprecation"),
                 resolveBoolean(compilerConfig, "showDeprecation"));
 
         String resolvedCompilerArgument = firstNonEmpty(
-                this.compilerArgument,
                 resolveString(mavenCompiler, "compilerArgument"),
                 resolveString(compilerConfig, "compilerArgument"));
 
         List<String> resolvedCompilerArgs = firstNonEmptyList(
-                this.compilerArgs,
                 () -> resolveCompilerArgsList(mavenCompiler),
                 () -> resolveCompilerArgsList(compilerConfig));
 
@@ -322,16 +255,12 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     String resolveEncoding() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
         String enc = firstNonEmpty(
-                this.encoding,
                 resolveString(mavenCompiler, "encoding"),
                 resolveString(compilerConfig, "encoding"));
         return normalizeEncoding(enc);
     }
 
-    private static <T> T firstNonNull(T a, Supplier<T> bSupplier, Supplier<T> cSupplier) {
-        if (a != null) {
-            return a;
-        }
+    private static <T> T firstNonNull(Supplier<T> bSupplier, Supplier<T> cSupplier) {
         T b = bSupplier.get();
         if (b != null) {
             return b;
@@ -339,10 +268,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return cSupplier.get();
     }
 
-    private static String firstNonEmpty(String a, Supplier<String> bSupplier, Supplier<String> cSupplier) {
-        if (isNotBlank(a)) {
-            return trim(a);
-        }
+    private static String firstNonEmpty(Supplier<String> bSupplier, Supplier<String> cSupplier) {
         String b = bSupplier.get();
         if (isNotBlank(b)) {
             return trim(b);
@@ -354,10 +280,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return null;
     }
 
-    private static List<String> firstNonEmptyList(List<String> a, Supplier<List<String>> bSupplier, Supplier<List<String>> cSupplier) {
-        if (a != null && !a.isEmpty()) {
-            return a;
-        }
+    private static List<String> firstNonEmptyList(Supplier<List<String>> bSupplier, Supplier<List<String>> cSupplier) {
         List<String> b = bSupplier.get();
         if (b != null && !b.isEmpty()) {
             return b;
@@ -435,38 +358,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     void setProject(MavenProject project) {
         this.project = project;
-    }
-
-    void setEncoding(String encoding) {
-        this.encoding = encoding;
-    }
-
-    void setParameters(Boolean parameters) {
-        this.parameters = parameters;
-    }
-
-    void setDebug(Boolean debug) {
-        this.debug = debug;
-    }
-
-    void setDebuglevel(String debuglevel) {
-        this.debuglevel = debuglevel;
-    }
-
-    void setShowWarnings(Boolean showWarnings) {
-        this.showWarnings = showWarnings;
-    }
-
-    void setShowDeprecation(Boolean showDeprecation) {
-        this.showDeprecation = showDeprecation;
-    }
-
-    void setCompilerArgs(List<String> compilerArgs) {
-        this.compilerArgs = compilerArgs;
-    }
-
-    void setCompilerArgument(String compilerArgument) {
-        this.compilerArgument = compilerArgument;
     }
 
     void setMavenCompiler(PlexusConfiguration mavenCompiler) {
