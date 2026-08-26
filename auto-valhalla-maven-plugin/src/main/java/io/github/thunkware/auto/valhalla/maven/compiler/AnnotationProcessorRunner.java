@@ -93,15 +93,10 @@ public final class AnnotationProcessorRunner {
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
-                .sourceRoots(input.sourceRoots())
-                .outputDirectory(input.outputDirectory())
-                .executable(input.executable())
-                .encoding(input.encoding())
                 .compilerArgs(options.subList(1, options.size()))
                 .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("only")
-                .compilerConfiguration(input.compilerConfiguration())
                 .build();
         ProcessResult process = mavenCompilerInvoker.compile(mavenCompilerInput);
         if (process.exit != 0) {

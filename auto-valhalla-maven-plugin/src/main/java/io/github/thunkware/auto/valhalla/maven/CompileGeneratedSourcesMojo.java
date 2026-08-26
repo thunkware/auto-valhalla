@@ -170,7 +170,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     }
 
     List<String> resolveCompilerArgs() {
-        List<String> args = new ArrayList<>();
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
 
         ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig);
@@ -182,6 +181,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         String resolvedCompilerArgument = configEvaluator.resolveString("compilerArgument");
         List<String> resolvedCompilerArgs = configEvaluator.resolveCompilerArgs();
 
+        List<String> args = new ArrayList<>();
         if (asBoolean(resolvedParameters)) {
             args.add("-parameters");
         }
@@ -211,11 +211,9 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 }
             }
         }
-        if (resolvedCompilerArgs != null) {
-            for (String arg : resolvedCompilerArgs) {
-                if (isNotBlank(arg)) {
-                    args.add(trim(arg));
-                }
+        for (String arg : resolvedCompilerArgs) {
+            if (isNotBlank(arg)) {
+                args.add(trim(arg));
             }
         }
         return args;
