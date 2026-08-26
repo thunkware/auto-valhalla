@@ -50,7 +50,7 @@ public final class AutoValhallaSourceTransformer {
      * @throws IOException on I/O errors during scanning, generating, or compilation
      */
     public Result transform(MavenCompilerInput input) throws IOException {
-        if (input.outputDirectory == null) {
+        if (input.outputDirectory() == null) {
             throw new IllegalStateException("outputDirectory is required for transform");
         }
         Result result = new Result();
@@ -66,31 +66,31 @@ public final class AutoValhallaSourceTransformer {
     }
 
     private static File getVersionsDirectory(MavenCompilerInput input) {
-        return new File(input.outputDirectory, "META-INF/versions/" + CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
+        return new File(input.outputDirectory(), "META-INF/versions/" + CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
     }
 
     private Result withMavenCompilerPlugin(
             MavenCompilerInput input, Selection selection, Result result) throws IOException {
         File versionsDirectory = getVersionsDirectory(input);
-        String sourceEncoding = Utils.normalizeEncoding(input.encoding);
+        String sourceEncoding = Utils.normalizeEncoding(input.encoding());
         int generatedCount = 0;
         for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles().entrySet()) {
             generatedCount += entry.getValue().size();
         }
         Files.createDirectories(versionsDirectory.toPath());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
-                .session(input.session)
-                .project(input.project)
-                .pluginManager(input.pluginManager)
+                .session(input.session())
+                .project(input.project())
+                .pluginManager(input.pluginManager())
                 .sourceRoots(singletonList(selection.generatedSources().getAbsolutePath()))
                 .outputDirectory(versionsDirectory)
-                .executable(input.executable)
+                .executable(input.executable())
                 .encoding(sourceEncoding)
                 .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("none")
-                .compilerArgs(input.compilerArgs)
-                .compilerConfiguration(input.compilerConfiguration)
+                .compilerArgs(input.compilerArgs())
+                .compilerConfiguration(input.compilerConfiguration())
                 .build();
         ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
         if (process.exit == 0) {

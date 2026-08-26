@@ -31,9 +31,9 @@ public final class MavenCompilerJavac {
     }
 
     public ProcessResult compile(MavenCompilerInput input) {
-        MavenSession session = input.session;
-        MavenProject project = input.project;
-        BuildPluginManager pluginManager = input.pluginManager;
+        MavenSession session = input.session();
+        MavenProject project = input.project();
+        BuildPluginManager pluginManager = input.pluginManager();
         Plugin plugin = project.getPlugin(GROUP_ID + ":" + ARTIFACT_ID);
         if (plugin == null) {
             plugin = new Plugin();
@@ -76,35 +76,35 @@ public final class MavenCompilerJavac {
         child(root, "compilePath", "${project.compileClasspathElements}");
         child(root, "mojoExecution", "${mojoExecution}");
         Xpp3Dom sourceRoots = new Xpp3Dom("compileSourceRoots");
-        for (String sourceRoot : input.sourceRoots) {
+        for (String sourceRoot : input.sourceRoots()) {
             child(sourceRoots, "compileSourceRoot", sourceRoot);
         }
         root.addChild(sourceRoots);
-        log.debug("outputDirectory: " + input.outputDirectory.getAbsolutePath());
-        child(root, "outputDirectory", input.outputDirectory.getAbsolutePath());
-        if (input.release != null) {
-            child(root, "release", input.release);
+        log.debug("outputDirectory: " + input.outputDirectory().getAbsolutePath());
+        child(root, "outputDirectory", input.outputDirectory().getAbsolutePath());
+        if (input.release() != null) {
+            child(root, "release", input.release());
         }
-        if (input.enablePreview) {
+        if (input.enablePreview()) {
             child(root, "enablePreview", "true");
         }
-        if (input.proc != null) {
-            child(root, "proc", input.proc);
+        if (input.proc() != null) {
+            child(root, "proc", input.proc());
         }
         child(root, "compilerId", "javac");
         child(root, "fork", "true");
-        child(root, "executable", input.executable);
-        child(root, "encoding", input.encoding);
+        child(root, "executable", input.executable());
+        child(root, "encoding", input.encoding());
         child(root, "useIncrementalCompilation", "false");
         child(root, "forceLegacyJavacApi", "true");
-        if (input.compilerConfiguration != null) {
-            for (PlexusConfiguration child : input.compilerConfiguration.getChildren()) {
+        if (input.compilerConfiguration() != null) {
+            for (PlexusConfiguration child : input.compilerConfiguration().getChildren()) {
                 root.addChild(copy(child));
             }
         }
 
         Xpp3Dom args = new Xpp3Dom("compilerArgs");
-        for (String value : input.compilerArgs) {
+        for (String value : input.compilerArgs()) {
             if (Utils.isNotBlank(value)) {
                 child(args, "arg", Utils.trim(value));
             }

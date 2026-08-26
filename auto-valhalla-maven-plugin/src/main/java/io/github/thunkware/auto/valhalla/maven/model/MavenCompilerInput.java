@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven.model;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -13,47 +14,81 @@ import org.codehaus.plexus.configuration.PlexusConfiguration;
  */
 public final class MavenCompilerInput {
 
-    public final MavenSession session;
-    public final MavenProject project;
-    public final BuildPluginManager pluginManager;
-    public final List<String> sourceRoots;
-    public final File outputDirectory;
-    public final File buildDirectory;
-    public final String executable;
-    public final String processorPath;
-    public final List<String> compileClasspath;
-    public final String encoding;
-    public final List<String> compilerArgs;
-    public final String release;
-    public final boolean enablePreview;
-    public final String proc;
-    public final boolean skipProcessor;
-    public final PlexusConfiguration compilerConfiguration;
+    private final Builder builder;
 
     private MavenCompilerInput(Builder builder) {
-        this.session = builder.session;
-        this.project = builder.project;
-        this.pluginManager = builder.pluginManager;
-        this.sourceRoots = builder.sourceRoots;
-        this.outputDirectory = builder.outputDirectory;
-        this.buildDirectory = builder.buildDirectory;
-        this.executable = builder.executable;
-        this.processorPath = builder.processorPath;
-        this.compileClasspath = builder.compileClasspath;
-        this.encoding = builder.encoding;
-        this.compilerArgs = builder.compilerArgs;
-        this.release = builder.release;
-        this.enablePreview = builder.enablePreview;
-        this.proc = builder.proc;
-        this.skipProcessor = builder.skipProcessor;
-        this.compilerConfiguration = builder.compilerConfiguration;
+        this.builder = builder;
+    }
+
+    public MavenSession session() {
+        return builder.session;
+    }
+
+    public MavenProject project() {
+        return builder.project;
+    }
+
+    public BuildPluginManager pluginManager() {
+        return builder.pluginManager;
+    }
+
+    public List<String> sourceRoots() {
+        return builder.sourceRoots;
+    }
+
+    public File outputDirectory() {
+        return builder.outputDirectory;
+    }
+
+    public File buildDirectory() {
+        return builder.buildDirectory;
+    }
+
+    public String executable() {
+        return builder.executable;
+    }
+
+    public String processorPath() {
+        return builder.processorPath;
+    }
+
+    public List<String> compileClasspath() {
+        return builder.compileClasspath;
+    }
+
+    public String encoding() {
+        return builder.encoding;
+    }
+
+    public List<String> compilerArgs() {
+        return builder.compilerArgs;
+    }
+
+    public String release() {
+        return builder.release;
+    }
+
+    public boolean enablePreview() {
+        return builder.enablePreview;
+    }
+
+    public String proc() {
+        return builder.proc;
+    }
+
+    public boolean skipProcessor() {
+        return builder.skipProcessor;
+    }
+
+    public PlexusConfiguration compilerConfiguration() {
+        return builder.compilerConfiguration;
     }
 
     public static Builder builder() {
         return new Builder();
     }
 
-    public static final class Builder {
+    public static final class Builder implements Cloneable {
 
         private MavenSession session;
         private MavenProject project;
@@ -88,7 +123,7 @@ public final class MavenCompilerInput {
         }
 
         public Builder sourceRoots(List<String> sourceRoots) {
-            this.sourceRoots = sourceRoots;
+            this.sourceRoots = sourceRoots == null ? null : new ArrayList<>(sourceRoots);
             return this;
         }
 
@@ -113,7 +148,7 @@ public final class MavenCompilerInput {
         }
 
         public Builder compileClasspath(List<String> compileClasspath) {
-            this.compileClasspath = compileClasspath;
+            this.compileClasspath = compileClasspath == null ? null : new ArrayList<>(compileClasspath);
             return this;
         }
 
@@ -123,7 +158,7 @@ public final class MavenCompilerInput {
         }
 
         public Builder compilerArgs(List<String> compilerArgs) {
-            this.compilerArgs = compilerArgs;
+            this.compilerArgs = compilerArgs == null ? null : new ArrayList<>(compilerArgs);
             return this;
         }
 
@@ -165,7 +200,20 @@ public final class MavenCompilerInput {
             if (encoding == null || encoding.trim().isEmpty()) {
                 throw new IllegalStateException("Maven compiler encoding is required");
             }
-            return new MavenCompilerInput(this);
+            return new MavenCompilerInput(clone());
+        }
+
+        @Override
+        public Builder clone() {
+            try {
+                Builder clone = (Builder) super.clone();
+                clone.sourceRoots = sourceRoots == null ? null : new ArrayList<>(sourceRoots);
+                clone.compileClasspath = compileClasspath == null ? null : new ArrayList<>(compileClasspath);
+                clone.compilerArgs = compilerArgs == null ? null : new ArrayList<>(compilerArgs);
+                return clone;
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError(e);
+            }
         }
     }
 }

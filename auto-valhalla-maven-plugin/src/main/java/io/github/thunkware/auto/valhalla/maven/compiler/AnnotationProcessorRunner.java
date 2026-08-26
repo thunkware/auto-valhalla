@@ -59,10 +59,10 @@ public final class AnnotationProcessorRunner {
      * @throws IOException on I/O errors during scanning or the selection pass
      */
     public Selection run(MavenCompilerInput input) throws IOException {
-        File generatedDir = new File(input.buildDirectory, GENERATED_DIR);
+        File generatedDir = new File(input.buildDirectory(), GENERATED_DIR);
 
         Selection selection = new Selection(generatedDir);
-        if (input.skipProcessor) {
+        if (input.skipProcessor()) {
             collectGeneratedFiles(generatedDir, selection);
             return selection;
         }
@@ -71,7 +71,7 @@ public final class AnnotationProcessorRunner {
         // deleteRecursively(generatedDir);
         Files.createDirectories(generatedDir.toPath());
 
-        List<File> sources = collectSources(input.sourceRoots);
+        List<File> sources = collectSources(input.sourceRoots());
         if (sources.isEmpty()) {
             return selection;
         }
@@ -93,27 +93,27 @@ public final class AnnotationProcessorRunner {
         List<String> options = new ArrayList<>();
         options.add("-proc:only");
         options.add("-processorpath");
-        options.add(input.processorPath);
+        options.add(input.processorPath());
         options.add("-cp");
-        options.add(Javac.joinClasspath(input.compileClasspath));
+        options.add(Javac.joinClasspath(input.compileClasspath()));
         options.add("-encoding");
-        options.add(input.encoding);
+        options.add(input.encoding());
         options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
-                .session(input.session)
-                .project(input.project)
-                .pluginManager(input.pluginManager)
-                .sourceRoots(input.sourceRoots)
-                .outputDirectory(input.outputDirectory)
-                .executable(input.executable)
-                .encoding(input.encoding)
+                .session(input.session())
+                .project(input.project())
+                .pluginManager(input.pluginManager())
+                .sourceRoots(input.sourceRoots())
+                .outputDirectory(input.outputDirectory())
+                .executable(input.executable())
+                .encoding(input.encoding())
                 .compilerArgs(options.subList(1, options.size()))
                 .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("only")
-                .compilerConfiguration(input.compilerConfiguration)
+                .compilerConfiguration(input.compilerConfiguration())
                 .build();
         ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
         if (process.exit != 0) {
