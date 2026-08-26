@@ -7,7 +7,7 @@ import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
 import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import org.apache.maven.plugin.MojoFailureException;
 
-public final class JdkVersion {
+public final class JdkVersionValidator {
 
     public static void validate() throws MojoFailureException {
         validate(CompileGeneratedSourcesMojo.jdkFeature(), System.getenv("JAVA28_HOME"));

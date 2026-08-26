@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
-import org.apache.maven.plugin.logging.Log;
 
 /**
  * Resolves the JDK compiler executable used by the Maven compiler plugin.
@@ -21,7 +20,6 @@ public final class Javac {
         return String.join(File.pathSeparator, paths);
     }
 
-    /** Joins classpath entries with the platform path separator. */
     /** Lowest JDK feature version scanned for {@code java<N>.home} /
      *  {@code JAVA<N>_HOME}. */
     private static final int MIN_SCAN_VERSION = 28;

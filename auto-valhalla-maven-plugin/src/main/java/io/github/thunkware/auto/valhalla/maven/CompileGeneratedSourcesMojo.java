@@ -5,13 +5,15 @@ import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.normalizeEncoding;
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.trim;
+import static org.apache.maven.plugins.annotations.LifecyclePhase.PROCESS_CLASSES;
+import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
 import io.github.thunkware.auto.valhalla.maven.compiler.AutoValhallaSourceTransformer;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
-import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
+import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -26,10 +28,8 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
@@ -63,8 +63,11 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
  *       a value class) fails the build ({@code failOnAnnotationFailure}).</li>
  * </ul>
  */
-@Mojo(name = "compile-generated-sources", defaultPhase = LifecyclePhase.PROCESS_CLASSES,
-        threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
+@Mojo(name = "compile-generated-sources",
+        defaultPhase = PROCESS_CLASSES,
+        threadSafe = true,
+        requiresDependencyResolution = COMPILE_PLUS_RUNTIME
+)
 public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     /**
@@ -132,7 +135,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
             return;
         }
         JarPluginChecker.checkOnce(session, project, getLog());
-        JdkVersion.validate();
+        JdkVersionValidator.validate();
         List<String> compileClasspath;
         try {
             compileClasspath = compileClasspath();

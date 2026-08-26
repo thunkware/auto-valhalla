@@ -1,13 +1,15 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
+import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_SOURCES;
+import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
 import io.github.thunkware.auto.valhalla.maven.compiler.AnnotationProcessorRunner;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
-import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
+import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
@@ -20,10 +22,8 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 
@@ -40,8 +40,10 @@ import org.codehaus.plexus.configuration.PlexusConfiguration;
  * inspect (or post-process) what would be transformed without producing the
  * multi-release value classes.
  */
-@Mojo(name = "generate-sources", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true,
-        requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
+@Mojo(name = "generate-sources",
+        defaultPhase = GENERATE_SOURCES,
+        threadSafe = true,
+        requiresDependencyResolution = COMPILE_PLUS_RUNTIME)
 public class GenerateSourcesMojo extends AbstractMojo {
 
     /**
@@ -97,7 +99,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
             return;
         }
         JarPluginChecker.checkOnce(session, project, getLog());
-        JdkVersion.validate();
+        JdkVersionValidator.validate();
         List<String> compileClasspath;
         try {
             compileClasspath = compileClasspath();
@@ -133,13 +135,13 @@ public class GenerateSourcesMojo extends AbstractMojo {
                     + "annotation-processor pass: " + e.getMessage(), e);
         }
 
-        if (selection.selectedTypes().isEmpty()) {
+        if (selection.selectedTypes.isEmpty()) {
             getLog().info("auto-valhalla: no @AutoValhalla-annotated classes found");
         } else {
-            int count = selection.selectedTypes().size();
+            int count = selection.selectedTypes.size();
             getLog().info("auto-valhalla: processed " + count
                     + " @AutoValhalla-annotated class" + plural(count) + "; generated sources under "
-                    + selection.generatedSources().getAbsolutePath());
+                    + selection.generatedSources.getAbsolutePath());
         }
     }
 

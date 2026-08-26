@@ -14,35 +14,26 @@ import java.util.Map;
  */
 public final class Selection {
 
+    /**
+     * Qualified names of the {@code @AutoValhalla}-annotated top-level
+     * types the processor selected (and generated copies for).
+     */
     public final List<String> selectedTypes = new ArrayList<>();
+
+    /**
+     * Generated files by path relative to generatedSources; each
+     * entry lists the selected types living in that file.
+     */
     public final Map<String, List<Generated>> generatedFiles = new LinkedHashMap<>();
+
+    /**
+     * Directory holding the generated sources (the processor's out
+     * dir); created even when nothing was generated.
+     */
     public final File generatedSources;
 
     public Selection(File generatedSources) {
         this.generatedSources = generatedSources;
     }
 
-    /**
-     * Qualified names of the {@code @AutoValhalla}-annotated top-level
-     * types the processor selected (and generated copies for).
-     */
-    public List<String> selectedTypes() {
-        return selectedTypes;
-    }
-
-    /**
-     * Directory holding the generated sources (the processor's out
-     * dir); created even when nothing was generated.
-     */
-    public File generatedSources() {
-        return generatedSources;
-    }
-
-    /**
-     * Generated files by path relative to {@link #generatedSources()}; each
-     * entry lists the selected types living in that file.
-     */
-    public Map<String, List<Generated>> generatedFiles() {
-        return generatedFiles;
-    }
 }

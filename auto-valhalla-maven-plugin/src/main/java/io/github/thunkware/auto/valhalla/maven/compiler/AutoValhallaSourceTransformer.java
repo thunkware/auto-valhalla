@@ -56,9 +56,9 @@ public final class AutoValhallaSourceTransformer {
         Result result = new Result();
 
         Selection selection = runner.run(input);
-        result.selected.addAll(selection.selectedTypes());
-        result.generatedSources = selection.generatedSources();
-        if (selection.generatedFiles().isEmpty()) {
+        result.selected.addAll(selection.selectedTypes);
+        result.generatedSources = selection.generatedSources;
+        if (selection.generatedFiles.isEmpty()) {
             return result;
         }
 
@@ -74,7 +74,7 @@ public final class AutoValhallaSourceTransformer {
         File versionsDirectory = getVersionsDirectory(input);
         String sourceEncoding = Utils.normalizeEncoding(input.encoding());
         int generatedCount = 0;
-        for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles().entrySet()) {
+        for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles.entrySet()) {
             generatedCount += entry.getValue().size();
         }
         Files.createDirectories(versionsDirectory.toPath());
@@ -82,7 +82,7 @@ public final class AutoValhallaSourceTransformer {
                 .session(input.session())
                 .project(input.project())
                 .pluginManager(input.pluginManager())
-                .sourceRoots(singletonList(selection.generatedSources().getAbsolutePath()))
+                .sourceRoots(singletonList(selection.generatedSources.getAbsolutePath()))
                 .outputDirectory(versionsDirectory)
                 .executable(input.executable())
                 .encoding(sourceEncoding)

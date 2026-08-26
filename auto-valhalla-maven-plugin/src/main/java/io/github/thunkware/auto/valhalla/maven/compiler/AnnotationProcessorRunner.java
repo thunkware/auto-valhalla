@@ -67,8 +67,7 @@ public final class AnnotationProcessorRunner {
             return selection;
         }
 
-        // don't delete. mvn clean might not be run, and mvn compiler might skip if all source files are up-to-date
-        // deleteRecursively(generatedDir);
+        // don't delete generatedDir. mvn clean might not be run, and mvn compiler might skip if all source files are up-to-date
         Files.createDirectories(generatedDir.toPath());
 
         List<File> sources = collectSources(input.sourceRoots());

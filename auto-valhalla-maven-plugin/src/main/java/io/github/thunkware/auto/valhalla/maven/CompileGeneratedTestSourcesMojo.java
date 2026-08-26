@@ -7,8 +7,10 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
 /** Compiles transformed sources from the project's test source roots. */
-@Mojo(name = "compile-generated-test-sources", defaultPhase = LifecyclePhase.PROCESS_TEST_CLASSES,
-        threadSafe = true)
+@Mojo(name = "compile-generated-test-sources",
+        defaultPhase = LifecyclePhase.PROCESS_TEST_CLASSES,
+        threadSafe = true
+)
 public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo {
 
     @Override

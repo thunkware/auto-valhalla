@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
+import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import java.util.List;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Plugin;
@@ -17,21 +17,21 @@ class CompileGeneratedSourcesMojoTest {
 
     @Test
     void allowsOlderMavenJdksWhenJava28HomeIsSet() throws Exception {
-        JdkVersion.validate(8, "/jdk28");
-        JdkVersion.validate(27, "/jdk28");
-        JdkVersion.validate(28, null);
+        JdkVersionValidator.validate(8, "/jdk28");
+        JdkVersionValidator.validate(27, "/jdk28");
+        JdkVersionValidator.validate(28, null);
     }
 
     @Test
     void rejectsOlderMavenJdksWithoutJava28Home() {
         assertThrows(MojoFailureException.class,
-                () -> JdkVersion.validate(27, null));
+                () -> JdkVersionValidator.validate(27, null));
     }
 
     @Test
     void rejectsJdksNewerThanTwentyEight() {
         assertThrows(MojoFailureException.class,
-                () -> JdkVersion.validate(29, null));
+                () -> JdkVersionValidator.validate(29, null));
     }
 
     @Test
