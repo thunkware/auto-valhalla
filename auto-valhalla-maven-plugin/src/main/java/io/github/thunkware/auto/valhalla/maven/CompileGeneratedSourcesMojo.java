@@ -85,13 +85,13 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
      * under {@code META-INF/versions/<versionDirectory>} here.
      */
     @Parameter(defaultValue = "${project.build.outputDirectory}", readonly = true, required = true)
-    private File outputDirectory;
+    protected File outputDirectory;
 
     /**
      * Maven's {@code target} directory, used for the generated dir.
      */
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
-    private File buildDirectory;
+    protected File buildDirectory;
 
     /**
      * Override for the JDK compiler executable. When Maven runs on JDK 8
@@ -108,7 +108,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     private PlexusConfiguration mavenCompiler;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
-    private MavenProject project;
+    protected MavenProject project;
 
     /**
      * The current Maven session, so the jar-plugin version check runs at
@@ -135,7 +135,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         JdkVersion.validate();
         List<String> compileClasspath;
         try {
-            compileClasspath = project.getCompileClasspathElements();
+            compileClasspath = compileClasspath();
         } catch (DependencyResolutionRequiredException e) {
             throw new MojoExecutionException("auto-valhalla: could not resolve the project's "
                     + "compile classpath for javac: " + e.getMessage(), e);
@@ -149,9 +149,10 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         String resolvedEncoding = resolveEncoding();
         List<String> extraCompilerArgs = resolveCompilerArgs();
         MavenCompilerInput input = MavenCompilerInput.builder()
-                .sourceRoots(project.getCompileSourceRoots())
-                .outputDirectory(outputDirectory)
+                .sourceRoots(sourceRoots())
+                .outputDirectory(outputDirectory())
                 .buildDirectory(buildDirectory)
+                .generatedSourcesDirectory(generatedSourcesDirectory())
                 .executable(javacExecutable())
                 .processorPath(processorPath)
                 .compileClasspath(compileClasspath)
@@ -370,6 +371,22 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     private String javacExecutable() {
         return Javac.resolveExecutable(javac, MIN_VALHALLA_JDK);
+    }
+
+    protected List<String> sourceRoots() {
+        return project.getCompileSourceRoots();
+    }
+
+    protected List<String> compileClasspath() throws DependencyResolutionRequiredException {
+        return project.getCompileClasspathElements();
+    }
+
+    protected File generatedSourcesDirectory() {
+        return new File(buildDirectory, "auto-valhalla-generated-sources");
+    }
+
+    protected File outputDirectory() {
+        return outputDirectory;
     }
 
     /**

@@ -44,6 +44,10 @@ public final class MavenCompilerInput {
         return builder.buildDirectory;
     }
 
+    public File generatedSourcesDirectory() {
+        return builder.generatedSourcesDirectory;
+    }
+
     public String executable() {
         return builder.executable;
     }
@@ -96,6 +100,7 @@ public final class MavenCompilerInput {
         private List<String> sourceRoots;
         private File outputDirectory;
         private File buildDirectory;
+        private File generatedSourcesDirectory;
         private String executable;
         private String processorPath;
         private List<String> compileClasspath;
@@ -134,6 +139,11 @@ public final class MavenCompilerInput {
 
         public Builder buildDirectory(File buildDirectory) {
             this.buildDirectory = buildDirectory;
+            return this;
+        }
+
+        public Builder generatedSourcesDirectory(File generatedSourcesDirectory) {
+            this.generatedSourcesDirectory = generatedSourcesDirectory;
             return this;
         }
 
@@ -199,6 +209,9 @@ public final class MavenCompilerInput {
             }
             if (encoding == null || encoding.trim().isEmpty()) {
                 throw new IllegalStateException("Maven compiler encoding is required");
+            }
+            if (generatedSourcesDirectory == null) {
+                generatedSourcesDirectory = new File(buildDirectory, "auto-valhalla-generated-sources");
             }
             return new MavenCompilerInput(clone());
         }

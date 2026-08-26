@@ -59,7 +59,7 @@ public final class AnnotationProcessorRunner {
      * @throws IOException on I/O errors during scanning or the selection pass
      */
     public Selection run(MavenCompilerInput input) throws IOException {
-        File generatedDir = new File(input.buildDirectory(), GENERATED_DIR);
+        File generatedDir = input.generatedSourcesDirectory();
 
         Selection selection = new Selection(generatedDir);
         if (input.skipProcessor()) {
