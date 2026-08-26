@@ -38,7 +38,7 @@ class JavacTest {
         System.setProperty("java28.home", home.toString());
 
         assertEquals(home.resolve("bin/javac").toFile().getAbsolutePath(),
-                Javac.resolveExecutable(null, 28));
+                Javac.resolveExecutable(null, 100));
     }
 
     @Test
@@ -60,16 +60,14 @@ class JavacTest {
         System.setProperty("java100.home", home.toString());
 
         assertEquals(home.resolve("bin/javac").toFile().getAbsolutePath(),
-                Javac.resolveExecutable(null, 28));
+                Javac.resolveExecutable(null, 100));
     }
 
     @Test
-    void configuredHomeWithoutJavacFails() {
-        System.setProperty("java28.home", temp.toString());
+    void configuredHomeWithoutJavacFallsThroughToUsableHome() {
+        System.setProperty("java100.home", temp.toString());
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> Javac.resolveExecutable(null, 28));
-        assertTrue(e.getMessage().contains("java28.home"), e.getMessage());
+        assertTrue(new File(Javac.resolveExecutable(null, 100)).isFile());
     }
 
     @Test
