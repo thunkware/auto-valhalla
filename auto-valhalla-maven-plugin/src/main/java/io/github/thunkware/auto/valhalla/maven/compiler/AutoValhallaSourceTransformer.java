@@ -8,7 +8,6 @@ import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
-import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -72,7 +71,6 @@ public final class AutoValhallaSourceTransformer {
     private Result withMavenCompilerPlugin(
             MavenCompilerInput input, Selection selection, Result result) throws IOException {
         File versionsDirectory = getVersionsDirectory(input);
-        String sourceEncoding = Utils.normalizeEncoding(input.encoding());
         int generatedCount = 0;
         for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles.entrySet()) {
             generatedCount += entry.getValue().size();
@@ -81,13 +79,9 @@ public final class AutoValhallaSourceTransformer {
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 .sourceRoots(singletonList(selection.generatedSources.getAbsolutePath()))
                 .outputDirectory(versionsDirectory)
-                .executable(input.executable())
-                .encoding(sourceEncoding)
                 .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("none")
-                .compilerArgs(input.compilerArgs())
-                .compilerConfiguration(input.compilerConfiguration())
                 .build();
         ProcessResult process = mavenCompilerInvoker.compile(mavenCompilerInput);
         if (process.exit == 0) {
