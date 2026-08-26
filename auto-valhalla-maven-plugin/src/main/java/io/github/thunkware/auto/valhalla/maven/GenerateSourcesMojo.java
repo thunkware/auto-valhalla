@@ -93,7 +93,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
             getLog().info("auto-valhalla: skipping source processing");
             return;
         }
-        JarPluginCheck.checkOnce(session, project, getLog());
+        JarPluginChecker.checkOnce(session, project, getLog());
         JdkVersion.validate();
         List<String> compileClasspath;
         try {

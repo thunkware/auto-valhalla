@@ -179,7 +179,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
             getLog().info("auto-valhalla: skipping transformation");
             return;
         }
-        JarPluginCheck.checkOnce(session, project, getLog());
+        JarPluginChecker.checkOnce(session, project, getLog());
         JdkVersion.validate();
         List<String> compileClasspath;
         try {

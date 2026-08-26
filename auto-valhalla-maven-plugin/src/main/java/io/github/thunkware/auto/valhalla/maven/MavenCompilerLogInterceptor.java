@@ -1,14 +1,13 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import org.apache.maven.plugin.BuildPluginManager;
-import org.apache.maven.plugin.MavenPluginManager;
-import org.apache.maven.plugin.Mojo;
-import org.apache.maven.plugin.logging.Log;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import org.apache.maven.plugin.BuildPluginManager;
+import org.apache.maven.plugin.MavenPluginManager;
+import org.apache.maven.plugin.Mojo;
+import org.apache.maven.plugin.logging.Log;
 
 final class MavenCompilerLogInterceptor {
 

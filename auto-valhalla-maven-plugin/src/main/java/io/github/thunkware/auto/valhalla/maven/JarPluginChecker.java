@@ -13,7 +13,7 @@ import org.apache.maven.project.MavenProject;
  * own. Runs at most once per Maven run (guarded by a marker in the session's
  * user properties), no matter how many modules or auto-valhalla goals fire.
  */
-final class JarPluginCheck {
+final class JarPluginChecker {
 
     /** First maven-jar-plugin release with automatic multi-release jar
      *  handling based on the META-INF/versions directory. */
@@ -21,7 +21,7 @@ final class JarPluginCheck {
 
     private static final String CHECKED_KEY = "auto-valhalla.jarPluginVersionChecked";
 
-    private JarPluginCheck() {
+    private JarPluginChecker() {
         throw new AssertionError();
     }
 

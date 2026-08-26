@@ -81,7 +81,7 @@ public class MultiReleaseJarMojo extends AbstractMojo {
             getLog().info("auto-valhalla: no META-INF/versions produced; jar is not multi-release");
             return;
         }
-        JarPluginCheck.checkOnce(session, project, getLog());
+        JarPluginChecker.checkOnce(session, project, getLog());
         if (!multiRelease) {
             return;
         }
