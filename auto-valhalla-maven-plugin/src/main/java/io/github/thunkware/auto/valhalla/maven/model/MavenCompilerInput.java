@@ -88,6 +88,13 @@ public final class MavenCompilerInput {
         return new Builder();
     }
 
+    public static Builder builder(MavenCompilerInput input) {
+        if (input == null) {
+            throw new IllegalArgumentException("Maven compiler input is required");
+        }
+        return input.builder.clone();
+    }
+
     public static final class Builder implements Cloneable {
 
         private MavenSession session;

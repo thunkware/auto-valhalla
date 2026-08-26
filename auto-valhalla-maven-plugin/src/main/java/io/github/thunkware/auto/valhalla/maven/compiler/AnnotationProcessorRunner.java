@@ -92,10 +92,7 @@ public final class AnnotationProcessorRunner {
         options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
-        MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
-                .session(input.session())
-                .project(input.project())
-                .pluginManager(input.pluginManager())
+        MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 .sourceRoots(input.sourceRoots())
                 .outputDirectory(input.outputDirectory())
                 .executable(input.executable())

@@ -175,17 +175,11 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
         ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig);
         Boolean resolvedParameters = configEvaluator.resolveBoolean("parameters");
-
         Boolean resolvedDebug = configEvaluator.resolveBoolean("debug");
-
         String resolvedDebuglevel = configEvaluator.resolveString("debuglevel");
-
         Boolean resolvedShowWarnings = configEvaluator.resolveBoolean("showWarnings");
-
         Boolean resolvedShowDeprecation = configEvaluator.resolveBoolean("showDeprecation");
-
         String resolvedCompilerArgument = configEvaluator.resolveString("compilerArgument");
-
         List<String> resolvedCompilerArgs = configEvaluator.resolveCompilerArgs();
 
         if (asBoolean(resolvedParameters)) {

@@ -78,10 +78,7 @@ public final class AutoValhallaSourceTransformer {
             generatedCount += entry.getValue().size();
         }
         Files.createDirectories(versionsDirectory.toPath());
-        MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder()
-                .session(input.session())
-                .project(input.project())
-                .pluginManager(input.pluginManager())
+        MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 .sourceRoots(singletonList(selection.generatedSources.getAbsolutePath()))
                 .outputDirectory(versionsDirectory)
                 .executable(input.executable())
