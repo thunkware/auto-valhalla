@@ -36,10 +36,10 @@ public final class AnnotationProcessorRunner {
      */
     public static final String GENERATED_DIR = "auto-valhalla-generated-sources";
 
-    private final MavenCompilerJavac mavenCompilerJavac;
+    private final MavenCompilerInvoker mavenCompilerInvoker;
 
     public AnnotationProcessorRunner(Log log) {
-        this.mavenCompilerJavac = new MavenCompilerJavac(log);
+        this.mavenCompilerInvoker = new MavenCompilerInvoker(log);
     }
 
     /**
@@ -114,7 +114,7 @@ public final class AnnotationProcessorRunner {
                 .proc("only")
                 .compilerConfiguration(input.compilerConfiguration())
                 .build();
-        ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
+        ProcessResult process = mavenCompilerInvoker.compile(mavenCompilerInput);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass "
                     + "(maven-compiler-plugin) failed:\n"

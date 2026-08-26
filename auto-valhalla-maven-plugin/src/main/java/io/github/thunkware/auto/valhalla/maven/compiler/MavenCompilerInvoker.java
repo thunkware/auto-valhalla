@@ -18,7 +18,7 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
  * {@code maven-compiler-plugin}. The generated source directory and versioned
  * output directory are supplied as execution-local configuration.
  */
-public final class MavenCompilerJavac {
+public final class MavenCompilerInvoker {
 
     private static final String GROUP_ID = "org.apache.maven.plugins";
     private static final String ARTIFACT_ID = "maven-compiler-plugin";
@@ -26,11 +26,11 @@ public final class MavenCompilerJavac {
 
     private final Log log;
 
-    public MavenCompilerJavac(Log log) {
+    public MavenCompilerInvoker(Log log) {
         this.log = log;
     }
 
-    public ProcessResult compile(MavenCompilerInput input) {
+    ProcessResult compile(MavenCompilerInput input) {
         MavenSession session = input.session();
         MavenProject project = input.project();
         BuildPluginManager pluginManager = input.pluginManager();
@@ -80,7 +80,6 @@ public final class MavenCompilerJavac {
             child(sourceRoots, "compileSourceRoot", sourceRoot);
         }
         root.addChild(sourceRoots);
-        log.debug("outputDirectory: " + input.outputDirectory().getAbsolutePath());
         child(root, "outputDirectory", input.outputDirectory().getAbsolutePath());
         if (input.release() != null) {
             child(root, "release", input.release());
@@ -110,6 +109,9 @@ public final class MavenCompilerJavac {
             }
         }
         root.addChild(args);
+        if (log.isDebugEnabled()) {
+            log.debug("maven-compiler configuration: " + root);
+        }
         return root;
     }
 

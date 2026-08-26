@@ -97,14 +97,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     protected File buildDirectory;
 
     /**
-     * Override for the JDK compiler executable. When Maven runs on JDK 8
-     * through 27, {@code JAVA28_HOME} must point to the JDK 28 compiler; on
-     * JDK 28, the running JDK compiler is used by default.
-     */
-    @Parameter(property = "auto-valhalla.javac")
-    private String javac;
-
-    /**
      * Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}).
      */
     @Parameter(alias = "compiler")
@@ -156,7 +148,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .outputDirectory(outputDirectory())
                 .buildDirectory(buildDirectory)
                 .generatedSourcesDirectory(generatedSourcesDirectory())
-                .executable(javacExecutable())
+                .executable(resolveExecutable())
                 .processorPath(processorPath)
                 .compileClasspath(compileClasspath)
                 .encoding(resolvedEncoding)
@@ -292,7 +284,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return cSupplier.get();
     }
 
-    private PlexusConfiguration getCompilerPluginConfiguration() {
+    protected PlexusConfiguration getCompilerPluginConfiguration() {
         if (project == null) {
             return null;
         }
@@ -372,8 +364,12 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         this.mavenCompiler = mavenCompiler == null ? null : new XmlPlexusConfiguration(mavenCompiler);
     }
 
-    private String javacExecutable() {
-        return Javac.resolveExecutable(javac, MIN_VALHALLA_JDK);
+    protected String resolveExecutable() {
+        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
+        String executable = firstNonEmpty(
+                resolveString(mavenCompiler, "executable"),
+                resolveString(compilerConfig, "executable"));
+        return Javac.resolveExecutable(executable, MIN_VALHALLA_JDK);
     }
 
     protected List<String> sourceRoots() {

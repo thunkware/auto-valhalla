@@ -26,6 +26,8 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /**
  * Runs only the {@code auto-valhalla} annotation processor: a
@@ -61,23 +63,8 @@ public class GenerateSourcesMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.outputDirectory}", readonly = true, required = true)
     protected File outputDirectory;
 
-    /**
-     * Override for the JDK compiler executable. When Maven runs on JDK 8
-     * through 27, {@code JAVA28_HOME} must point to the JDK 28 compiler; on
-     * JDK 28, the running JDK compiler is used by default.
-     */
-    @Parameter(property = "auto-valhalla.javac")
-    private String javac;
-
     @Parameter(alias = "compiler")
     private PlexusConfiguration mavenCompiler;
-
-    /**
-     * Character encoding for the selection pass. Defaults to
-     * {@code ${project.build.sourceEncoding}} or UTF-8.
-     */
-    @Parameter(property = "auto-valhalla.encoding", defaultValue = "${project.build.sourceEncoding}")
-    private String encoding;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     protected MavenProject project;
@@ -119,7 +106,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
                     .buildDirectory(buildDirectory)
                     .outputDirectory(outputDirectory())
                     .generatedSourcesDirectory(generatedSourcesDirectory())
-                    .executable(javacExecutable())
+                    .executable(resolveExecutable())
                     .processorPath(processorPath)
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())
@@ -146,11 +133,38 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String resolveEncoding() {
-        return Utils.normalizeEncoding(encoding);
+        return Utils.normalizeEncoding(firstCompilerValue("encoding"));
     }
 
-    private String javacExecutable() {
-        return Javac.resolveExecutable(javac, CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
+    private String resolveExecutable() {
+        return Javac.resolveExecutable(firstCompilerValue("executable"),
+                CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
+    }
+
+    private String firstCompilerValue(String name) {
+        String nested = compilerValue(mavenCompiler, name);
+        return nested == null ? compilerValue(compilerPluginConfiguration(), name) : nested;
+    }
+
+    private PlexusConfiguration compilerPluginConfiguration() {
+        org.apache.maven.model.Plugin plugin =
+                project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
+        if (plugin == null) {
+            plugin = project.getPlugin("maven-compiler-plugin");
+        }
+        if (plugin != null && plugin.getConfiguration() instanceof Xpp3Dom) {
+            return new XmlPlexusConfiguration((Xpp3Dom) plugin.getConfiguration());
+        }
+        return null;
+    }
+
+    private static String compilerValue(PlexusConfiguration configuration, String name) {
+        if (configuration == null) {
+            return null;
+        }
+        PlexusConfiguration child = configuration.getChild(name);
+        String value = child == null ? null : child.getValue(null);
+        return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
     protected List<String> sourceRoots() {

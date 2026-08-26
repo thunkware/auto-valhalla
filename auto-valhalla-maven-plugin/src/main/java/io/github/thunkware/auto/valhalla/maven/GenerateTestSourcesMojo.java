@@ -1,11 +1,11 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_TEST_SOURCES;
+
 import java.io.File;
 import java.util.List;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
-
-import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_TEST_SOURCES;
 
 /** Generates transformed sources from the project's test source roots. */
 @Mojo(name = "generate-test-sources",

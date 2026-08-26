@@ -33,11 +33,11 @@ import org.apache.maven.plugin.logging.Log;
 public final class AutoValhallaSourceTransformer {
 
     private final AnnotationProcessorRunner runner;
-    private final MavenCompilerJavac mavenCompilerJavac;
+    private final MavenCompilerInvoker mavenCompilerInvoker;
 
     public AutoValhallaSourceTransformer(Log log) {
         this.runner = new AnnotationProcessorRunner(log);
-        this.mavenCompilerJavac = new MavenCompilerJavac(log);
+        this.mavenCompilerInvoker = new MavenCompilerInvoker(log);
     }
 
     /**
@@ -92,7 +92,7 @@ public final class AutoValhallaSourceTransformer {
                 .compilerArgs(input.compilerArgs())
                 .compilerConfiguration(input.compilerConfiguration())
                 .build();
-        ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
+        ProcessResult process = mavenCompilerInvoker.compile(mavenCompilerInput);
         if (process.exit == 0) {
             result.converted += generatedCount;
         } else {

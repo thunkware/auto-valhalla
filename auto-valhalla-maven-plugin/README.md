@@ -86,10 +86,8 @@ All parameters are optional:
 | --- | --- | --- | --- |
 | `versionDirectory` | `auto-valhalla.version` | `28` | the multi-release version directory, also the javac `--release` |
 | `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
-| `javac` | `auto-valhalla.javac` | `JAVA28_HOME/bin/javac` on JDK 8–27, else `<java.home>/bin/javac` on JDK 28 | override the JDK compiler executable; Maven may run on JDK 8 through 27 only when `JAVA28_HOME` points to JDK 28 |
 | `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
 | `skip` | `auto-valhalla.skip` | `false` | skip the goal |
-| `encoding` | `auto-valhalla.encoding` | `${project.build.sourceEncoding}` | character encoding for source compilation |
 | `parameters` | `auto-valhalla.parameters` | inherited | generate metadata for reflection on method parameters (`-parameters`) |
 | `debug` | `auto-valhalla.debug` | inherited | include debugging information (`-g` or `-g:none`) |
 | `debuglevel` | `auto-valhalla.debuglevel` | inherited | keyword list for `-g:` (e.g. `lines,vars,source`) |
@@ -97,7 +95,7 @@ All parameters are optional:
 | `showDeprecation` | `auto-valhalla.showDeprecation` | inherited | show deprecation warnings (`-deprecation`) |
 | `compilerArgs` | — | inherited | list of additional arguments to pass to javac (e.g. `<compilerArgs><arg>-parameters</arg></compilerArgs>`) |
 | `compilerArgument` | `auto-valhalla.compilerArgument` | inherited | single additional argument string to pass to javac |
-| `maven-compiler` | — | — | nested configuration block (`<maven-compiler>` or `<compiler>`) containing any of the compiler options above |
+| `maven-compiler` | — | — | nested configuration block (`<maven-compiler>` or `<compiler>`) containing compiler-plugin options such as `executable` and `encoding`; options are also inherited from the project's `maven-compiler-plugin` declaration |
 
 Compiler configuration options (`parameters`, `debug`, `debuglevel`, `showWarnings`, `showDeprecation`, `encoding`, `compilerArgs`) can be specified directly on `<configuration>`, nested inside a `<maven-compiler>` (or `<compiler>`) block, or automatically inherited from the project's `maven-compiler-plugin` configuration:
 
