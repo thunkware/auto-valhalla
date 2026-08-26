@@ -13,7 +13,7 @@
 
   <artifactId>auto-valhalla-tests</artifactId>
   <packaging>pom</packaging>
-  <name>auto-valhalla tests</name>
+  <name>auto-valhalla-tests</name>
 
   <modules>
     <module>test-5-lib</module>

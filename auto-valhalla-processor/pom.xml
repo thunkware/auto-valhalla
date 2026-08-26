@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>auto-valhalla-processor</artifactId>
-  <name>auto-valhalla annotation processor</name>
+  <name>auto-valhalla-processor</name>
 
   <description>
     Annotation processor (javac's -processor) that selects the top-level

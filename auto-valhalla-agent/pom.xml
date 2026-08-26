@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>auto-valhalla-agent</artifactId>
-  <name>auto-valhalla agent</name>
+  <name>auto-valhalla-agent</name>
 
   <url>https://github.com/thunkware/auto-valhalla.git</url>
   <organization>

@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>test-5-lib</artifactId>
-  <name>test-5-lib (Java 5 bytecode)</name>
+  <name>test-5-lib</name>
 
   <description>
     A value-class candidate compiled to genuine Java 5 bytecode with a real JDK 5, proving the agent handles legacy class files.

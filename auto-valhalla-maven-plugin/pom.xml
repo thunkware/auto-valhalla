@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>auto-valhalla-maven-plugin</artifactId>
-  <name>auto-valhalla maven plugin</name>
+  <name>auto-valhalla-maven-plugin</name>
   <packaging>maven-plugin</packaging>
 
   <description>

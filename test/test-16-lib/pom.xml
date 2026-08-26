@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>test-16-lib</artifactId>
-  <name>test-16-lib (Java 16 bytecode)</name>
+  <name>test-16-lib</name>
 
   <description>
     Value-class candidates compiled to Java 16 bytecode,

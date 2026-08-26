@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>auto-valhalla-agent-attach</artifactId>
-  <name>auto-valhalla agent attach</name>
+  <name>auto-valhalla-agent-attach</name>
 
   <description>
     Attaches the auto-valhalla agent to an already running JVM

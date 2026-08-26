@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>auto-valhalla-api</artifactId>
-  <name>auto-valhalla api</name>
+  <name>auto-valhalla-api</name>
 
   <description>
     The @AutoValhalla annotation and AutoValhallaVerifier
