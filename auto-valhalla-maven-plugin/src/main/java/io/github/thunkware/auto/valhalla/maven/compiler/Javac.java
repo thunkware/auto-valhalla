@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.TreeMap;
 import org.apache.maven.plugin.logging.Log;
 
@@ -12,7 +13,7 @@ import org.apache.maven.plugin.logging.Log;
  */
 public final class Javac {
 
-    public Javac(Log log) {
+    private Javac() {
     }
 
     /** Joins classpath entries with the platform path separator. */
@@ -43,10 +44,11 @@ public final class Javac {
         }
 
         Map<Integer, List<Home>> homes = new TreeMap<>();
-        for (String name : System.getProperties().stringPropertyNames()) {
+        Properties properties = System.getProperties();
+        for (String name : properties.stringPropertyNames()) {
             int version = numberedVersion(name, "java", ".home");
             if (version >= MIN_SCAN_VERSION) {
-                addHome(homes, version, System.getProperty(name),
+                addHome(homes, version, properties.getProperty(name),
                         "system property " + name);
             }
         }
@@ -131,7 +133,7 @@ public final class Javac {
         }
     }
 
-    public static final class ProcessResult {
+    static final class ProcessResult {
 
         public final int exit;
         public final String output;
