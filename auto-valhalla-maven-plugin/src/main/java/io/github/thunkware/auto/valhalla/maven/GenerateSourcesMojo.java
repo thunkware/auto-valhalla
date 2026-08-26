@@ -9,6 +9,7 @@ import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
 import io.github.thunkware.auto.valhalla.maven.support.ConfigEvaluator;
+import io.github.thunkware.auto.valhalla.maven.support.ConfigOrigin;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
@@ -68,7 +69,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
     private PlexusConfiguration mavenCompiler;
 
     @Parameter(property = "auto-valhalla.config-origin", defaultValue = "nestedFirst")
-    private ConfigEvaluator.Origin configOrigin = ConfigEvaluator.Origin.nestedFirst;
+    private ConfigOrigin configOrigin = ConfigOrigin.NESTED_FIRST;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     protected MavenProject project;
