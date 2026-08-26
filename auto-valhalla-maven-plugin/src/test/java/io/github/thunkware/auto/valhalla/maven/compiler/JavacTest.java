@@ -64,10 +64,12 @@ class JavacTest {
     }
 
     @Test
-    void configuredHomeWithoutJavacFallsThroughToUsableHome() {
+    void configuredHomeWithoutJavacFails() {
         System.setProperty("java100.home", temp.toString());
 
-        assertTrue(new File(Javac.resolveExecutable(null, 100)).isFile());
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> Javac.resolveExecutable(null, 100));
+        assertTrue(e.getMessage().contains("java100.home"), e.getMessage());
     }
 
     @Test

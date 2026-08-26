@@ -67,6 +67,9 @@ public class GenerateSourcesMojo extends AbstractMojo {
     @Parameter(alias = "compiler")
     private PlexusConfiguration mavenCompiler;
 
+    @Parameter(property = "auto-valhalla.config-origin", defaultValue = "nestedFirst")
+    private String configOrigin;
+
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     protected MavenProject project;
 
@@ -143,7 +146,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String firstCompilerValue(String name) {
-        return new ConfigEvaluator(mavenCompiler, compilerPluginConfiguration())
+        return new ConfigEvaluator(mavenCompiler, compilerPluginConfiguration(), configOrigin)
                 .resolveString(name);
     }
 

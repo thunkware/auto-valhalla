@@ -100,6 +100,9 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     @Parameter(alias = "compiler")
     private PlexusConfiguration mavenCompiler;
 
+    @Parameter(property = "auto-valhalla.config-origin", defaultValue = "nestedFirst")
+    private String configOrigin;
+
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     protected MavenProject project;
 
@@ -172,7 +175,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     List<String> resolveCompilerArgs() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
 
-        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig);
+        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig, configOrigin);
         Boolean resolvedParameters = configEvaluator.resolveBoolean("parameters");
         Boolean resolvedDebug = configEvaluator.resolveBoolean("debug");
         String resolvedDebuglevel = configEvaluator.resolveString("debuglevel");
@@ -221,7 +224,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     String resolveEncoding() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig);
+        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig, configOrigin);
         String enc = configEvaluator.resolveString("encoding");
         return normalizeEncoding(enc);
     }
@@ -255,7 +258,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     protected String resolveExecutable() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        String executable = new ConfigEvaluator(mavenCompiler, compilerConfig)
+        String executable = new ConfigEvaluator(mavenCompiler, compilerConfig, configOrigin)
                 .resolveString("executable");
         return Javac.resolveExecutable(executable, MIN_VALHALLA_JDK);
     }

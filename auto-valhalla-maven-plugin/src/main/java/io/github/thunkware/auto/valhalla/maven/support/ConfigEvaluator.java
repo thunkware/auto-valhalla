@@ -11,12 +11,25 @@ import org.codehaus.plexus.configuration.PlexusConfiguration;
 /** Evaluates nested compiler configuration before inherited plugin configuration. */
 public final class ConfigEvaluator {
 
+    public enum Origin {
+        NESTED_FIRST,
+        PROJECT_FIRST,
+        NESTED_ONLY,
+        PROJECT_ONLY
+    }
+
     private final PlexusConfiguration nested;
     private final PlexusConfiguration inherited;
+    private final Origin origin;
 
     public ConfigEvaluator(PlexusConfiguration nested, PlexusConfiguration inherited) {
+        this(nested, inherited, "nestedFirst");
+    }
+
+    public ConfigEvaluator(PlexusConfiguration nested, PlexusConfiguration inherited, String origin) {
         this.nested = nested;
         this.inherited = inherited;
+        this.origin = parseOrigin(origin);
     }
 
     public Boolean resolveBoolean(String name) {
@@ -25,13 +38,57 @@ public final class ConfigEvaluator {
     }
 
     public String resolveString(String name) {
-        String value = value(nested, name);
-        return value == null ? value(inherited, name) : value;
+        for (PlexusConfiguration configuration : configurations()) {
+            String value = value(configuration, name);
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 
     public List<String> resolveCompilerArgs() {
-        List<String> args = compilerArgs(nested);
-        return args.isEmpty() ? compilerArgs(inherited) : args;
+        for (PlexusConfiguration configuration : configurations()) {
+            List<String> args = compilerArgs(configuration);
+            if (!args.isEmpty()) {
+                return args;
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    private PlexusConfiguration[] configurations() {
+        switch (origin) {
+            case PROJECT_FIRST:
+                return new PlexusConfiguration[] {inherited, nested};
+            case NESTED_ONLY:
+                return new PlexusConfiguration[] {nested};
+            case PROJECT_ONLY:
+                return new PlexusConfiguration[] {inherited};
+            case NESTED_FIRST:
+            default:
+                return new PlexusConfiguration[] {nested, inherited};
+        }
+    }
+
+    private static Origin parseOrigin(String origin) {
+        if (origin == null || origin.trim().isEmpty()) {
+            return Origin.NESTED_FIRST;
+        }
+        if ("nestedFirst".equals(origin)) {
+            return Origin.NESTED_FIRST;
+        }
+        if ("projectFirst".equals(origin)) {
+            return Origin.PROJECT_FIRST;
+        }
+        if ("nestedOnly".equals(origin)) {
+            return Origin.NESTED_ONLY;
+        }
+        if ("projectOnly".equals(origin)) {
+            return Origin.PROJECT_ONLY;
+        }
+        throw new IllegalArgumentException("config-origin must be one of "
+                + "nestedFirst, projectFirst, nestedOnly, projectOnly");
     }
 
     private static String value(PlexusConfiguration configuration, String name) {
