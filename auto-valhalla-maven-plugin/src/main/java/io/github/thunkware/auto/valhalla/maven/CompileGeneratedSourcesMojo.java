@@ -117,11 +117,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        execute(false);
-    }
-
-    protected final void execute(boolean skipProcessor)
-            throws MojoExecutionException, MojoFailureException {
         if (skip) {
             getLog().info("auto-valhalla: skipping transformation");
             return;
@@ -154,7 +149,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .encoding(resolvedEncoding)
                 .compilerArgs(extraCompilerArgs)
                 .compilerConfiguration(mavenCompiler)
-                .skipProcessor(skipProcessor)
                 .session(session)
                 .project(project)
                 .pluginManager(pluginManager)

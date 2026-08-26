@@ -80,10 +80,6 @@ public final class MavenCompilerInput {
         return builder.proc;
     }
 
-    public boolean skipProcessor() {
-        return builder.skipProcessor;
-    }
-
     public PlexusConfiguration compilerConfiguration() {
         return builder.compilerConfiguration;
     }
@@ -109,7 +105,6 @@ public final class MavenCompilerInput {
         private String release;
         private boolean enablePreview;
         private String proc;
-        private boolean skipProcessor;
         private PlexusConfiguration compilerConfiguration;
 
         public Builder session(MavenSession session) {
@@ -184,11 +179,6 @@ public final class MavenCompilerInput {
 
         public Builder proc(String proc) {
             this.proc = proc;
-            return this;
-        }
-
-        public Builder skipProcessor(boolean skipProcessor) {
-            this.skipProcessor = skipProcessor;
             return this;
         }
 

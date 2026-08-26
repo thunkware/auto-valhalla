@@ -51,9 +51,6 @@ public final class AnnotationProcessorRunner {
      * {@code versionDirectory}, {@code outputDirectory} and
      * {@code compilerArgs} input fields are ignored.
      *
-     * <p>With {@code skipProcessor} set, the generated dir is not touched and
-     * no pass runs: generated files left by a previous run are reused.
-     *
      * @param input the compiler inputs (source roots, build directory, javac,
      *              processor path, compile classpath, encoding)
      * @throws IOException on I/O errors during scanning or the selection pass
@@ -62,11 +59,6 @@ public final class AnnotationProcessorRunner {
         File generatedDir = input.generatedSourcesDirectory();
 
         Selection selection = new Selection(generatedDir);
-        if (input.skipProcessor()) {
-            collectGeneratedFiles(generatedDir, selection);
-            return selection;
-        }
-
         // don't delete generatedDir. mvn clean might not be run, and mvn compiler might skip if all source files are up-to-date
         Files.createDirectories(generatedDir.toPath());
 
