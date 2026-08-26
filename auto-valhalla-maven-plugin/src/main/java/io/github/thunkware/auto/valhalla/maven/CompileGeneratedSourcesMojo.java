@@ -12,15 +12,14 @@ import io.github.thunkware.auto.valhalla.maven.compiler.AutoValhallaSourceTransf
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
+import io.github.thunkware.auto.valhalla.maven.support.ConfigEvaluator;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
@@ -174,33 +173,20 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         List<String> args = new ArrayList<>();
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
 
-        Boolean resolvedParameters = firstNonNull(
-                resolveBoolean(mavenCompiler, "parameters"),
-                resolveBoolean(compilerConfig, "parameters"));
+        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig);
+        Boolean resolvedParameters = configEvaluator.resolveBoolean("parameters");
 
-        Boolean resolvedDebug = firstNonNull(
-                resolveBoolean(mavenCompiler, "debug"),
-                resolveBoolean(compilerConfig, "debug"));
+        Boolean resolvedDebug = configEvaluator.resolveBoolean("debug");
 
-        String resolvedDebuglevel = firstNonEmpty(
-                resolveString(mavenCompiler, "debuglevel"),
-                resolveString(compilerConfig, "debuglevel"));
+        String resolvedDebuglevel = configEvaluator.resolveString("debuglevel");
 
-        Boolean resolvedShowWarnings = firstNonNull(
-                resolveBoolean(mavenCompiler, "showWarnings"),
-                resolveBoolean(compilerConfig, "showWarnings"));
+        Boolean resolvedShowWarnings = configEvaluator.resolveBoolean("showWarnings");
 
-        Boolean resolvedShowDeprecation = firstNonNull(
-                resolveBoolean(mavenCompiler, "showDeprecation"),
-                resolveBoolean(compilerConfig, "showDeprecation"));
+        Boolean resolvedShowDeprecation = configEvaluator.resolveBoolean("showDeprecation");
 
-        String resolvedCompilerArgument = firstNonEmpty(
-                resolveString(mavenCompiler, "compilerArgument"),
-                resolveString(compilerConfig, "compilerArgument"));
+        String resolvedCompilerArgument = configEvaluator.resolveString("compilerArgument");
 
-        List<String> resolvedCompilerArgs = firstNonEmptyList(
-                () -> resolveCompilerArgsList(mavenCompiler),
-                () -> resolveCompilerArgsList(compilerConfig));
+        List<String> resolvedCompilerArgs = configEvaluator.resolveCompilerArgs();
 
         if (asBoolean(resolvedParameters)) {
             args.add("-parameters");
@@ -243,38 +229,9 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     String resolveEncoding() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        String enc = firstNonEmpty(
-                resolveString(mavenCompiler, "encoding"),
-                resolveString(compilerConfig, "encoding"));
+        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig);
+        String enc = configEvaluator.resolveString("encoding");
         return normalizeEncoding(enc);
-    }
-
-    private static <T> T firstNonNull(Supplier<T> bSupplier, Supplier<T> cSupplier) {
-        T b = bSupplier.get();
-        if (b != null) {
-            return b;
-        }
-        return cSupplier.get();
-    }
-
-    private static String firstNonEmpty(Supplier<String> bSupplier, Supplier<String> cSupplier) {
-        String b = bSupplier.get();
-        if (isNotBlank(b)) {
-            return trim(b);
-        }
-        String c = cSupplier.get();
-        if (isNotBlank(c)) {
-            return trim(c);
-        }
-        return null;
-    }
-
-    private static List<String> firstNonEmptyList(Supplier<List<String>> bSupplier, Supplier<List<String>> cSupplier) {
-        List<String> b = bSupplier.get();
-        if (b != null && !b.isEmpty()) {
-            return b;
-        }
-        return cSupplier.get();
     }
 
     protected PlexusConfiguration getCompilerPluginConfiguration() {
@@ -291,59 +248,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return null;
     }
 
-    private static List<String> resolveCompilerArgsList(PlexusConfiguration compilerConfig) {
-        if (compilerConfig == null) {
-            return Collections.emptyList();
-        }
-        PlexusConfiguration argsDom = compilerConfig.getChild("compilerArgs");
-        if (argsDom == null) {
-            argsDom = compilerConfig.getChild("compilerArguments");
-        }
-        if (argsDom != null) {
-            List<String> list = new ArrayList<>();
-            for (PlexusConfiguration child : argsDom.getChildren()) {
-                String val = child.getValue(null);
-                if (isNotBlank(val)) {
-                    list.add(trim(val));
-                } else if (child.getName() != null && child.getName().startsWith("-")) {
-                    list.add(child.getName());
-                }
-            }
-            if (!list.isEmpty()) {
-                return list;
-            }
-        }
-        return Collections.emptyList();
-    }
-
-    private static Supplier<Boolean> resolveBoolean(PlexusConfiguration compilerConfig, String childName) {
-        if (compilerConfig != null) {
-            return () -> {
-                PlexusConfiguration child = compilerConfig.getChild(childName);
-                String value = getDomValue(child);
-                return value == null ? null : Boolean.valueOf(value);
-            };
-        }
-        return () -> null;
-    }
-
-    private static Supplier<String> resolveString(PlexusConfiguration compilerConfig, String childName) {
-        if (compilerConfig != null) {
-            return () -> {
-                PlexusConfiguration child = compilerConfig.getChild(childName);
-                return getDomValue(child);
-            };
-        }
-        return () -> null;
-    }
-
-    private static String getDomValue(PlexusConfiguration child) {
-        String value = child == null ? null : child.getValue(null);
-        if (value != null && !value.trim().isEmpty()) {
-            return value.trim();
-        }
-        return null;
-    }
 
     void setProject(MavenProject project) {
         this.project = project;
@@ -359,9 +263,8 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     protected String resolveExecutable() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        String executable = firstNonEmpty(
-                resolveString(mavenCompiler, "executable"),
-                resolveString(compilerConfig, "executable"));
+        String executable = new ConfigEvaluator(mavenCompiler, compilerConfig)
+                .resolveString("executable");
         return Javac.resolveExecutable(executable, MIN_VALHALLA_JDK);
     }
 
