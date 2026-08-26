@@ -13,6 +13,11 @@ import org.apache.maven.plugins.annotations.Parameter;
 )
 public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo {
 
+    @Parameter(defaultValue = "${project.build.testOutputDirectory}", readonly = true, required = true)
+    private File testOutputDirectory;
+
+    private boolean skipCompileGeneratedTestSources;
+
     @Override
     protected List<String> sourceRoots() {
         return project.getTestCompileSourceRoots();
@@ -33,6 +38,13 @@ public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo
         return testOutputDirectory;
     }
 
-    @Parameter(defaultValue = "${project.build.testOutputDirectory}", readonly = true, required = true)
-    private File testOutputDirectory;
+    @Override
+    protected boolean isSkipped() {
+        return skipCompileGeneratedTestSources;
+    }
+
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipCompileGeneratedTestSources")
+    protected void setSkipCompileGeneratedTestSources(boolean skipCompileGeneratedTestSources) {
+        this.skipCompileGeneratedTestSources = skipCompileGeneratedTestSources;
+    }
 }

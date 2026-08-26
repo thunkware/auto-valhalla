@@ -80,8 +80,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     /**
      * Skip the transformation entirely.
      */
-    @Parameter(defaultValue = "false", property = "auto-valhalla.skip")
-    private boolean skip;
+    private boolean skipCompileGeneratedSources;
 
     /**
      * The compiled classes directory; the versioned value classes are written
@@ -117,7 +116,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        if (skip) {
+        if (isSkipped()) {
             getLog().info("auto-valhalla: skipping transformation");
             return;
         }
@@ -380,6 +379,15 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     protected File outputDirectory() {
         return outputDirectory;
+    }
+
+    protected boolean isSkipped() {
+        return skipCompileGeneratedSources;
+    }
+
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipCompileGeneratedSources")
+    protected void setSkipCompileGeneratedSources(boolean skipCompileGeneratedSources) {
+        this.skipCompileGeneratedSources = skipCompileGeneratedSources;
     }
 
     /**

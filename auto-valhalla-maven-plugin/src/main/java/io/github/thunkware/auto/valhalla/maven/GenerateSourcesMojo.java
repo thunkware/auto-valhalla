@@ -51,8 +51,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
     /**
      * Skip the annotation-processor pass entirely.
      */
-    @Parameter(defaultValue = "false", property = "auto-valhalla.skip")
-    private boolean skip;
+    private boolean skipGenerateSources;
 
     /**
      * Maven's {@code target} directory, used for the generated sources.
@@ -81,7 +80,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        if (skip) {
+        if (isSkipped()) {
             getLog().info("auto-valhalla: skipping source processing");
             return;
         }
@@ -181,5 +180,14 @@ public class GenerateSourcesMojo extends AbstractMojo {
 
     protected File outputDirectory() {
         return outputDirectory;
+    }
+
+    protected boolean isSkipped() {
+        return skipGenerateSources;
+    }
+
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipGenerateSources")
+    protected void setSkipGenerateSources(boolean skipGenerateSources) {
+        this.skipGenerateSources = skipGenerateSources;
     }
 }
