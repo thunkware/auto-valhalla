@@ -46,10 +46,10 @@ major_of() {
 }
 
 echo "== 1. build + tests =="
-mvn -q install >/tmp/avv-build.log 2>&1
+mvn -q install
 RC=$?
 check "$RC" "mvn install (annotation=JDK8, agent=JDK28)"
-[ "$RC" -eq 0 ] || { echo "FATAL: mvn install failed (see /tmp/avv-build.log); aborting."; exit 1; }
+[ "$RC" -eq 0 ] || { echo "FATAL: mvn install failed; aborting."; exit 1; }
 
 AGENT_JAR=$(ls auto-valhalla-agent/target/auto-valhalla-agent-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 ATTACH_JAR=$(ls auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
@@ -80,11 +80,11 @@ echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints 
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"
 
 echo "== 4. JDK 28 agent-attach integration test =="
-mvn -q -pl test/test-16-main test >/tmp/avv-test.log 2>&1
+mvn -q -pl test/test-16-main test
 check $? "demo-runner AgentAttachTest"
 
 echo "== 5. end-to-end demo =="
-./test/run-demo.sh >/tmp/avv-demo.log 2>&1
+./test/run-demo.sh
 check $? "run-demo.sh (with and without agent)"
 
 echo "== 6. maven-plugin end-to-end =="
