@@ -8,6 +8,7 @@ import io.github.thunkware.auto.valhalla.maven.compiler.AnnotationProcessorRunne
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
+import io.github.thunkware.auto.valhalla.maven.support.ConfigEvaluator;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
@@ -18,6 +19,7 @@ import java.util.List;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -141,13 +143,12 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String firstCompilerValue(String name) {
-        String nested = compilerValue(mavenCompiler, name);
-        return nested == null ? compilerValue(compilerPluginConfiguration(), name) : nested;
+        return new ConfigEvaluator(mavenCompiler, compilerPluginConfiguration())
+                .resolveString(name);
     }
 
     private PlexusConfiguration compilerPluginConfiguration() {
-        org.apache.maven.model.Plugin plugin =
-                project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
+        Plugin plugin = project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
         if (plugin == null) {
             plugin = project.getPlugin("maven-compiler-plugin");
         }
@@ -155,15 +156,6 @@ public class GenerateSourcesMojo extends AbstractMojo {
             return new XmlPlexusConfiguration((Xpp3Dom) plugin.getConfiguration());
         }
         return null;
-    }
-
-    private static String compilerValue(PlexusConfiguration configuration, String name) {
-        if (configuration == null) {
-            return null;
-        }
-        PlexusConfiguration child = configuration.getChild(name);
-        String value = child == null ? null : child.getValue(null);
-        return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
     protected List<String> sourceRoots() {
