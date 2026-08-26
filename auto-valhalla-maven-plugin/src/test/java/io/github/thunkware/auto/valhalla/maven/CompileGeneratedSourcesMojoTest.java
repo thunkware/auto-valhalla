@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.thunkware.auto.valhalla.maven.compiler.CompilerConfiguration;
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersion;
 import java.util.Arrays;
 import java.util.List;
@@ -155,15 +154,19 @@ class CompileGeneratedSourcesMojoTest {
 
     @Test
     void resolvesNestedMavenCompilerConfiguration() {
-        CompilerConfiguration compiler = new CompilerConfiguration();
-        compiler.setParameters(true);
-        compiler.setDebug(true);
-        compiler.setDebuglevel("lines,vars");
-        compiler.setShowWarnings(false);
-        compiler.setShowDeprecation(true);
-        compiler.setCompilerArgument("-Xlint:all");
-        compiler.setCompilerArgs(Arrays.asList("-Werror"));
-        compiler.setEncoding("ISO-8859-1");
+        Xpp3Dom compiler = nestedCompiler(
+                "parameters", "true",
+                "debug", "true",
+                "debuglevel", "lines,vars",
+                "showWarnings", "false",
+                "showDeprecation", "true",
+                "compilerArgument", "-Xlint:all",
+                "encoding", "ISO-8859-1");
+        Xpp3Dom compilerArgs = new Xpp3Dom("compilerArgs");
+        Xpp3Dom arg = new Xpp3Dom("arg");
+        arg.setValue("-Werror");
+        compilerArgs.addChild(arg);
+        compiler.addChild(compilerArgs);
 
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setMavenCompiler(compiler);
@@ -180,9 +183,7 @@ class CompileGeneratedSourcesMojoTest {
 
     @Test
     void directParametersOverrideNestedCompilerConfig() {
-        CompilerConfiguration compiler = new CompilerConfiguration();
-        compiler.setDebug(true);
-        compiler.setEncoding("UTF-16");
+        Xpp3Dom compiler = nestedCompiler("debug", "true", "encoding", "UTF-16");
 
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setMavenCompiler(compiler);
@@ -215,9 +216,7 @@ class CompileGeneratedSourcesMojoTest {
         build.addPlugin(compilerPlugin);
         project.setBuild(build);
 
-        CompilerConfiguration compiler = new CompilerConfiguration();
-        compiler.setParameters(true);
-        compiler.setEncoding("ISO-8859-1");
+        Xpp3Dom compiler = nestedCompiler("parameters", "true", "encoding", "ISO-8859-1");
 
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setProject(project);
@@ -226,5 +225,15 @@ class CompileGeneratedSourcesMojoTest {
         List<String> args = mojo.resolveCompilerArgs();
         assertTrue(args.contains("-parameters"));
         assertEquals("ISO-8859-1", mojo.resolveEncoding());
+    }
+
+    private static Xpp3Dom nestedCompiler(String... entries) {
+        Xpp3Dom compiler = new Xpp3Dom("compiler");
+        for (int i = 0; i < entries.length; i += 2) {
+            Xpp3Dom child = new Xpp3Dom(entries[i]);
+            child.setValue(entries[i + 1]);
+            compiler.addChild(child);
+        }
+        return compiler;
     }
 }

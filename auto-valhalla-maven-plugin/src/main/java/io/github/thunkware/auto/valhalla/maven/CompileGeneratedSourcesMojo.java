@@ -7,7 +7,6 @@ import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.trim;
 
 import io.github.thunkware.auto.valhalla.maven.compiler.AutoValhallaSourceTransformer;
-import io.github.thunkware.auto.valhalla.maven.compiler.CompilerConfiguration;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
@@ -33,6 +32,8 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /**
@@ -160,7 +161,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
      * Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}).
      */
     @Parameter(alias = "compiler")
-    private CompilerConfiguration mavenCompiler;
+    private PlexusConfiguration mavenCompiler;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -212,6 +213,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .compileClasspath(compileClasspath)
                 .encoding(resolvedEncoding)
                 .compilerArgs(extraCompilerArgs)
+                .compilerConfiguration(mavenCompiler)
                 .skipProcessor(skipProcessor)
                 .session(session)
                 .project(project)
@@ -241,41 +243,41 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     List<String> resolveCompilerArgs() {
         List<String> args = new ArrayList<>();
-        Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
+        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
 
         Boolean resolvedParameters = firstNonNull(
                 this.parameters,
-                resolve(mavenCompiler, CompilerConfiguration::getParameters),
+                resolveBoolean(mavenCompiler, "parameters"),
                 resolveBoolean(compilerConfig, "parameters"));
 
         Boolean resolvedDebug = firstNonNull(
                 this.debug,
-                resolve(mavenCompiler, CompilerConfiguration::getDebug),
+                resolveBoolean(mavenCompiler, "debug"),
                 resolveBoolean(compilerConfig, "debug"));
 
         String resolvedDebuglevel = firstNonEmpty(
                 this.debuglevel,
-                resolve(mavenCompiler, CompilerConfiguration::getDebuglevel),
+                resolveString(mavenCompiler, "debuglevel"),
                 resolveString(compilerConfig, "debuglevel"));
 
         Boolean resolvedShowWarnings = firstNonNull(
                 this.showWarnings,
-                resolve(mavenCompiler, CompilerConfiguration::getShowWarnings),
+                resolveBoolean(mavenCompiler, "showWarnings"),
                 resolveBoolean(compilerConfig, "showWarnings"));
 
         Boolean resolvedShowDeprecation = firstNonNull(
                 this.showDeprecation,
-                resolve(mavenCompiler, CompilerConfiguration::getShowDeprecation),
+                resolveBoolean(mavenCompiler, "showDeprecation"),
                 resolveBoolean(compilerConfig, "showDeprecation"));
 
         String resolvedCompilerArgument = firstNonEmpty(
                 this.compilerArgument,
-                resolve(mavenCompiler, CompilerConfiguration::getCompilerArgument),
+                resolveString(mavenCompiler, "compilerArgument"),
                 resolveString(compilerConfig, "compilerArgument"));
 
         List<String> resolvedCompilerArgs = firstNonEmptyList(
                 this.compilerArgs,
-                resolve(mavenCompiler, CompilerConfiguration::getCompilerArgs),
+                () -> resolveCompilerArgsList(mavenCompiler),
                 () -> resolveCompilerArgsList(compilerConfig));
 
         if (asBoolean(resolvedParameters)) {
@@ -318,10 +320,10 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     }
 
     String resolveEncoding() {
-        Xpp3Dom compilerConfig = getCompilerPluginConfiguration();
+        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
         String enc = firstNonEmpty(
                 this.encoding,
-                resolve(mavenCompiler, CompilerConfiguration::getEncoding),
+                resolveString(mavenCompiler, "encoding"),
                 resolveString(compilerConfig, "encoding"));
         return normalizeEncoding(enc);
     }
@@ -363,7 +365,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return cSupplier.get();
     }
 
-    private Xpp3Dom getCompilerPluginConfiguration() {
+    private PlexusConfiguration getCompilerPluginConfiguration() {
         if (project == null) {
             return null;
         }
@@ -372,23 +374,23 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
             plugin = project.getPlugin("maven-compiler-plugin");
         }
         if (plugin != null && plugin.getConfiguration() instanceof Xpp3Dom) {
-            return (Xpp3Dom) plugin.getConfiguration();
+            return new XmlPlexusConfiguration((Xpp3Dom) plugin.getConfiguration());
         }
         return null;
     }
 
-    private static List<String> resolveCompilerArgsList(Xpp3Dom compilerConfig) {
+    private static List<String> resolveCompilerArgsList(PlexusConfiguration compilerConfig) {
         if (compilerConfig == null) {
             return Collections.emptyList();
         }
-        Xpp3Dom argsDom = compilerConfig.getChild("compilerArgs");
+        PlexusConfiguration argsDom = compilerConfig.getChild("compilerArgs");
         if (argsDom == null) {
             argsDom = compilerConfig.getChild("compilerArguments");
         }
         if (argsDom != null) {
             List<String> list = new ArrayList<>();
-            for (Xpp3Dom child : argsDom.getChildren()) {
-                String val = child.getValue();
+            for (PlexusConfiguration child : argsDom.getChildren()) {
+                String val = child.getValue(null);
                 if (isNotBlank(val)) {
                     list.add(trim(val));
                 } else if (child.getName() != null && child.getName().startsWith("-")) {
@@ -402,10 +404,10 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return Collections.emptyList();
     }
 
-    private static Supplier<Boolean> resolveBoolean(Xpp3Dom compilerConfig, String childName) {
+    private static Supplier<Boolean> resolveBoolean(PlexusConfiguration compilerConfig, String childName) {
         if (compilerConfig != null) {
             return () -> {
-                Xpp3Dom child = compilerConfig.getChild(childName);
+                PlexusConfiguration child = compilerConfig.getChild(childName);
                 String value = getDomValue(child);
                 return value == null ? null : Boolean.valueOf(value);
             };
@@ -413,19 +415,20 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return () -> null;
     }
 
-    private static Supplier<String> resolveString(Xpp3Dom compilerConfig, String childName) {
+    private static Supplier<String> resolveString(PlexusConfiguration compilerConfig, String childName) {
         if (compilerConfig != null) {
             return () -> {
-                Xpp3Dom child = compilerConfig.getChild(childName);
+                PlexusConfiguration child = compilerConfig.getChild(childName);
                 return getDomValue(child);
             };
         }
         return () -> null;
     }
 
-    private static String getDomValue(Xpp3Dom child) {
-        if (child != null && child.getValue() != null && !child.getValue().trim().isEmpty()) {
-            return child.getValue().trim();
+    private static String getDomValue(PlexusConfiguration child) {
+        String value = child == null ? null : child.getValue(null);
+        if (value != null && !value.trim().isEmpty()) {
+            return value.trim();
         }
         return null;
     }
@@ -466,8 +469,12 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         this.compilerArgument = compilerArgument;
     }
 
-    void setMavenCompiler(CompilerConfiguration mavenCompiler) {
+    void setMavenCompiler(PlexusConfiguration mavenCompiler) {
         this.mavenCompiler = mavenCompiler;
+    }
+
+    void setMavenCompiler(Xpp3Dom mavenCompiler) {
+        this.mavenCompiler = mavenCompiler == null ? null : new XmlPlexusConfiguration(mavenCompiler);
     }
 
     private String javacExecutable() {

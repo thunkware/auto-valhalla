@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
 
 /**
  * Parameters for one invocation of the consuming project's
@@ -27,6 +28,7 @@ public final class MavenCompilerInput {
     public final boolean enablePreview;
     public final String proc;
     public final boolean skipProcessor;
+    public final PlexusConfiguration compilerConfiguration;
 
     private MavenCompilerInput(Builder builder) {
         this.session = builder.session;
@@ -44,6 +46,7 @@ public final class MavenCompilerInput {
         this.enablePreview = builder.enablePreview;
         this.proc = builder.proc;
         this.skipProcessor = builder.skipProcessor;
+        this.compilerConfiguration = builder.compilerConfiguration;
     }
 
     public static Builder builder() {
@@ -67,6 +70,7 @@ public final class MavenCompilerInput {
         private boolean enablePreview;
         private String proc;
         private boolean skipProcessor;
+        private PlexusConfiguration compilerConfiguration;
 
         public Builder session(MavenSession session) {
             this.session = session;
@@ -140,6 +144,11 @@ public final class MavenCompilerInput {
 
         public Builder skipProcessor(boolean skipProcessor) {
             this.skipProcessor = skipProcessor;
+            return this;
+        }
+
+        public Builder compilerConfiguration(PlexusConfiguration compilerConfiguration) {
+            this.compilerConfiguration = compilerConfiguration;
             return this;
         }
 

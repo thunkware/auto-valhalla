@@ -2,10 +2,10 @@ package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 
+import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
-import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -113,6 +113,7 @@ public final class AnnotationProcessorRunner {
                 .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("only")
+                .compilerConfiguration(input.compilerConfiguration)
                 .build();
         ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
         if (process.exit != 0) {

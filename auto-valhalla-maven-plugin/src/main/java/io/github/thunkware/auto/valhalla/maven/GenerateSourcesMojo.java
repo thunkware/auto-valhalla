@@ -25,6 +25,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
 
 /**
  * Runs only the {@code auto-valhalla} annotation processor: a
@@ -73,6 +74,9 @@ public class GenerateSourcesMojo extends AbstractMojo {
      */
     @Parameter(property = "auto-valhalla.javac")
     private String javac;
+
+    @Parameter(alias = "compiler")
+    private PlexusConfiguration mavenCompiler;
 
     /**
      * Character encoding for the selection pass. Defaults to
@@ -124,6 +128,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
                     .processorPath(processorPath)
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())
+                    .compilerConfiguration(mavenCompiler)
                     .session(session)
                     .project(project)
                     .pluginManager(pluginManager)

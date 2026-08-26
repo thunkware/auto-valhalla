@@ -10,6 +10,7 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /**
@@ -96,6 +97,11 @@ public final class MavenCompilerJavac {
         child(root, "encoding", input.encoding);
         child(root, "useIncrementalCompilation", "false");
         child(root, "forceLegacyJavacApi", "true");
+        if (input.compilerConfiguration != null) {
+            for (PlexusConfiguration child : input.compilerConfiguration.getChildren()) {
+                root.addChild(copy(child));
+            }
+        }
 
         Xpp3Dom args = new Xpp3Dom("compilerArgs");
         for (String value : input.compilerArgs) {
@@ -115,5 +121,14 @@ public final class MavenCompilerJavac {
 
     private static void child(Xpp3Dom parent, String name, String value) {
         parent.addChild(child(name, value));
+    }
+
+    private static Xpp3Dom copy(PlexusConfiguration source) {
+        Xpp3Dom target = new Xpp3Dom(source.getName());
+        target.setValue(source.getValue(null));
+        for (PlexusConfiguration child : source.getChildren()) {
+            target.addChild(copy(child));
+        }
+        return target;
     }
 }

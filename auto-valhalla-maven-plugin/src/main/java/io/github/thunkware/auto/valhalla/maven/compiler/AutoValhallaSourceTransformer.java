@@ -3,11 +3,11 @@ package io.github.thunkware.auto.valhalla.maven.compiler;
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import static java.util.Collections.singletonList;
 
+import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
-import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.io.File;
 import java.io.IOException;
@@ -90,6 +90,7 @@ public final class AutoValhallaSourceTransformer {
                 .enablePreview(true)
                 .proc("none")
                 .compilerArgs(input.compilerArgs)
+                .compilerConfiguration(input.compilerConfiguration)
                 .build();
         ProcessResult process = mavenCompilerJavac.compile(mavenCompilerInput);
         if (process.exit == 0) {
