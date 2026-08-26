@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>test-maven-plugin-nested-compiler</artifactId>
+  <name>test-maven-plugin-nested-compiler</name>
+
+  <description>
+    A consumer project that configures the auto-valhalla-maven-plugin through
+    its nested maven-compiler configuration block.
+  </description>
+
+  <properties>
+    <maven.compiler.release>8</maven.compiler.release>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>8</release>
+          <parameters>false</parameters>
+          <debug>true</debug>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>io.github.thunkware</groupId>
+        <artifactId>auto-valhalla-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <id>transform</id>
+            <goals>
+              <goal>generate-sources</goal>
+              <goal>compile-generated-sources</goal>
+            </goals>
+            <configuration>
+              <compiler>
+                <parameters>true</parameters>
+                <debug>false</debug>
+                <compilerArgument>-Xlint:all</compilerArgument>
+                <encoding>ISO-8859-1</encoding>
+              </compiler>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
