@@ -49,11 +49,11 @@ public final class AnnotationProcessorRunner {
      * <p>With {@code skipProcessor} set, the generated dir is not touched and
      * no pass runs: generated files left by a previous run are reused.
      *
-     * @param input the run inputs (source roots, build directory, javac,
+     * @param input the compiler inputs (source roots, build directory, javac,
      *              processor path, compile classpath, encoding)
      * @throws IOException on I/O errors during scanning or the selection pass
      */
-    Selection run(Input input) throws IOException {
+    Selection run(MavenCompilerInput input) throws IOException {
         File generatedDir = new File(input.buildDirectory, GENERATED_DIR);
 
         Selection selection = new Selection(generatedDir);
@@ -84,7 +84,7 @@ public final class AnnotationProcessorRunner {
      * only exits non-zero when it reported a real problem (e.g. an I/O error
      * writing the generated sources or the manifest).
      */
-    private void runPass(Input input, File selected) throws IOException {
+    private void runPass(MavenCompilerInput input, File selected) throws IOException {
         List<String> options = new ArrayList<>();
         options.add("-proc:only");
         options.add("-processorpath");
@@ -102,7 +102,7 @@ public final class AnnotationProcessorRunner {
                 .pluginManager(input.pluginManager)
                 .sourceRoots(input.sourceRoots)
                 .outputDirectory(input.outputDirectory)
-                .executable(input.javac)
+                .executable(input.executable)
                 .encoding(input.encoding)
                 .compilerArgs(options.subList(1, options.size()))
                 .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))

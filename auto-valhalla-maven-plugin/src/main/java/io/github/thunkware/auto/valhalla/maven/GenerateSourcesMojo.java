@@ -109,11 +109,11 @@ public class GenerateSourcesMojo extends AbstractMojo {
         }
         Selection selection;
         try {
-            Input input = Input.builder()
+            MavenCompilerInput input = MavenCompilerInput.builder()
                     .sourceRoots(project.getCompileSourceRoots())
                     .buildDirectory(buildDirectory)
                     .outputDirectory(outputDirectory)
-                    .javac(javacExecutable())
+                    .executable(javacExecutable())
                     .processorPath(processorPath)
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())

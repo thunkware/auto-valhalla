@@ -18,7 +18,7 @@ import org.apache.maven.plugin.logging.Log;
  * (with {@code value class}/{@code value record}), then compiles each generated
  * file with the JDK 28 compiler ({@code --release <N> --enable-preview}),
  * writing the resulting value-class files under {@code META-INF/versions/<N>}
- * so {@link MultiReleaseJarMojo} can mark the jar as multi-release.
+ * so the jar can be marked as multi-release.
  *
  * <p>There is no bytecode rewriting anywhere: the JVM's own compiler enforces
  * the value-class rules, and classes that javac rejects surface as per-source
@@ -40,10 +40,10 @@ public final class AutoValhallaSourceTransformer {
      * ({@code --release <N> --enable-preview}), writing the resulting
      * value-class files under {@code META-INF/versions/<N>}.
      *
-     * @param input the run inputs; {@code outputDirectory} must be set
+     * @param input the compiler inputs; {@code outputDirectory} must be set
      * @throws IOException on I/O errors during scanning, generating, or compilation
      */
-    public Result transform(Input input) throws IOException {
+    public Result transform(MavenCompilerInput input) throws IOException {
         if (input.outputDirectory == null) {
             throw new IllegalStateException("outputDirectory is required for transform");
         }
@@ -59,11 +59,12 @@ public final class AutoValhallaSourceTransformer {
         return withMavenCompilerPlugin(input, selection, result);
     }
 
-    private static File getVersionsDirectory(Input input) {
+    private static File getVersionsDirectory(MavenCompilerInput input) {
         return new File(input.outputDirectory, "META-INF/versions/" + CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
     }
 
-    private Result withMavenCompilerPlugin(Input input, Selection selection, Result result) throws IOException {
+    private Result withMavenCompilerPlugin(
+            MavenCompilerInput input, Selection selection, Result result) throws IOException {
         File versionsDirectory = getVersionsDirectory(input);
         String sourceEncoding = Utils.normalizeEncoding(input.encoding);
         int generatedCount = 0;
@@ -77,7 +78,7 @@ public final class AutoValhallaSourceTransformer {
                 .pluginManager(input.pluginManager)
                 .sourceRoots(singletonList(selection.generatedSources().getAbsolutePath()))
                 .outputDirectory(versionsDirectory)
-                .executable(input.javac)
+                .executable(input.executable)
                 .encoding(sourceEncoding)
                 .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
                 .enablePreview(true)
