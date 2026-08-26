@@ -5,7 +5,7 @@ import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResu
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
-import io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo;
+import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;

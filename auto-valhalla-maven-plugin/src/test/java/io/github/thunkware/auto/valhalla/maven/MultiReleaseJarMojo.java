@@ -1,5 +1,5 @@
 // TODO remove
-package io.github.thunkware.auto.valhalla.maven.mojo;
+package io.github.thunkware.auto.valhalla.maven;
 
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
 import io.github.thunkware.auto.valhalla.maven.support.MultiReleaseJar;

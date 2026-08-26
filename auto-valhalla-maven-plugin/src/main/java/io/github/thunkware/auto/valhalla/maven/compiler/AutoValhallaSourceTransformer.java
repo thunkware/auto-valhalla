@@ -7,7 +7,7 @@ import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
-import io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo;
+import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.io.File;
 import java.io.IOException;

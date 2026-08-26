@@ -1,4 +1,4 @@
-package io.github.thunkware.auto.valhalla.maven.mojo;
+package io.github.thunkware.auto.valhalla.maven;
 
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
 

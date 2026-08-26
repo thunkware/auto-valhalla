@@ -1,10 +1,10 @@
 package io.github.thunkware.auto.valhalla.maven.support;
 
-import static io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo.MIN_MAVEN_JDK;
-import static io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_MAVEN_JDK;
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
 
-import io.github.thunkware.auto.valhalla.maven.mojo.CompileGeneratedSourcesMojo;
+import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import org.apache.maven.plugin.MojoFailureException;
 
 public final class JdkVersion {
