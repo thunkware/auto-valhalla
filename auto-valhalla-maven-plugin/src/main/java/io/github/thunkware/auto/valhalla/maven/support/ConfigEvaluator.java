@@ -8,31 +8,27 @@ import java.util.Collections;
 import java.util.List;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 
-/** Evaluates nested compiler configuration before inherited plugin configuration. */
+/** Evaluates nested compiler configuration and project plugin configuration. */
 public final class ConfigEvaluator {
 
     private final PlexusConfiguration[] configurations;
 
-    private ConfigEvaluator(PlexusConfiguration nested, PlexusConfiguration inherited, ConfigOrigin origin) {
-        this.configurations = configurations(origin, nested, inherited);
+    private ConfigEvaluator(PlexusConfiguration nested, PlexusConfiguration project, ConfigOrigin origin) {
+        this.configurations = configurations(origin, nested, project);
     }
 
     private static String toUpperSnakeCase(String value) {
         return value.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
     }
 
-    public static ConfigEvaluator of(PlexusConfiguration nested, PlexusConfiguration inherited) {
-        return of(nested, inherited, ConfigOrigin.NESTED_FIRST);
+    public static ConfigEvaluator of(
+            PlexusConfiguration nested, PlexusConfiguration project, ConfigOrigin origin) {
+        return new ConfigEvaluator(nested, project, origin);
     }
 
     public static ConfigEvaluator of(
-            PlexusConfiguration nested, PlexusConfiguration inherited, ConfigOrigin origin) {
-        return new ConfigEvaluator(nested, inherited, origin);
-    }
-
-    public static ConfigEvaluator of(
-            PlexusConfiguration nested, PlexusConfiguration inherited, String origin) {
-        return of(nested, inherited, parseOrigin(origin));
+            PlexusConfiguration nested, PlexusConfiguration project, String origin) {
+        return of(nested, project, parseOrigin(origin));
     }
 
     public Boolean resolveBoolean(String name) {
@@ -61,17 +57,17 @@ public final class ConfigEvaluator {
     }
 
     private static PlexusConfiguration[] configurations(
-            ConfigOrigin origin, PlexusConfiguration nested, PlexusConfiguration inherited) {
+            ConfigOrigin origin, PlexusConfiguration nested, PlexusConfiguration project) {
         switch (origin) {
             case PROJECT_FIRST:
-                return new PlexusConfiguration[] {inherited, nested};
+                return new PlexusConfiguration[] {project, nested};
             case NESTED_ONLY:
                 return new PlexusConfiguration[] {nested};
             case PROJECT_ONLY:
-                return new PlexusConfiguration[] {inherited};
+                return new PlexusConfiguration[] {project};
             case NESTED_FIRST:
             default:
-                return new PlexusConfiguration[] {nested, inherited};
+                return new PlexusConfiguration[] {nested, project};
         }
     }
 
