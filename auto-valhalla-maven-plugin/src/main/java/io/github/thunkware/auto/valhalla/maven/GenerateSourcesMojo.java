@@ -146,7 +146,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String firstCompilerValue(String name) {
-        return new ConfigEvaluator(mavenCompiler, compilerPluginConfiguration(), configOrigin)
+        return ConfigEvaluator.of(mavenCompiler, compilerPluginConfiguration(), configOrigin)
                 .resolveString(name);
     }
 

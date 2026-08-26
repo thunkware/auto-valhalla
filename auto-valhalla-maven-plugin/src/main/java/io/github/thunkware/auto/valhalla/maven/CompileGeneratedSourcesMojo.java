@@ -175,7 +175,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     List<String> resolveCompilerArgs() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
 
-        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig, configOrigin);
+        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
         Boolean resolvedParameters = configEvaluator.resolveBoolean("parameters");
         Boolean resolvedDebug = configEvaluator.resolveBoolean("debug");
         String resolvedDebuglevel = configEvaluator.resolveString("debuglevel");
@@ -224,7 +224,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     String resolveEncoding() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        ConfigEvaluator configEvaluator = new ConfigEvaluator(mavenCompiler, compilerConfig, configOrigin);
+        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
         String enc = configEvaluator.resolveString("encoding");
         return normalizeEncoding(enc);
     }
@@ -258,7 +258,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     protected String resolveExecutable() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        String executable = new ConfigEvaluator(mavenCompiler, compilerConfig, configOrigin)
+        String executable = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin)
                 .resolveString("executable");
         return Javac.resolveExecutable(executable, MIN_VALHALLA_JDK);
     }

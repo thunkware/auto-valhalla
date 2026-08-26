@@ -18,18 +18,19 @@ public final class ConfigEvaluator {
         PROJECT_ONLY
     }
 
-    private final PlexusConfiguration nested;
-    private final PlexusConfiguration inherited;
-    private final Origin origin;
+    private final PlexusConfiguration[] configurations;
 
-    public ConfigEvaluator(PlexusConfiguration nested, PlexusConfiguration inherited) {
-        this(nested, inherited, "nestedFirst");
+    private ConfigEvaluator(PlexusConfiguration nested, PlexusConfiguration inherited, String origin) {
+        this.configurations = configurations(parseOrigin(origin), nested, inherited);
     }
 
-    public ConfigEvaluator(PlexusConfiguration nested, PlexusConfiguration inherited, String origin) {
-        this.nested = nested;
-        this.inherited = inherited;
-        this.origin = parseOrigin(origin);
+    public static ConfigEvaluator of(PlexusConfiguration nested, PlexusConfiguration inherited) {
+        return of(nested, inherited, "nestedFirst");
+    }
+
+    public static ConfigEvaluator of(
+            PlexusConfiguration nested, PlexusConfiguration inherited, String origin) {
+        return new ConfigEvaluator(nested, inherited, origin);
     }
 
     public Boolean resolveBoolean(String name) {
@@ -38,7 +39,7 @@ public final class ConfigEvaluator {
     }
 
     public String resolveString(String name) {
-        for (PlexusConfiguration configuration : configurations()) {
+        for (PlexusConfiguration configuration : configurations) {
             String value = value(configuration, name);
             if (value != null) {
                 return value;
@@ -48,7 +49,7 @@ public final class ConfigEvaluator {
     }
 
     public List<String> resolveCompilerArgs() {
-        for (PlexusConfiguration configuration : configurations()) {
+        for (PlexusConfiguration configuration : configurations) {
             List<String> args = compilerArgs(configuration);
             if (!args.isEmpty()) {
                 return args;
@@ -57,7 +58,8 @@ public final class ConfigEvaluator {
         return Collections.emptyList();
     }
 
-    private PlexusConfiguration[] configurations() {
+    private static PlexusConfiguration[] configurations(
+            Origin origin, PlexusConfiguration nested, PlexusConfiguration inherited) {
         switch (origin) {
             case PROJECT_FIRST:
                 return new PlexusConfiguration[] {inherited, nested};

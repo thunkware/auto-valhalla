@@ -13,20 +13,20 @@ class ConfigEvaluatorTest {
         XmlPlexusConfiguration nested = config("value", "nested");
         XmlPlexusConfiguration project = config("value", "project");
 
-        assertEquals("nested", new ConfigEvaluator(nested, project, "nestedFirst")
+        assertEquals("nested", ConfigEvaluator.of(nested, project, "nestedFirst")
                 .resolveString("value"));
-        assertEquals("project", new ConfigEvaluator(nested, project, "projectFirst")
+        assertEquals("project", ConfigEvaluator.of(nested, project, "projectFirst")
                 .resolveString("value"));
-        assertEquals("nested", new ConfigEvaluator(nested, project, "nestedOnly")
+        assertEquals("nested", ConfigEvaluator.of(nested, project, "nestedOnly")
                 .resolveString("value"));
-        assertEquals("project", new ConfigEvaluator(nested, project, "projectOnly")
+        assertEquals("project", ConfigEvaluator.of(nested, project, "projectOnly")
                 .resolveString("value"));
     }
 
     @Test
     void rejectsUnknownConfigurationOrigin() {
         assertThrows(IllegalArgumentException.class,
-                () -> new ConfigEvaluator(null, null, "invalid"));
+                () -> ConfigEvaluator.of(null, null, "invalid"));
     }
 
     private static XmlPlexusConfiguration config(String name, String value) {
