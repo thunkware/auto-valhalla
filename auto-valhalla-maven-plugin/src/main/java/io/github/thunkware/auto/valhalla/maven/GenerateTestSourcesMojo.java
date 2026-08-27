@@ -13,6 +13,7 @@ import org.apache.maven.plugins.annotations.Parameter;
         threadSafe = true)
 public class GenerateTestSourcesMojo extends GenerateSourcesMojo {
 
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipGenerateTestSources")
     private boolean skipGenerateTestSources;
 
     @Override
@@ -35,7 +36,6 @@ public class GenerateTestSourcesMojo extends GenerateSourcesMojo {
         return skipGenerateTestSources;
     }
 
-    @Parameter(defaultValue = "false", property = "auto-valhalla.skipGenerateTestSources")
     protected void setSkipGenerateTestSources(boolean skipGenerateTestSources) {
         this.skipGenerateTestSources = skipGenerateTestSources;
     }

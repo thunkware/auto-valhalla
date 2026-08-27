@@ -53,7 +53,18 @@ public class GenerateSourcesMojo extends AbstractMojo {
     /**
      * Skip the annotation-processor pass entirely.
      */
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipGenerateSources")
     private boolean skipGenerateSources;
+
+    /**
+     * Remove the {@code @AutoValhalla} annotation from the generated source
+     * files, so the generated value classes no longer carry the in-source
+     * opt-in marker. Only the generated copies are affected; the original
+     * sources are never modified. Default {@code false}, i.e. the generated
+     * copies keep the annotation.
+     */
+    @Parameter(defaultValue = "false", property = "auto-valhalla.removeAnnotation")
+    private boolean removeAnnotation;
 
     /**
      * Maven's {@code target} directory, used for the generated sources.
@@ -115,6 +126,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())
                     .compilerConfiguration(mavenCompiler)
+                    .removeAnnotation(removeAnnotation)
                     .session(session)
                     .project(project)
                     .pluginManager(pluginManager)
@@ -181,8 +193,11 @@ public class GenerateSourcesMojo extends AbstractMojo {
         return skipGenerateSources;
     }
 
-    @Parameter(defaultValue = "false", property = "auto-valhalla.skipGenerateSources")
     protected void setSkipGenerateSources(boolean skipGenerateSources) {
         this.skipGenerateSources = skipGenerateSources;
+    }
+
+    void setRemoveAnnotation(boolean removeAnnotation) {
+        this.removeAnnotation = removeAnnotation;
     }
 }

@@ -80,6 +80,10 @@ public final class MavenCompilerInput {
         return builder.proc;
     }
 
+    public boolean removeAnnotation() {
+        return builder.removeAnnotation;
+    }
+
     public PlexusConfiguration compilerConfiguration() {
         return builder.compilerConfiguration;
     }
@@ -112,6 +116,7 @@ public final class MavenCompilerInput {
         private String release;
         private boolean enablePreview;
         private String proc;
+        private boolean removeAnnotation;
         private PlexusConfiguration compilerConfiguration;
 
         public Builder session(MavenSession session) {
@@ -186,6 +191,11 @@ public final class MavenCompilerInput {
 
         public Builder proc(String proc) {
             this.proc = proc;
+            return this;
+        }
+
+        public Builder removeAnnotation(boolean removeAnnotation) {
+            this.removeAnnotation = removeAnnotation;
             return this;
         }
 

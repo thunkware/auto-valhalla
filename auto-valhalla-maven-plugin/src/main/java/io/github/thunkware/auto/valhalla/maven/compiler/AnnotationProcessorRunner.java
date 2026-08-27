@@ -100,6 +100,9 @@ public final class AnnotationProcessorRunner {
         options.add("-encoding");
         options.add(input.encoding());
         options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
+        if (input.removeAnnotation()) {
+            options.add("-A" + AutoValhallaProcessor.OPT_REMOVE_ANNOTATION + "=true");
+        }
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)

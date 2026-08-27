@@ -81,6 +81,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     /**
      * Skip the transformation entirely.
      */
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipCompileGeneratedSources")
     private boolean skipCompileGeneratedSources;
 
     /**
@@ -285,7 +286,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return skipCompileGeneratedSources;
     }
 
-    @Parameter(defaultValue = "false", property = "auto-valhalla.skipCompileGeneratedSources")
     protected void setSkipCompileGeneratedSources(boolean skipCompileGeneratedSources) {
         this.skipCompileGeneratedSources = skipCompileGeneratedSources;
     }

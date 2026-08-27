@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.thunkware</groupId>
+    <artifactId>auto-valhalla</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>test-maven-plugin-remove-annotation</artifactId>
+  <name>test-maven-plugin-remove-annotation</name>
+
+  <description>
+    A consumer project like test-maven-plugin-jdk8 that also configures the
+    auto-valhalla-maven-plugin's generate-sources goal with removeAnnotation
+    true: the @AutoValhalla marker is stripped from the generated value-class
+    sources (the base classes keep it), which are then compiled under
+    META-INF/versions/28.
+  </description>
+
+  <properties>
+    <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
+    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>8</release>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <debug>true</debug>
+          <parameters>true</parameters>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>io.github.thunkware</groupId>
+        <artifactId>auto-valhalla-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <id>transform</id>
+            <goals>
+              <goal>generate-sources</goal>
+              <goal>compile-generated-sources</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <removeAnnotation>true</removeAnnotation>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <!-- runnable directly: java -enable-preview -jar ... -->
+            <manifest>
+              <mainClass>demo.Main</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

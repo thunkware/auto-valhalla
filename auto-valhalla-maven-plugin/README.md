@@ -145,6 +145,7 @@ All parameters are optional:
 | parameter | property | default | description |
 | --- | --- | --- | --- |
 | `skipGenerateSources` | `auto-valhalla.skipGenerateSources` | `false` | skip the annotation-processor pass |
+| `removeAnnotation` | `auto-valhalla.removeAnnotation` | `false` | strip the `@AutoValhalla` annotation from the generated source files (`generate-sources`). Only the generated copies are affected; the original sources are never modified |
 | `skipCompileGeneratedSources` | `auto-valhalla.skipCompileGeneratedSources` | `false` | skip the value-class compilation |
 | `compiler` | — | — | nested configuration block (`<compiler>`) containing compiler-plugin options such as `executable` and `encoding` |
 
@@ -180,3 +181,4 @@ Additional test modules verify other configurations:
 | `test-maven-plugin-no-compiler`     | No explicit `maven-compiler-plugin` declaration   |
 | `test-maven-plugin-nested-compiler` | Nested `<compiler>` block with different settings |
 | `test-maven-plugin-parent-config`   | Compiler settings inherited from a parent POM     |
+| `test-maven-plugin-remove-annotation` | `removeAnnotation=true` strips the `@AutoValhalla` marker from the generated value-class sources |

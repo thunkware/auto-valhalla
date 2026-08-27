@@ -16,6 +16,7 @@ public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo
     @Parameter(defaultValue = "${project.build.testOutputDirectory}", readonly = true, required = true)
     private File testOutputDirectory;
 
+    @Parameter(defaultValue = "false", property = "auto-valhalla.skipCompileGeneratedTestSources")
     private boolean skipCompileGeneratedTestSources;
 
     @Override
@@ -43,7 +44,6 @@ public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo
         return skipCompileGeneratedTestSources;
     }
 
-    @Parameter(defaultValue = "false", property = "auto-valhalla.skipCompileGeneratedTestSources")
     protected void setSkipCompileGeneratedTestSources(boolean skipCompileGeneratedTestSources) {
         this.skipCompileGeneratedTestSources = skipCompileGeneratedTestSources;
     }

@@ -42,5 +42,6 @@
     <module>test-maven-plugin-no-compiler</module>
     <module>test-maven-plugin-nested-compiler</module>
     <module>test-maven-plugin-parent-config</module>
+    <module>test-maven-plugin-remove-annotation</module>
   </modules>
 </project>

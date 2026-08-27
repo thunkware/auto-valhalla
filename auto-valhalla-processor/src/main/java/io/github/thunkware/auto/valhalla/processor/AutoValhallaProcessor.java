@@ -5,6 +5,7 @@ import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -12,19 +13,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Messager;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
-import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
+
+import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * The annotation processor that drives the compile-time value-class
@@ -43,14 +48,25 @@ import javax.tools.Diagnostic.Kind;
  */
 public class AutoValhallaProcessor extends AbstractProcessor {
 
-    /** The {@code -A} option with the directory that receives the generated
-     *  sources. */
+    /**
+     * The {@code -A} option for output directory
+     */
     public static final String OPT_OUTDIR = "outdir";
 
-    /** The absolute path of the location this class was loaded from (the jar or
-     *  class directory to hand to {@code javac -processorpath}), or {@code null}
-     *  when it cannot be determined. The maven plugin passes this path through
-     *  to its {@code javac -proc:only} selection pass. */
+    /**
+     * The {@code -A} option for removing {@code @AutoValhalla} annotation from generated source.
+     */
+    public static final String OPT_REMOVE_ANNOTATION = "removeAnnotation";
+
+    private static final String ANNOTATION = "io.github.thunkware.auto.valhalla.api.AutoValhalla";
+    private static final String ANNOTATION_SIMPLE = "AutoValhalla";
+
+    /**
+     * The absolute path of the location this class was loaded from (the jar or
+     * class directory to hand to {@code javac -processorpath}), or {@code null}
+     * when it cannot be determined. The maven plugin passes this path through
+     * to its {@code javac -proc:only} selection pass.
+     */
     public static String processorPath() {
         if (AutoValhallaProcessor.class.getProtectionDomain() == null
                 || AutoValhallaProcessor.class.getProtectionDomain().getCodeSource() == null) {
@@ -65,9 +81,6 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         }
     }
 
-    private static final String ANNOTATION = "io.github.thunkware.auto.valhalla.api.AutoValhalla";
-    private static final String ANNOTATION_SIMPLE = "AutoValhalla";
-
     @Override
     public Set<String> getSupportedAnnotationTypes() {
         return Collections.singleton("*");
@@ -75,7 +88,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
 
     @Override
     public Set<String> getSupportedOptions() {
-        return Collections.singleton(OPT_OUTDIR);
+        return new HashSet<>(Arrays.asList(OPT_OUTDIR, OPT_REMOVE_ANNOTATION));
     }
 
     @Override
@@ -93,12 +106,13 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             return false;
         }
         String outdir = processingEnv.getOptions().get(OPT_OUTDIR);
+        Messager messager = processingEnv.getMessager();
         if (outdir == null || outdir.trim().isEmpty()) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                    "auto-valhalla processor requires the -A" + OPT_OUTDIR + " option");
+            messager.printMessage(ERROR, "auto-valhalla processor requires the -A" + OPT_OUTDIR + " option");
             return false;
         }
         Path out = Paths.get(outdir.trim());
+        boolean removeAnnotation = isOptionEnabled(processingEnv.getOptions().get(OPT_REMOVE_ANNOTATION));
 
         Trees trees = Trees.instance(processingEnv);
         Map<CompilationUnitTree, List<Selected>> byUnit = new LinkedHashMap<>();
@@ -116,24 +130,61 @@ public class AutoValhallaProcessor extends AbstractProcessor {
 
             TreePath path = trees.getPath(type);
             if (path == null || !(path.getLeaf() instanceof ClassTree)) {
-                processingEnv.getMessager().printMessage(
-                        Diagnostic.Kind.ERROR, "auto-valhalla: " + qname + ": no tree path");
+                messager.printMessage(ERROR, "auto-valhalla: " + qname + ": no tree path");
                 continue;
             }
+            Selected selected = new Selected(path.getCompilationUnit(), pkg, qname, (ClassTree) path.getLeaf());
             byUnit.computeIfAbsent(path.getCompilationUnit(), k -> new ArrayList<>())
-                    .add(new Selected(path.getCompilationUnit(), pkg, qname,
-                            (ClassTree) path.getLeaf()));
+                    .add(selected);
         }
         for (List<Selected> unit : byUnit.values()) {
-            generateUnit(trees, unit, out);
+            generateUnit(trees, unit, out, removeAnnotation);
         }
         return false;
     }
 
-    /** Generates every selected type of one compilation unit into a single generated
-     *  copy: all {@code value} keywords are inserted before the file is written,
-     *  so several selected types in one file are all generated. */
-    private void generateUnit(Trees trees, List<Selected> unit, Path out) {
+    /**
+     * Generates every selected type of one compilation selectedUnits into a single generated
+     * copy: all {@code value} keywords are inserted before the file is written,
+     * so several selected types in one file are all generated. When
+     * {@code removeAnnotation} is set the {@code @AutoValhalla} annotations are
+     * stripped from the copy as well, so the generated value classes no longer
+     * carry the in-source opt-in marker.
+     */
+    private void generateUnit(Trees trees, List<Selected> selectedUnits, Path out, boolean removeAnnotation) {
+        String source = insertValueKeyword(trees, selectedUnits);
+        if (source == null) {
+            return;
+        }
+        if (removeAnnotation) {
+            source = removeAnnotation(source);
+        }
+
+        Selected selected = selectedUnits.get(0);
+        CompilationUnitTree compilationUnit = selected.unit;
+        String fileName = fileName(compilationUnit);
+        String relDir = selected.pkg.isEmpty() ? "" : selected.pkg.replace('.', '/') + "/";
+        String fqClassFileName = relDir + fileName;
+        try {
+            Path target = out.resolve(fqClassFileName);
+            Files.createDirectories(target.getParent());
+            Files.write(target, source.getBytes(StandardCharsets.UTF_8));
+            processingEnv.getMessager().printMessage(Kind.NOTE, "Writing " + target);
+        } catch (IOException e) {
+            for (Selected selectedUnit : selectedUnits) {
+                failIo(selectedUnit, "cannot write " + fqClassFileName + ": " + e);
+            }
+        }
+    }
+
+    private String removeAnnotation(String source) {
+        source = source.replace("import io.github.thunkware.auto.valhalla.api.AutoValhalla;", "");
+        source = source.replace("@io.github.thunkware.auto.valhalla.api.AutoValhalla", "");
+        source = source.replace("@AutoValhalla", "");
+        return source;
+    }
+
+    private String insertValueKeyword(Trees trees, List<Selected> unit) {
         CompilationUnitTree compilationUnit = unit.get(0).unit;
         SourcePositions positions = trees.getSourcePositions();
         String source;
@@ -143,8 +194,9 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             for (Selected selected : unit) {
                 failIo(selected, "cannot read source: " + e);
             }
-            return;
+            return null;
         }
+
         List<Integer> insertIndexes = new ArrayList<>();
         for (Selected selected : unit) {
             int insertIndex = (int) positions.getEndPosition(
@@ -163,33 +215,22 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         for (int insertIndex : insertIndexes) {
             generated.insert(insertIndex, "value ");
         }
-        String fileName = fileName(compilationUnit);
-        Selected first = unit.get(0);
-        String relDir = first.pkg.isEmpty() ? "" : first.pkg.replace('.', '/') + "/";
-        String rel = relDir + fileName;
-        try {
-            Path target = out.resolve(rel);
-            Files.createDirectories(target.getParent());
-            Files.write(target, generated.toString().getBytes(StandardCharsets.UTF_8));
-            processingEnv.getMessager().printMessage(Kind.NOTE, "Writing " + target);
-            for (Selected selected : unit) {
-            }
-        } catch (IOException e) {
-            for (Selected selected : unit) {
-                failIo(selected, "cannot write " + rel + ": " + e);
-            }
-        }
+        return generated.toString();
     }
 
-    /** Records an I/O failure for a selected type in the manifest and raises a
-     *  javac error so the {@code -proc:only} pass fails the build (an I/O
-     *  problem is a tooling error, not a per-type rejection). */
+    /**
+     * Records an I/O failure for a selected type in the manifest and raises a
+     * javac error so the {@code -proc:only} pass fails the build (an I/O
+     * problem is a tooling error, not a per-type rejection).
+     */
     private void failIo(Selected selected, String reason) {
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+        processingEnv.getMessager().printMessage(ERROR,
                 "auto-valhalla processor: " + selected.qname + ": " + reason);
     }
 
-    /** A selected top-level type plus the context needed to generate its file. */
+    /**
+     * A selected top-level type plus the context needed to generate its file.
+     */
     private static final class Selected {
 
         private final CompilationUnitTree unit;
@@ -197,18 +238,24 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         private final String qname;
         private final ClassTree classTree;
 
-        private Selected(CompilationUnitTree unit, String pkg, String qname,
-                ClassTree classTree) {
+        private Selected(CompilationUnitTree unit, String pkg, String qname, ClassTree classTree) {
             this.unit = unit;
             this.pkg = pkg;
             this.qname = qname;
             this.classTree = classTree;
         }
+
+        @Override
+        public String toString() {
+            return "Selected[" + pkg + ":" + qname + "]";
+        }
     }
 
-    /** Returns {@code root} when it is a top-level {@code class}/{@code record},
-     *  otherwise {@code null} (interfaces, enums, and module/package info are
-     *  skipped, mirroring the agent's selection). */
+    /**
+     * Returns {@code root} when it is a top-level {@code class}/{@code record},
+     * otherwise {@code null} (interfaces, enums, and module/package info are
+     * skipped, mirroring the agent's selection).
+     */
     private static TypeElement topLevelType(Element root) {
         if (!(root instanceof TypeElement)) {
             return null;
@@ -228,14 +275,24 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         return type;
     }
 
-    /** True when the {@code @AutoValhalla} annotation is attached, matched by
-     *  fully qualified or simple name. */
+    /**
+     * True when the {@code @AutoValhalla} annotation is attached, matched by
+     * fully qualified or simple name.
+     */
     private static boolean isAnnotated(TypeElement type) {
         return type.getAnnotationMirrors().stream().anyMatch(mirror -> {
             String name = mirror.getAnnotationType().toString();
             String simple = name.indexOf('.') < 0 ? name : name.substring(name.lastIndexOf('.') + 1);
             return ANNOTATION.equals(name) || ANNOTATION_SIMPLE.equals(simple);
         });
+    }
+
+    /**
+     * True when an {@code -A} option value enables its feature: present and not
+     * an explicit {@code false}.
+     */
+    private static boolean isOptionEnabled(String value) {
+        return value != null && !value.trim().equalsIgnoreCase("false");
     }
 
     private static String fileName(CompilationUnitTree unit) {

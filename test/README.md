@@ -14,6 +14,7 @@ plugin from the outside, just as a real user would.
 | `test-maven-plugin-nested-compiler/` | Maven plugin with nested `<compiler>` configuration |
 | `test-maven-plugin-no-compiler/` | Maven plugin with no explicit `maven-compiler-plugin` declaration |
 | `test-maven-plugin-parent-config/` | Maven plugin with compiler settings inherited from a parent POM |
+| `test-maven-plugin-remove-annotation/` | Maven plugin with `removeAnnotation=true`: `@AutoValhalla` stripped from generated sources |
 
 ## Running
 

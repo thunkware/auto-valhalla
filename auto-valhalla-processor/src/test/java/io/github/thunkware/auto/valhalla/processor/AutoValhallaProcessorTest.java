@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.thunkware.auto.valhalla.api.AutoValhalla;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -16,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,6 +34,9 @@ class AutoValhallaProcessorTest {
     private static String apiJar;
     private static String processorPath;
 
+    @TempDir
+    Path temp;
+
     @BeforeAll
     static void locateJdk() {
         String configuredHome = System.getenv("JAVA28_HOME");
@@ -43,13 +48,9 @@ class AutoValhallaProcessorTest {
             javac = new File(javaHome, "../bin/javac");
         }
         javacPath = javac.getAbsoluteFile().getAbsolutePath();
-        apiJar = io.github.thunkware.auto.valhalla.api.AutoValhalla.class
-                .getProtectionDomain().getCodeSource().getLocation().getPath();
+        apiJar = AutoValhalla.class.getProtectionDomain().getCodeSource().getLocation().getPath();
         processorPath = AutoValhallaProcessor.processorPath();
     }
-
-    @TempDir
-    Path temp;
 
     @Test
     void processorPathIsLoadableLocation() {
@@ -68,17 +69,16 @@ class AutoValhallaProcessorTest {
         ProcessResult pass = runPass(src, out);
 
         assertEquals(0, pass.exit, pass.output);
+        assertSource(out.resolve("fixture/Point.java"), "@AutoValhalla");
         assertSource(out.resolve("fixture/Point.java"), "public final value class Point");
         assertFalse(Files.exists(out.resolve("fixture/Shade.java")),
                 "an unannotated class must not be generated");
 
-        if (jdkFeature() >= 28) {
-            ProcessResult compile = runValueCompile(out, classes);
-            assertEquals(0, compile.exit, compile.output);
-            assertTrue(Files.isRegularFile(classes.resolve("fixture/Point.class")));
-            assertFalse(Files.exists(classes.resolve("fixture/Shade.class")),
-                    "no class file may be produced for an unannotated class");
-        }
+        ProcessResult compile = runValueCompile(out, classes);
+        assertEquals(0, compile.exit, compile.output);
+        assertTrue(Files.isRegularFile(classes.resolve("fixture/Point.class")));
+        assertFalse(Files.exists(classes.resolve("fixture/Shade.class")),
+                "no class file may be produced for an unannotated class");
     }
 
     @Test
@@ -102,6 +102,44 @@ class AutoValhallaProcessorTest {
         assertEquals(0, pass.exit, pass.output);
         assertSource(out.resolve("fixture/Pair.java"), "public final value class Pair");
         assertSource(out.resolve("fixture/Pair.java"), "final value class Side");
+    }
+
+    @Test
+    void removesAnnotationFromGeneratedSourceWhenOptionEnabled() throws Exception {
+        Path src = write("fixture/Point.java", POINT);
+        Path out = temp.resolve("out");
+
+        ProcessResult pass = runPass(src, out,
+                "-A" + AutoValhallaProcessor.OPT_REMOVE_ANNOTATION + "=true");
+
+        assertEquals(0, pass.exit, pass.output);
+        String generated = new String(
+                Files.readAllBytes(out.resolve("fixture/Point.java")), StandardCharsets.UTF_8);
+        assertTrue(generated.contains("public final value class Point"),
+                "the value keyword must still be inserted:\n" + generated);
+        assertFalse(generated.contains("@AutoValhalla"),
+                "the annotation must be stripped from the generated copy:\n" + generated);
+
+        ProcessResult compile = runValueCompile(out, temp.resolve("classes"));
+        assertEquals(0, compile.exit, compile.output);
+    }
+
+    @Test
+    void removesInlineAnnotationBeforeValueClass() throws Exception {
+        Path src = write("fixture/Inline.java", INLINE);
+        Path out = temp.resolve("out");
+
+        ProcessResult pass = runPass(src, out,
+                "-A" + AutoValhallaProcessor.OPT_REMOVE_ANNOTATION + "=true");
+
+        assertEquals(0, pass.exit, pass.output);
+        String generated = new String(
+                Files.readAllBytes(out.resolve("fixture/Inline.java")), StandardCharsets.UTF_8);
+        assertTrue(generated.contains("public final value class Inline"),
+                "the value keyword must still be inserted before the inline annotation:\n"
+                        + generated);
+        assertFalse(generated.contains("@AutoValhalla"),
+                "the inline annotation must be stripped:\n" + generated);
     }
 
     // -- fixture sources -----------------------------------------------------
@@ -185,10 +223,27 @@ class AutoValhallaProcessorTest {
                     + "    }\n"
                     + "}\n";
 
+    private static final String INLINE =
+            "package fixture;\n"
+                    + "\n"
+                    + "import io.github.thunkware.auto.valhalla.api.AutoValhalla;\n"
+                    + "\n"
+                    + "/** The annotation shares a line with the class declaration. */\n"
+                    + "@AutoValhalla public final class Inline {\n"
+                    + "\n"
+                    + "    public final int x;\n"
+                    + "\n"
+                    + "    Inline(int x) {\n"
+                    + "        this.x = x;\n"
+                    + "    }\n"
+                    + "}\n";
+
     // -- helpers --------------------------------------------------------------
 
-    /** Writes {@code content} relative to the temp project's {@code src} root
-     *  and returns that root, creating parent directories as needed. */
+    /**
+     * Writes {@code content} relative to the temp project's {@code src} root
+     * and returns that root, creating parent directories as needed.
+     */
     private Path write(String relative, String content) throws Exception {
         Path file = temp.resolve("src").resolve(relative);
         Files.createDirectories(file.getParent());
@@ -203,6 +258,10 @@ class AutoValhallaProcessorTest {
     }
 
     private static ProcessResult runPass(Path srcRoot, Path out) throws Exception {
+        return runPass(srcRoot, out, null);
+    }
+
+    private static ProcessResult runPass(Path srcRoot, Path out, String option) throws Exception {
         List<String> command = new ArrayList<>();
         command.add(javacPath);
         command.add("-proc:only");
@@ -213,6 +272,9 @@ class AutoValhallaProcessorTest {
         command.add("-encoding");
         command.add("UTF-8");
         command.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + out.toAbsolutePath());
+        if (option != null) {
+            command.add(option);
+        }
         try (Stream<Path> files = Files.walk(srcRoot)) {
             files.filter(p -> p.toString().endsWith(".java"))
                     .sorted()
@@ -269,15 +331,4 @@ class AutoValhallaProcessorTest {
         }
     }
 
-    private static int jdkFeature() {
-        String spec = System.getProperty("java.specification.version", "1.8");
-        if (spec.startsWith("1.")) {
-            spec = spec.substring(2);
-        }
-        try {
-            return Integer.parseInt(spec);
-        } catch (NumberFormatException e) {
-            return 8;
-        }
-    }
 }
