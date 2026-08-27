@@ -33,9 +33,7 @@ public final class Javac {
      *  {@code java<preferredVersion>.home}/{@code JAVA<preferredVersion>_HOME}
      *  is tried before the scan because its javac matches the target
      *  {@code --release} — {@code --enable-preview} only works there.
-     *
-     *  @throws IllegalArgumentException when homes are configured but none of
-     *          them contains a {@code bin/javac} */
+     */
     public static String resolveExecutable(String override, int preferredVersion) {
         if (override != null && !override.trim().isEmpty()) {
             return override.trim();
@@ -58,27 +56,16 @@ public final class Javac {
             }
         }
 
-        String invalidSource = null;
-        String invalidPath = null;
         for (int version : versionsInPreferenceOrder(homes, preferredVersion)) {
             for (Home home : homes.get(version)) {
                 File executable = new File(home.path.trim(), "bin/javac");
                 if (!executable.isFile()) {
-                    if (invalidSource == null) {
-                        invalidSource = home.source;
-                        invalidPath = executable.getAbsolutePath();
-                    }
                     continue;
                 }
                 return executable.getAbsolutePath();
             }
         }
 
-        if (invalidSource != null) {
-            throw new IllegalArgumentException(invalidSource + " is set but there is "
-                    + "no javac at " + invalidPath + "; no usable java<N>.home or "
-                    + "JAVA<N>_HOME was found");
-        }
         return new File(System.getProperty("java.home", "java"),
                 "bin/javac").getAbsolutePath();
     }
