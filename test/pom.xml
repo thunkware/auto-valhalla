@@ -15,6 +15,18 @@
   <packaging>pom</packaging>
   <name>auto-valhalla-tests</name>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <configuration>
+          <skipSource>true</skipSource>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <modules>
     <module>test-5-lib</module>
     <module>test-16-lib</module>
