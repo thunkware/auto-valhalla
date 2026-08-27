@@ -46,7 +46,7 @@ major_of() {
 }
 
 echo "== 1. build + tests =="
-mvn install
+mvn install -Dauto-valhalla.build-script-running=true
 RC=$?
 check "$RC" "mvn install (annotation=JDK8, agent=JDK28)"
 [ "$RC" -eq 0 ] || { echo "FATAL: mvn install failed; aborting."; exit 1; }
@@ -80,7 +80,7 @@ echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints 
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"
 
 echo "== 4. JDK 28 agent-attach integration test =="
-mvn -pl test/test-16-main test
+mvn -pl test/test-16-main test -Dauto-valhalla.build-script-running=true
 check $? "demo-runner AgentAttachTest"
 
 echo "== 5. end-to-end demo =="

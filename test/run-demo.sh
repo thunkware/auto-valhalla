@@ -17,7 +17,7 @@ else
     EXTRA=()
 fi
 
-mvn -q package
+mvn -q package -Dauto-valhalla.build-script-running=true
 
 # jars follow Maven's artifactId-version convention; resolve them dynamically
 find_jar() { ls "$1"/target/"$2"-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1; }
