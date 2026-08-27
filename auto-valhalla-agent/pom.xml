@@ -68,7 +68,7 @@
          transforming fails the agent's unit tests. -->
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>test-5-lib</artifactId>
+      <artifactId>test-lib-jdk5</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

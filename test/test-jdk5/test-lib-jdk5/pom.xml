@@ -6,11 +6,11 @@
     <groupId>io.github.thunkware</groupId>
     <artifactId>auto-valhalla</artifactId>
     <version>0.1.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>test-5-lib</artifactId>
-  <name>test-5-lib</name>
+  <artifactId>test-lib-jdk5</artifactId>
+  <name>test-lib-jdk5</name>
 
   <description>
     A value-class candidate compiled to genuine Java 5 bytecode with a real JDK 5, proving the agent handles legacy class files.
@@ -65,7 +65,7 @@
                 <argument>-target</argument>
                 <argument>1.5</argument>
                 <argument>-cp</argument>
-                <argument>${project.basedir}/../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
+                <argument>${project.basedir}/../../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>${project.basedir}/src/main/java/demo5/annotation/Point.java</argument>

@@ -6,11 +6,11 @@
     <groupId>io.github.thunkware</groupId>
     <artifactId>auto-valhalla</artifactId>
     <version>0.1.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>test-5-main</artifactId>
-  <name>test-5-main</name>
+  <artifactId>test-main-jdk5</artifactId>
+  <name>test-main-jdk5</name>
 
   <properties>
     <!-- Real JDK 5 install: the app and the run are on JDK 5 so we can prove
@@ -22,11 +22,11 @@
   <dependencies>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>test-5-lib</artifactId>
+      <artifactId>test-lib-jdk5</artifactId>
       <version>${project.version}</version>
     </dependency>
     <!-- Ensures the agent JAR is packaged before the run-on-jdk5 exec tries to
-         load it via -javaagent:../../auto-valhalla-agent/target/... -->
+         load it via -javaagent:../../../auto-valhalla-agent/target/... -->
     <dependency>
       <groupId>io.github.thunkware</groupId>
       <artifactId>auto-valhalla-agent-attach</artifactId>
@@ -59,7 +59,7 @@
                 <argument>-target</argument>
                 <argument>1.5</argument>
                 <argument>-cp</argument>
-                <argument>../test-5-lib/target/test-5-lib-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar:../../auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-${project.version}.jar</argument>
+                <argument>../test-lib-jdk5/target/test-lib-jdk5-${project.version}.jar:../../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar:../../../auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-${project.version}.jar</argument>
                 <argument>-d</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>src/main/jdk5/demo5runner/Main.java</argument>
@@ -78,9 +78,9 @@
             <configuration>
               <executable>${java5.home}/bin/java</executable>
               <arguments>
-                <argument>-javaagent:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+                <argument>-javaagent:../../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
                 <argument>-cp</argument>
-                <argument>${project.build.outputDirectory}:../test-5-lib/target/test-5-lib-${project.version}.jar:../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar:../../auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-${project.version}.jar</argument>
+                <argument>${project.build.outputDirectory}:../test-lib-jdk5/target/test-lib-jdk5-${project.version}.jar:../../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar:../../../auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-${project.version}.jar</argument>
                 <argument>demo5runner.Main</argument>
               </arguments>
             </configuration>

@@ -35,10 +35,8 @@
   </build>
 
   <modules>
-    <module>test-5-lib</module>
-    <module>test-16-lib</module>
-    <module>test-16-main</module>
-    <module>test-5-main</module>
+    <module>test-jdk5</module>
+    <module>test-jdk16</module>
     <module>test-maven-plugin-jdk25</module>
     <module>test-maven-plugin-jdk8</module>
     <module>test-maven-plugin-no-compiler</module>

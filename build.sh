@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 export JAVA_HOME
 export JAVA5_HOME
 
-RUNNER5_CLASSES=test/test-5-main/target/classes
+RUNNER5_CLASSES=test/test-jdk5/test-main-jdk5/target/classes
 # agent / demo5 jars follow Maven's artifactId-version convention; resolved after the build
 AGENT_JAR=""
 DEMO5_JAR=""
@@ -53,7 +53,7 @@ check "$RC" "mvn install (annotation=JDK8, agent=JDK28)"
 
 AGENT_JAR=$(ls auto-valhalla-agent/target/auto-valhalla-agent-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 ATTACH_JAR=$(ls auto-valhalla-agent-attach/target/auto-valhalla-agent-attach-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
-DEMO5_JAR=$(ls test/test-5-lib/target/test-5-lib-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+DEMO5_JAR=$(ls test/test-jdk5/test-lib-jdk5/target/test-lib-jdk5-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 
 echo "== 2. agent jar class-file audit =="
 SHIM=$(major_of "$AGENT_JAR" io/github/thunkware/auto/valhalla/AutoValhallaAgent.class)
@@ -80,7 +80,7 @@ echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints 
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"
 
 echo "== 4. JDK 28 agent-attach integration test =="
-mvn -pl test/test-16-main test -Dauto-valhalla.build-script-running=true
+mvn -pl test/test-jdk16/test-main-jdk16 test -Dauto-valhalla.build-script-running=true
 check $? "demo-runner AgentAttachTest"
 
 echo "== 5. end-to-end demo =="

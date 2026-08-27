@@ -9,10 +9,10 @@ read [README.md](README.md) instead.
 | --- | --- |
 | `auto-valhalla-api` | The `@AutoValhalla` annotation and `AutoValhallaVerifier`. Compiled with a **real JDK 5** to genuine Java 5 bytecode (major 49) so it is loadable everywhere. |
 | `auto-valhalla-agent` | The real agent (`AutoValhallaAgent28`, `ValueClassTransformer`, `ValueClassRewriter`, `ConstructorRewriter`). Compiled **without** preview so it loads even when preview is off; embeds the annotation and the JDK 5 shim (`AutoValhallaAgent`). |
-| `test/test-5-lib` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files. |
-| `test/test-16-lib` | Candidates compiled to Java 16 bytecode (a record is included to show records are rewritten by the agent). |
-| `test/test-16-main` | Runs the demos with `Objects.hasIdentity` to report value-ness, and holds the agent-attach integration test. |
-| `test/test-5-main` | A JDK 5 app used to prove the agent is safe to attach on a pre-Valhalla JVM (it must only warn and return). |
+| `test/test-jdk5/test-lib-jdk5` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files. |
+| `test/test-jdk16/test-lib-jdk16` | Candidates compiled to Java 16 bytecode (a record is included to show records are rewritten by the agent). |
+| `test/test-jdk16/test-main-jdk16` | Runs the demos with `Objects.hasIdentity` to report value-ness, and holds the agent-attach integration test. |
+| `test/test-jdk5/test-main-jdk5` | A JDK 5 app used to prove the agent is safe to attach on a pre-Valhalla JVM (it must only warn and return). |
 
 ## Building
 
@@ -28,10 +28,10 @@ export JAVA5_HOME=/path/to/jdk-5-or-6
 
 - `JAVA_HOME` — the JDK that compiles and runs Maven (JDK 28+).
 - `JAVA5_HOME` — an old JDK (5/6) used, via `exec-maven-plugin`, to compile the
-  shim (inside `auto-valhalla-agent`), the annotation, and `test-5-lib` to
+  shim (inside `auto-valhalla-agent`), the annotation, and `test-lib-jdk5` to
   Java 5 bytecode (JDK 5's `javac -version` exits non-zero, so
   `maven-compiler-plugin` is not used for them), and to verify the agent is safe
-  to attach on a pre-Valhalla JVM (`test-5-main`).
+  to attach on a pre-Valhalla JVM (`test-main-jdk5`).
 
 This produces `auto-valhalla-agent/target/auto-valhalla-agent-<version>.jar` — a single self-contained jar
 that contains the JDK 28 real agent **and** a JDK 5 shim
@@ -55,14 +55,14 @@ for converted classes.
 
 ## Tests
 
-The agent-attach integration test (`test-16-main`'s `AgentAttachTest`)
+The agent-attach integration test (`test-main-jdk16`'s `AgentAttachTest`)
 attaches the built agent to the running JVM and asserts a subsequently-loaded
 class is rewritten into a value class. It needs the agent jar to exist first, so
 build with `mvn install` (or `mvn package`) before running the test:
 
 ```bash
 mvn -DskipTests install
-mvn -pl test/test-16-main test
+mvn -pl test/test-jdk16/test-main-jdk16 test
 ```
 
 The test is skipped automatically if

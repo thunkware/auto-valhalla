@@ -6,11 +6,11 @@
     <groupId>io.github.thunkware</groupId>
     <artifactId>auto-valhalla</artifactId>
     <version>0.1.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>test-16-main</artifactId>
-  <name>test-16-main</name>
+  <artifactId>test-main-jdk16</artifactId>
+  <name>test-main-jdk16</name>
 
   <description>
     Runs the cross-version demos with the agent and reports whether each class
@@ -35,12 +35,12 @@
     </dependency>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>test-5-lib</artifactId>
+      <artifactId>test-lib-jdk5</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>test-16-lib</artifactId>
+      <artifactId>test-lib-jdk16</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -61,7 +61,7 @@
           <executable>${java.home}/bin/java</executable>
           <arguments>
             <argument>--enable-preview</argument>
-             <argument>-javaagent:${project.basedir}/../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
+             <argument>-javaagent:${project.basedir}/../../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
             <!-- select demo16.includes.* (and demo5.includes.*) by package
                  include with includes-mode=yolo; the annotated classes are also
                  converted via the annotation. -->
@@ -69,7 +69,7 @@
             <argument>-Dauto-valhalla.annotation-mode=yolo</argument>
             <argument>-Dauto-valhalla.includes-mode=yolo</argument>
             <argument>-cp</argument>
-            <argument>${project.build.outputDirectory}:${project.basedir}/../test-5-lib/target/test-5-lib-${project.version}.jar:${project.basedir}/../test-16-lib/target/test-16-lib-${project.version}.jar:${project.basedir}/../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
+            <argument>${project.build.outputDirectory}:${project.basedir}/../test-lib-jdk5/target/test-lib-jdk5-${project.version}.jar:${project.basedir}/../test-lib-jdk16/target/test-lib-jdk16-${project.version}.jar:${project.basedir}/../../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
             <argument>demo.runner.Main</argument>
           </arguments>
         </configuration>
