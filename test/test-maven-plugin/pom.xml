@@ -73,7 +73,6 @@
         <executions>
           <execution>
             <id>transform</id>
-            <phase>process-classes</phase>
             <goals>
               <goal>generate-sources</goal>
               <goal>compile-generated-sources</goal>

@@ -1,8 +1,9 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
+import static java.util.Comparator.comparing;
 
-import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
@@ -12,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import org.apache.maven.plugin.logging.Log;
@@ -72,6 +74,14 @@ public final class AnnotationProcessorRunner {
         return selection;
     }
 
+    public Selection findGeneratedFiles(MavenCompilerInput input) throws IOException {
+        File generatedDir = input.generatedSourcesDirectory();
+
+        Selection selection = new Selection(generatedDir);
+        collectGeneratedFiles(generatedDir, selection);
+        return selection;
+    }
+
     // -- selection pass ------------------------------------------------------
 
     /**
@@ -94,7 +104,7 @@ public final class AnnotationProcessorRunner {
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 .compilerArgs(options.subList(1, options.size()))
-                .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
+                .release(Integer.toString(MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("only")
                 .build();
@@ -132,10 +142,10 @@ public final class AnnotationProcessorRunner {
             try (Stream<Path> stream = Files.walk(root.toPath())) {
                 stream.filter(p -> p.toString().endsWith(".java"))
                         .filter(p -> !isMetaFile(p.getFileName().toString()))
-                        .sorted()
                         .forEach(p -> files.add(p.toFile()));
             }
         }
+        Collections.sort(files, comparing(File::getAbsolutePath));
         return files;
     }
 

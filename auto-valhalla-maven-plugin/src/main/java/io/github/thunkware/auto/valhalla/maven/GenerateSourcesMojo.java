@@ -1,6 +1,5 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_SOURCES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
@@ -131,8 +130,8 @@ public class GenerateSourcesMojo extends AbstractMojo {
             getLog().info("auto-valhalla: no @AutoValhalla-annotated classes found");
         } else {
             int count = selection.selectedTypes.size();
-            getLog().info("auto-valhalla: processed " + count
-                    + " @AutoValhalla-annotated class" + plural(count) + "; generated sources under "
+            getLog().info("auto-valhalla: generated sources for " + count
+                    + " @AutoValhalla-annotated class into "
                     + selection.generatedSources.getAbsolutePath());
         }
     }

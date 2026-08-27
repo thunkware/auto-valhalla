@@ -24,6 +24,7 @@ import java.util.List;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -226,15 +227,15 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     String resolveEncoding() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
         ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
-        String enc = configEvaluator.resolveString("encoding");
-        return normalizeEncoding(enc);
+        String encoding = configEvaluator.resolveString("encoding");
+        return normalizeEncoding(encoding);
     }
 
     protected PlexusConfiguration getCompilerPluginConfiguration() {
         if (project == null) {
             return null;
         }
-        org.apache.maven.model.Plugin plugin = project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
+        Plugin plugin = project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
         if (plugin == null) {
             plugin = project.getPlugin("maven-compiler-plugin");
         }

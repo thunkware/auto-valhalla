@@ -54,7 +54,7 @@ public final class AutoValhallaSourceTransformer {
         }
         Result result = new Result();
 
-        Selection selection = runner.run(input);
+        Selection selection = runner.findGeneratedFiles(input);
         result.selected.addAll(selection.selectedTypes);
         result.generatedSources = selection.generatedSources;
         if (selection.generatedFiles.isEmpty()) {
