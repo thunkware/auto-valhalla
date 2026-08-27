@@ -24,5 +24,6 @@
     <module>test-maven-plugin-jdk8</module>
     <module>test-maven-plugin-no-compiler</module>
     <module>test-maven-plugin-nested-compiler</module>
+    <module>test-maven-plugin-parent-config</module>
   </modules>
 </project>
