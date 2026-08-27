@@ -24,7 +24,6 @@ overview of the whole project, see the [auto-valhalla README](../README.md).
       <goals>
         <goal>generate-sources</goal>
         <goal>compile-generated-sources</goal>
-        <goal>jar</goal>
       </goals>
     </execution>
   </executions>
@@ -33,12 +32,12 @@ overview of the whole project, see the [auto-valhalla README](../README.md).
 
 Select classes in source with the
 [`@AutoValhalla` annotation](../auto-valhalla-api#quickstart); the plugin converts
-exactly the annotated top-level classes and nothing else:
+exactly the annotated top-level classes and nothing else.
 
 The plugin is also available directly from the command line:
 
 ```bash
-mvn auto-valhalla:generate-sources auto-valhalla:compile-generated-sources auto-valhalla:jar
+mvn auto-valhalla:generate-sources auto-valhalla:compile-generated-sources
 ```
 
 At runtime, run on JDK 28 with `--enable-preview`:
@@ -51,32 +50,41 @@ java --enable-preview -jar myapp.jar
 
 | Goal | Default phase | Description |
 | --- | --- | --- |
-| `generate-sources` | `generate-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and generates their copies under `target/auto-valhalla-generated-sources`. Nothing is compiled and nothing is written to the output directory — useful to inspect or post-process what would be transformed. |
+| `generate-sources` | `generate-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and generates their copies under `target/auto-valhalla-generated-sources`. Nothing is compiled and nothing is written to the project's output directory (`target/classes`) — useful to inspect or post-process what would be transformed. |
 | `compile-generated-sources` | `process-classes` | Compiles generated sources left by `generate-sources` under `target/auto-valhalla-generated-sources` into `META-INF/versions/28`. |
-| `jar` | `package` | Adds `Multi-Release: true` to the jar manifest so the JVM serves the value variants on JDK 28+ and the identity classes on older JDKs. |
 
 ## How it works
 
 There is no bytecode rewriting anywhere: the `auto-valhalla-processor`
 annotation processor (a dependency of this plugin, passed to `javac -
 processorpath`) selects the top-level types that carry the `@AutoValhalla`
-annotation, and writes generated copies of their source files into a generated dir
+annotation, and writes generated copies of their source files into a generated
 directory with the `class`/`record` declarations turned into
 `value class`/`value record`. The `compile-generated-sources` goal then delegates to
-the JDK compiler — `javac --release <N> --enable-preview` — which produces the
+the JDK compiler — `javac --release 28 --enable-preview` — which produces the
 value-class files natively and enforces the value-class rules. The base classes
 are left untouched, so they keep working on JDKs older than 28.
 
 Because javac enforces the rules, an `@AutoValhalla` class that cannot be a
 value class (a non-final class, a class with mutable fields, or one using
-`synchronized`) fails the build by default instead of silently staying an
-identity class. The base classes must therefore be compiled without preview
-(`--release` lower than 28) — the value-class compilation itself is preview.
+`synchronized`) fails the build instead of silently staying an identity class.
+The base classes must therefore be compiled without preview (`--release` lower
+than 28) — the value-class compilation itself is preview.
 
 ## Requirements
 
-Run Maven itself on **JDK 28 or newer** — below 28 the goals log a warning and
-leave everything as identity classes (the build never fails).
+Run Maven on **JDK 8 through 28**:
+
+- **JDK 28** — runs the value-class compilation directly.
+- **JDK 8–27** — requires the `JAVA28_HOME` environment variable pointing to
+  a JDK 28 installation; the plugin uses that JDK's `javac` for the
+  value-class compilation.
+
+The build fails if Maven runs below JDK 8 or above 28 without `JAVA28_HOME`.
+
+The `maven-jar-plugin` (≥ 3.4.0) handles the `Multi-Release: true` manifest
+entry automatically when it detects `META-INF/versions` content. Older versions
+trigger a warning from the plugin.
 
 ## Configuration
 
@@ -84,38 +92,38 @@ All parameters are optional:
 
 | parameter | property | default | description |
 | --- | --- | --- | --- |
-| `versionDirectory` | `auto-valhalla.version` | `28` | the multi-release version directory, also the javac `--release` |
-| `failOnAnnotationFailure` | — | `true` | fail the build when an `@AutoValhalla` class cannot be compiled as a value class |
-| `fork` | `auto-valhalla.fork` | `true` | run javac as a forked process; when `false`, compile in-process through the `javax.tools.JavaCompiler` API (the JDK running Maven is used and the `javac` override is ignored) |
-| `skip` | `auto-valhalla.skip` | `false` | skip the goal |
-| `parameters` | `auto-valhalla.parameters` | inherited | generate metadata for reflection on method parameters (`-parameters`) |
-| `debug` | `auto-valhalla.debug` | inherited | include debugging information (`-g` or `-g:none`) |
-| `debuglevel` | `auto-valhalla.debuglevel` | inherited | keyword list for `-g:` (e.g. `lines,vars,source`) |
-| `showWarnings` | `auto-valhalla.showWarnings` | inherited | show compiler warnings (passes `-nowarn` when `false`) |
-| `showDeprecation` | `auto-valhalla.showDeprecation` | inherited | show deprecation warnings (`-deprecation`) |
+| `skipGenerateSources` | `auto-valhalla.skipGenerateSources` | `false` | skip the annotation-processor pass |
+| `skipCompileGeneratedSources` | `auto-valhalla.skipCompileGeneratedSources` | `false` | skip the value-class compilation |
+| `parameters` | — | inherited | generate metadata for reflection on method parameters (`-parameters`) |
+| `debug` | — | inherited | include debugging information (`-g` or `-g:none`) |
+| `debuglevel` | — | inherited | keyword list for `-g:` (e.g. `lines,vars,source`) |
+| `showWarnings` | — | inherited | show compiler warnings (passes `-nowarn` when `false`) |
+| `showDeprecation` | — | inherited | show deprecation warnings (`-deprecation`) |
 | `compilerArgs` | — | inherited | list of additional arguments to pass to javac (e.g. `<compilerArgs><arg>-parameters</arg></compilerArgs>`) |
-| `compilerArgument` | `auto-valhalla.compilerArgument` | inherited | single additional argument string to pass to javac |
-| `maven-compiler` | — | — | nested configuration block (`<maven-compiler>` or `<compiler>`) containing compiler-plugin options such as `executable` and `encoding`; options are also inherited from the project's `maven-compiler-plugin` declaration |
+| `compilerArgument` | — | inherited | single additional argument string to pass to javac |
+| `compiler` | — | — | nested configuration block (`<compiler>`) containing compiler-plugin options such as `executable` and `encoding`; options are also inherited from the project's `maven-compiler-plugin` declaration |
 
-Compiler configuration options (`parameters`, `debug`, `debuglevel`, `showWarnings`, `showDeprecation`, `encoding`, `compilerArgs`) can be specified directly on `<configuration>`, nested inside a `<maven-compiler>` (or `<compiler>`) block, or automatically inherited from the project's `maven-compiler-plugin` configuration:
+Compiler configuration options (`parameters`, `debug`, `debuglevel`,
+`showWarnings`, `showDeprecation`, `encoding`, `compilerArgs`) can be specified
+directly on `<configuration>`, nested inside a `<compiler>` block, or
+automatically inherited from the project's `maven-compiler-plugin`
+configuration:
 
 ```xml
 <configuration>
-  <!-- Nested compiler options -->
-  <maven-compiler>
+  <compiler>
     <debug>true</debug>
     <parameters>true</parameters>
     <compilerArgs>
       <arg>-parameters</arg>
       <arg>-Xlint:all</arg>
     </compilerArgs>
-  </maven-compiler>
+  </compiler>
 </configuration>
 ```
 
 Selection is by the `@AutoValhalla` annotation alone: an annotated class that
-javac rejects (because it cannot be a value class) fails the build by default
-(`failOnAnnotationFailure=true`).
+javac rejects (because it cannot be a value class) fails the build.
 
 ## Example
 
@@ -124,3 +132,12 @@ runnable multi-release jar. The `PluginOutputTest` inspects the produced class
 files with `javap` (base classes class-file 69, versioned variants class-file
 72 / value classes) and `build.sh` runs the jar on JDK 28 to prove the value
 classes are active at runtime.
+
+Additional test modules verify other configurations:
+
+| Module | What it tests |
+| --- | --- |
+| `test-maven-plugin-jdk8` | Base classes at release 8 (class-file 52) |
+| `test-maven-plugin-no-compiler` | No explicit `maven-compiler-plugin` declaration |
+| `test-maven-plugin-nested-compiler` | Nested `<compiler>` block with different settings |
+| `test-maven-plugin-parent-config` | Compiler settings inherited from a parent POM |
