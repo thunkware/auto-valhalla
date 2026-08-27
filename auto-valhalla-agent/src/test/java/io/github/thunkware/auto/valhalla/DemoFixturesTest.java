@@ -36,13 +36,13 @@ class DemoFixturesTest {
     @Test
     void demoFixturesAreRewrittenByDemoConfig() throws Exception {
         ClassFile cf = ClassFile.of();
-        // Mirrors run-tests.sh: includes=demo16.includes.,demo5.includes.,
+        // Mirrors run-tests.sh: includes=demo17.includes.,demo5.includes.,
         // annotation-mode=yolo, includes-mode=yolo, and the default failure
         // handling (annotation throws, includes stay quiet).
         Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,
                 Mode.REMOVE_SYNCHRONIZED, Mode.MARK_FIELDS_FINAL);
         Config cfg = new Config();
-        cfg.includes = Set.of("demo16.includes.", "demo5.includes.");
+        cfg.includes = Set.of("demo17.includes.", "demo5.includes.");
         cfg.excludes = Set.of();
         cfg.annotationMode = yolo;
         cfg.includesMode = yolo;

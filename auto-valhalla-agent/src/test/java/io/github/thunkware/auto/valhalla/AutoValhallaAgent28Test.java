@@ -96,7 +96,7 @@ class AutoValhallaAgent28Test {
 
     @Test
     void normalizePatternDoesNotRequireTrailingDot() {
-        assertEquals("demo16", AutoValhallaAgent28.normalizePattern("demo16"));
+        assertEquals("demo17", AutoValhallaAgent28.normalizePattern("demo17"));
         assertEquals("com/Foo", AutoValhallaAgent28.normalizePattern("com.Foo"));
         assertEquals("com/Foo/", AutoValhallaAgent28.normalizePattern("com.Foo."));
         assertEquals("*", AutoValhallaAgent28.normalizePattern("*"));

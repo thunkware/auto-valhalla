@@ -13,14 +13,14 @@
   <name>test-lib-jdk17</name>
 
   <description>
-    Value-class candidates compiled to Java 16 bytecode,
-    proving the agent handles newer class files and rewrites Java 16 features
+    Value-class candidates compiled to Java 17 bytecode,
+    proving the agent handles newer class files and rewrites Java 17 features
     such as records.
   </description>
 
   <properties>
-    <!-- Java 16 bytecode, no preview. -->
-    <maven.compiler.release>16</maven.compiler.release>
+    <!-- Java 17 bytecode, no preview. -->
+    <maven.compiler.release>17</maven.compiler.release>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
   </properties>
 

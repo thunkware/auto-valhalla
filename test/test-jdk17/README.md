@@ -11,9 +11,9 @@ Cross-version integration tests using **JDK 17 bytecode**, including records.
 
 ## Source classes
 
-- `demo16.annotation.Money` &mdash; `@AutoValhalla` annotated
-- `demo16.includes.Hsl` &mdash; selected by package prefix (`demo16.includes.`)
-- `demo16.includes.Pair` &mdash; a plain Java `record`, proving the agent rewrites records into value classes
+- `demo17.annotation.Money` &mdash; `@AutoValhalla` annotated
+- `demo17.includes.Hsl` &mdash; selected by package prefix (`demo17.includes.`)
+- `demo17.includes.Pair` &mdash; a plain Java `record`, proving the agent rewrites records into value classes
 
 ## Tests
 

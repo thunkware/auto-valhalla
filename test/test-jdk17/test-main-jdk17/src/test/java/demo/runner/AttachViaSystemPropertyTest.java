@@ -37,7 +37,7 @@ public class AttachViaSystemPropertyTest {
                 "--enable-preview",
                 "-Ddemo.attach=true",
                 "-Ddemo.expect=value",
-                "-Dauto-valhalla.includes=demo16.includes.,demo5.includes.",
+                "-Dauto-valhalla.includes=demo17.includes.,demo5.includes.",
                 "-Dauto-valhalla.annotation-mode=yolo",
                 "-Dauto-valhalla.includes-mode=yolo",
                 "-cp",
@@ -67,7 +67,7 @@ public class AttachViaSystemPropertyTest {
      *  {@code mvn release:prepare}). */
     private static boolean agentJarExists() throws IOException {
         try (java.util.stream.Stream<Path> children =
-                Files.list(Path.of("..", "..", "auto-valhalla-agent", "target"))) {
+                Files.list(Path.of("..", "..", "..", "auto-valhalla-agent", "target"))) {
             return children.anyMatch(p -> p.getFileName().toString()
                     .matches("auto-valhalla-agent-.*\\.jar"));
         }

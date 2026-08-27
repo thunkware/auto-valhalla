@@ -62,10 +62,10 @@
           <arguments>
             <argument>--enable-preview</argument>
              <argument>-javaagent:${project.basedir}/../../../auto-valhalla-agent/target/auto-valhalla-agent-${project.version}.jar</argument>
-            <!-- select demo16.includes.* (and demo5.includes.*) by package
+            <!-- select demo17.includes.* (and demo5.includes.*) by package
                  include with includes-mode=yolo; the annotated classes are also
                  converted via the annotation. -->
-            <argument>-Dauto-valhalla.includes=demo16.includes.,demo5.includes.</argument>
+            <argument>-Dauto-valhalla.includes=demo17.includes.,demo5.includes.</argument>
             <argument>-Dauto-valhalla.annotation-mode=yolo</argument>
             <argument>-Dauto-valhalla.includes-mode=yolo</argument>
             <argument>-cp</argument>

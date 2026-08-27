@@ -1,10 +1,10 @@
-package demo16.annotation;
+package demo17.annotation;
 
 import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
 /**
  * Converted to a value class by the {@code @AutoValhalla} annotation. Compiled
- * to Java 16 bytecode to prove the agent handles class files
+ * to Java 17 bytecode to prove the agent handles class files
  * newer than the JDK it was built against.
  */
 @AutoValhalla

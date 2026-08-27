@@ -1,8 +1,8 @@
 package demo.runner;
 
-import demo16.annotation.Money;
-import demo16.includes.Hsl;
-import demo16.includes.Pair;
+import demo17.annotation.Money;
+import demo17.includes.Hsl;
+import demo17.includes.Pair;
 import demo5.annotation.Point;
 import demo5.includes.Circle;
 import demo5.includes.Square;
@@ -45,7 +45,7 @@ public class Main {
 
         Money m1 = new Money(1234, "USD");
         Money m2 = new Money(1234, "USD");
-        System.out.println("Money  (demo16.annotation, @AutoValhalla, Java 16 bytecode)");
+        System.out.println("Money  (demo17.annotation, @AutoValhalla, Java 17 bytecode)");
         System.out.println("  " + m1);
         System.out.println("  hasIdentity(m1):  " + Objects.hasIdentity(m1));
         System.out.println("  m1 == m2:         " + (m1 == m2));
@@ -53,7 +53,7 @@ public class Main {
 
         Hsl h1 = new Hsl(120, 50, 50);
         Hsl h2 = new Hsl(120, 50, 50);
-        System.out.println("Hsl    (demo16.includes, prefix selection, Java 16 bytecode)");
+        System.out.println("Hsl    (demo17.includes, prefix selection, Java 17 bytecode)");
         System.out.println("  " + h1);
         System.out.println("  hasIdentity(h1):  " + Objects.hasIdentity(h1));
         System.out.println("  h1 == h2:         " + (h1 == h2));
@@ -61,7 +61,7 @@ public class Main {
 
         Pair<Integer> r1 = new Pair<>(1, 2);
         Pair<Integer> r2 = new Pair<>(1, 2);
-        System.out.println("Pair   (demo16.includes, plain record, rewritten by the agent)");
+        System.out.println("Pair   (demo17.includes, plain record, rewritten by the agent)");
         System.out.println("  " + r1);
         System.out.println("  hasIdentity(r1):  " + Objects.hasIdentity(r1));
         System.out.println("  r1 == r2:         " + (r1 == r2));

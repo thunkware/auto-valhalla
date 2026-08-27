@@ -5,14 +5,14 @@ read [README.md](README.md) instead.
 
 ## Modules
 
-| Module | Purpose |
-| --- | --- |
-| `auto-valhalla-api` | The `@AutoValhalla` annotation and `AutoValhallaVerifier`. Compiled with a **real JDK 5** to genuine Java 5 bytecode (major 49) so it is loadable everywhere. |
+| Module | Purpose                                                                                                                                                                                                                                          |
+| --- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `auto-valhalla-api` | The `@AutoValhalla` annotation and `AutoValhallaVerifier`. Compiled with a **real JDK 5** to genuine Java 5 bytecode (major 49) so it is loadable everywhere.                                                                                    |
 | `auto-valhalla-agent` | The real agent (`AutoValhallaAgent28`, `ValueClassTransformer`, `ValueClassRewriter`, `ConstructorRewriter`). Compiled **without** preview so it loads even when preview is off; embeds the annotation and the JDK 5 shim (`AutoValhallaAgent`). |
-| `test/test-jdk5/test-lib-jdk5` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files. |
-| `test/test-jdk17/test-lib-jdk17` | Candidates compiled to Java 16 bytecode (a record is included to show records are rewritten by the agent). |
-| `test/test-jdk17/test-main-jdk17` | Runs the demos with `Objects.hasIdentity` to report value-ness, and holds the agent-attach integration test. |
-| `test/test-jdk5/test-main-jdk5` | A JDK 5 app used to prove the agent is safe to attach on a pre-Valhalla JVM (it must only warn and return). |
+| `test/test-jdk5/test-lib-jdk5` | A value-class candidate compiled to Java 5 bytecode (real JDK 5), proving the agent handles legacy class files.                                                                                                                                  |
+| `test/test-jdk17/test-lib-jdk17` | Candidates compiled to Java 17 bytecode (a record is included to show records are rewritten by the agent).                                                                                                                                      |
+| `test/test-jdk17/test-main-jdk17` | Runs the demos with `Objects.hasIdentity` to report value-ness, and holds the agent-attach integration test.                                                                                                                                     |
+| `test/test-jdk5/test-main-jdk5` | A JDK 5 app used to prove the agent is safe to attach on a pre-Valhalla JVM (it must only warn and return).                                                                                                                                      |
 
 ## Building
 
