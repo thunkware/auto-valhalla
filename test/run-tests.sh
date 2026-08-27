@@ -2,7 +2,7 @@
 # Compiles and runs the cross-version demo with Maven, both with and without
 # the agent.
 #
-#   JAVA_HOME=/path/to/jdk-28 ./test/run-demo.sh [debug]
+#   JAVA_HOME=/path/to/jdk-28 ./test/run-tests.sh [debug]
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"

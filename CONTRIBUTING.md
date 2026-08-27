@@ -46,8 +46,8 @@ reject.
 ## Running the demos
 
 ```bash
-./test/run-demo.sh          # both with and without the agent (needs JAVA_HOME set)
-./test/run-demo.sh debug     # with verbose logging
+./test/run-tests.sh         # both with and without the agent (needs JAVA_HOME set)
+./test/run-tests.sh debug   # with verbose logging
 ```
 
 Each demo class prints `hasIdentity(...)`; with the agent it becomes `false`

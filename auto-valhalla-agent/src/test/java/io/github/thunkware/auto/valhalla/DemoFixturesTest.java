@@ -16,12 +16,12 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Rewrites the real demo5 fixtures (genuine Java 5 bytecode) with the exact
- * configuration run-demo.sh uses, so a demo class that silently stops
+ * configuration run-tests.sh uses, so a demo class that silently stops
  * transforming fails the agent's unit tests instead of only the demo.
  *
  * <p>Before the assertions were added, a regression in demo5.annotation.Point (a
  * non-final field also written by a setter) made the class fail to transform
- * while run-demo.sh still reported success.
+ * while run-tests.sh still reported success.
  */
 class DemoFixturesTest {
 
@@ -36,7 +36,7 @@ class DemoFixturesTest {
     @Test
     void demoFixturesAreRewrittenByDemoConfig() throws Exception {
         ClassFile cf = ClassFile.of();
-        // Mirrors run-demo.sh: includes=demo16.includes.,demo5.includes.,
+        // Mirrors run-tests.sh: includes=demo16.includes.,demo5.includes.,
         // annotation-mode=yolo, includes-mode=yolo, and the default failure
         // handling (annotation throws, includes stay quiet).
         Set<Mode> yolo = EnumSet.of(Mode.MARK_CLASS_FINAL,

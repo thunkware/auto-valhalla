@@ -5,7 +5,7 @@
 #      annotation = 49, exactly one AutoValhallaAgent28)
 #   3. JDK 5 safety: the agent must warn and return on an ancient JVM
 #   4. JDK 28 agent-attach integration test (real transformation path)
-#   5. end-to-end demo (with vs without the agent) (./test/run-demo.sh)
+#   5. end-to-end tests (with vs without the agent) (./test/run-tests.sh)
 #
 # Requires JAVA_HOME (JDK 28+) and JAVA5_HOME.
 set -uo pipefail
@@ -84,8 +84,8 @@ mvn -pl test/test-16-main test -Dauto-valhalla.build-script-running=true
 check $? "demo-runner AgentAttachTest"
 
 echo "== 5. end-to-end demo =="
-./test/run-demo.sh
-check $? "run-demo.sh (with and without agent)"
+./test/run-tests.sh
+check $? "run-tests.sh (with and without agent)"
 
 echo "== 6. maven-plugin end-to-end =="
 PLUGIN_DEMO_JAR=$(ls test/test-maven-plugin/target/test-maven-plugin-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)

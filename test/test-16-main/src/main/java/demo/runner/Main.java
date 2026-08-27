@@ -17,7 +17,7 @@ import java.util.Objects;
  * {@code -Ddemo.expect} system property ({@code value} or
  * {@code identity}). Exits non-zero when any class behaves like the wrong
  * object form, so a demo class that silently fails to transform fails
- * run-demo.sh / build.sh instead of passing unnoticed.
+ * run-tests.sh / build.sh instead of passing unnoticed.
  *
  * <p>Uses JDK 28 preview APIs ({@link Objects#hasIdentity}).
  */
