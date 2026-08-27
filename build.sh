@@ -88,7 +88,7 @@ echo "== 5. end-to-end demo =="
 check $? "run-tests.sh (with and without agent)"
 
 echo "== 6. maven-plugin end-to-end =="
-PLUGIN_DEMO_JAR=$(ls test/test-maven-plugin/target/test-maven-plugin-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+PLUGIN_DEMO_JAR=$(ls test/test-maven-plugin-jdk25/target/test-maven-plugin-jdk25-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 [ -n "$PLUGIN_DEMO_JAR" ]; check $? "maven-plugin demo jar built [got $PLUGIN_DEMO_JAR]"
 unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "Multi-Release: true"; check $? "maven-plugin demo jar manifest is multi-release"
 unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "^Main-Class: demo.Main"; check $? "maven-plugin demo jar declares Main-Class"

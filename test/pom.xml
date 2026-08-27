@@ -39,7 +39,7 @@
     <module>test-16-lib</module>
     <module>test-16-main</module>
     <module>test-5-main</module>
-    <module>test-maven-plugin</module>
+    <module>test-maven-plugin-jdk25</module>
     <module>test-maven-plugin-jdk8</module>
     <module>test-maven-plugin-no-compiler</module>
     <module>test-maven-plugin-nested-compiler</module>

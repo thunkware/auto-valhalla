@@ -119,7 +119,7 @@ javac rejects (because it cannot be a value class) fails the build by default
 
 ## Example
 
-The `test/test-maven-plugin` project binds both goals and builds a
+The `test/test-maven-plugin-jdk25` project binds both goals and builds a
 runnable multi-release jar. The `PluginOutputTest` inspects the produced class
 files with `javap` (base classes class-file 61, versioned variants class-file
 72 / value classes) and `build.sh` runs the jar on JDK 28 to prove the value

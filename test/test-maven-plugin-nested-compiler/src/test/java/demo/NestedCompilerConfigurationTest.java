@@ -1,5 +1,6 @@
 package demo;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,7 +46,7 @@ class NestedCompilerConfigurationTest {
             bytes.write(buffer, 0, count);
         }
         String output = new String(bytes.toByteArray(), StandardCharsets.UTF_8);
-        assertTrue(rc == 0, "javap failed:\n" + output);
+        assertEquals(0, rc, "javap failed:\n" + output);
         return output;
     }
 

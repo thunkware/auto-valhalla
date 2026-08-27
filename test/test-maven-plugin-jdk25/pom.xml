@@ -9,8 +9,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>test-maven-plugin</artifactId>
-  <name>test-maven-plugin</name>
+  <artifactId>test-maven-plugin-jdk25</artifactId>
+  <name>test-maven-plugin-jdk25</name>
 
   <description>
     A consumer project that applies the auto-valhalla-maven-plugin: the
@@ -53,9 +53,9 @@
               <goal>compile</goal>
             </goals>
             <configuration>
-              <source>8</source>
-              <target>8</target>
-              <release>8</release>
+              <source>25</source>
+              <target>25</target>
+              <release>25</release>
               <parameters>true</parameters>
               <encoding>${project.build.sourceEncoding}</encoding>
               <showDeprecation>true</showDeprecation>

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Asserts what the auto-valhalla-maven-plugin did to this module at
  * {@code process-classes} (the {@code transform} goal): the selected classes
  * exist as value-class variants under {@code META-INF/versions/28} while the
- * base classes stay ordinary identity classes.
+ * base classes stay ordinary identity classes (compiled at release 25).
  *
  * <p>The produced class files are inspected with the JDK's own {@code javap},
  * so this test compiles at the same {@code --release} as the main sources and
@@ -42,8 +42,8 @@ class PluginOutputTest {
                 "value classes are not identity classes (no ACC_SUPER)");
 
         String basePoint = javap("target/classes/demo/Point.class");
-        assertTrue(basePoint.contains("major version: 52"),
-                "base Point keeps its pre-Valhalla class file (compiled at release 8)");
+        assertTrue(basePoint.contains("major version: 69"),
+                "base Point keeps its pre-Valhalla class file (compiled at release 25)");
         assertTrue(basePoint.contains("ACC_SUPER"), "base Point stays an identity class");
         assertFalse(basePoint.contains("value class demo.Point"), "base Point must not be a value class");
     }
