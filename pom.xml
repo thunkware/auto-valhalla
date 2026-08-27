@@ -41,6 +41,7 @@
     <git-commit-id-plugin.version>4.0.5</git-commit-id-plugin.version>
     <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
     <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
+    <auto-valhalla.build-script-running>false</auto-valhalla.build-script-running>
   </properties>
 
   <licenses>
@@ -67,6 +68,25 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <id>run-build-script</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${session.executionRootDirectory}/build.sh</executable>
+              <skip>${auto-valhalla.build-script-running}</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
