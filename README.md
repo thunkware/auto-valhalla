@@ -16,13 +16,13 @@ application. Existing code (compiled on older JDKs) transparently gets the
 memory and performance benefits of value classes when run on a Valhalla-enabled
 JVM, and stays an ordinary class everywhere else.
 
-It is available as a runtime javaagent, an attach helper, and a build-time
+It is available as a javaagent in two variations, and as a build-time
 plugin for Maven:
 
-- [auto-valhalla-api](auto-valhalla-api) — the `@AutoValhalla` annotation and `AutoValhallaVerifier`.
-- [auto-valhalla-agent](auto-valhalla-agent) — the javaagent that rewrites classes at load time.
-- [auto-valhalla-agent-attach](auto-valhalla-agent-attach) — attaches the agent to a running JVM without `-javaagent`.
-- [auto-valhalla-maven-plugin](auto-valhalla-maven-plugin) — compiles the value-class variants into a multi-release jar at build time.
+- [auto-valhalla-api](auto-valhalla-api) — `@AutoValhalla` annotation and `AutoValhallaVerifier`.
+- [auto-valhalla-agent](auto-valhalla-agent) — javaagent that rewrites classes at load time, started with `-javaagent` flag.
+- [auto-valhalla-agent-attach](auto-valhalla-agent-attach) — javaagent that rewrites classes at load time, started without `-javaagent` flag.
+- [auto-valhalla-maven-plugin](auto-valhalla-maven-plugin) — generates and compiles the value-classes at build time.
 
 ## Why auto-valhalla?
 
@@ -73,18 +73,25 @@ allocated identity objects, one heap object per element — poor memory density
 and poor reference locality:
 
 ```text
-+----------+          +-----------+     +-----------+
-| Point[3] |----+     |   Point   |     |   Point   |
-+----------+    |     +-----------+     +-----------+
-| p0       |----+---->| x = 1     |     | x = 5     |
-| p1       |--------->| y = 2     |     | y = 6     |
-| p2       |--+       +-----------+     +-----------+
-+----------+  |       +-----------+
-              +------>|   Point   |
-                      +-----------+
-                      | x = 3     |
-                      | y = 4     |
-                      +-----------+
++----------+
+| Point[3] |
++----------+
+| p0       | -----------------------> +-----------+
+| p1       | -----> +-----------+     |   Point   |
+| p2       | -> +   |-----------+     +-----------+
++----------+    |   |   Point   |     | x = 5     |
+                |   +-----------+     | y = 6     |
+                |   | x = 3     |     +-----------+
+                |   | y = 4     |
+                |   +-----------+
+                |
+                v
+            +-----------+
+            |   Point   |
+            +-----------+
+            | x = 1     |
+            | y = 2     |
+            +-----------+
 ```
 
 After conversion, each `Point`'s fields are stored directly in the array, like
@@ -103,14 +110,14 @@ primitives, in a single contiguous block:
 +----------+
 ```
 
-auto-valhalla applies this in two ways:
+auto-valhalla can be applied in these ways (choose one):
 
 * **At load time** — the [agent](auto-valhalla-agent) rewrites the selected
   classes when the JVM loads them, so nothing in the build changes.
-* **At build time** — the [Maven plugin](auto-valhalla-maven-plugin) compiles
-  generated `value class`/`value record` copies with `javac --release 28
-  --enable-preview` and packages them as a multi-release jar, so JDK 28+ uses
-  the value variants and older JDKs use the original identity classes.
+  * See also dynamic [attach agent](auto-valhalla-agent-attach)
+* **At build time** — the [Maven plugin](auto-valhalla-maven-plugin) generates
+  and compiles `value class`/`value record` to be packaged in a multi-release jar, 
+  so JDK 28+ uses the value variants and older JDKs use the original identity classes.
 
 For the full configuration reference (modes, logging, synchronization monitor,
 feedback loop), see the [agent documentation](auto-valhalla-agent#options).
