@@ -11,12 +11,12 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>auto-valhalla-tests-jdk16</artifactId>
+  <artifactId>auto-valhalla-tests-jdk17</artifactId>
   <packaging>pom</packaging>
-  <name>auto-valhalla-tests-jdk16</name>
+  <name>auto-valhalla-tests-jdk17</name>
 
   <modules>
-    <module>test-lib-jdk16</module>
-    <module>test-main-jdk16</module>
+    <module>test-lib-jdk17</module>
+    <module>test-main-jdk17</module>
   </modules>
 </project>

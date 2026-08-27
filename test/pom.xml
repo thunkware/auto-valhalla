@@ -36,7 +36,7 @@
 
   <modules>
     <module>test-jdk5</module>
-    <module>test-jdk16</module>
+    <module>test-jdk17</module>
     <module>test-maven-plugin-jdk25</module>
     <module>test-maven-plugin-jdk8</module>
     <module>test-maven-plugin-no-compiler</module>

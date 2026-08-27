@@ -80,7 +80,7 @@ echo "$OUT28" | grep -q "unsupported JVM"; check $? "JDK 28 (no preview) prints 
 [ "$RC28" = "0" ]; check $? "JDK 28 (no preview) exit code 0 [got $RC28]"
 
 echo "== 4. JDK 28 agent-attach integration test =="
-mvn -pl test/test-jdk16/test-main-jdk16 test -Dauto-valhalla.build-script-running=true
+mvn -pl test/test-jdk17/test-main-jdk17 test -Dauto-valhalla.build-script-running=true
 check $? "demo-runner AgentAttachTest"
 
 echo "== 5. end-to-end demo =="

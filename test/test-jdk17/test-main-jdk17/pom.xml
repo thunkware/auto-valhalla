@@ -9,8 +9,8 @@
     <relativePath>../../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>test-main-jdk16</artifactId>
-  <name>test-main-jdk16</name>
+  <artifactId>test-main-jdk17</artifactId>
+  <name>test-main-jdk17</name>
 
   <description>
     Runs the cross-version demos with the agent and reports whether each class
@@ -40,7 +40,7 @@
     </dependency>
     <dependency>
       <groupId>io.github.thunkware</groupId>
-      <artifactId>test-lib-jdk16</artifactId>
+      <artifactId>test-lib-jdk17</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -69,7 +69,7 @@
             <argument>-Dauto-valhalla.annotation-mode=yolo</argument>
             <argument>-Dauto-valhalla.includes-mode=yolo</argument>
             <argument>-cp</argument>
-            <argument>${project.build.outputDirectory}:${project.basedir}/../test-lib-jdk5/target/test-lib-jdk5-${project.version}.jar:${project.basedir}/../test-lib-jdk16/target/test-lib-jdk16-${project.version}.jar:${project.basedir}/../../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
+            <argument>${project.build.outputDirectory}:${project.basedir}/../test-lib-jdk5/target/test-lib-jdk5-${project.version}.jar:${project.basedir}/../test-lib-jdk17/target/test-lib-jdk17-${project.version}.jar:${project.basedir}/../../../auto-valhalla-api/target/auto-valhalla-api-${project.version}.jar</argument>
             <argument>demo.runner.Main</argument>
           </arguments>
         </configuration>

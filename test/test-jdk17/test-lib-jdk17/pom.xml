@@ -9,8 +9,8 @@
     <relativePath>../../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>test-lib-jdk16</artifactId>
-  <name>test-lib-jdk16</name>
+  <artifactId>test-lib-jdk17</artifactId>
+  <name>test-lib-jdk17</name>
 
   <description>
     Value-class candidates compiled to Java 16 bytecode,
