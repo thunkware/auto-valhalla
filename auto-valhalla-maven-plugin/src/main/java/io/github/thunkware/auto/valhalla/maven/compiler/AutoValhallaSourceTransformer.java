@@ -41,7 +41,8 @@ public final class AutoValhallaSourceTransformer {
 
     /**
      * Runs the source-level transformation: the annotation-processor selection
-     * pass followed by compiling each generated file with the JDK compiler
+     * pass (which also prunes stale generated sources) followed by compiling
+     * each generated file with the JDK compiler
      * ({@code --release <N> --enable-preview}), writing the resulting
      * value-class files under {@code META-INF/versions/<N>}.
      *
@@ -54,7 +55,11 @@ public final class AutoValhallaSourceTransformer {
         }
         Result result = new Result();
 
-        Selection selection = runner.findGeneratedFiles(input);
+        // Regenerate the selection instead of re-reading the generated dir:
+        // run() prunes stale generated sources (an @AutoValhalla that was
+        // removed leaves a leftover copy that would otherwise still be compiled
+        // into META-INF/versions/28).
+        Selection selection = runner.run(input);
         result.selected.addAll(selection.selectedTypes);
         result.generatedSources = selection.generatedSources;
         if (selection.generatedFiles.isEmpty()) {

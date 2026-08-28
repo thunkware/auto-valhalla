@@ -14,7 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.apache.maven.plugin.logging.Log;
 
@@ -69,7 +71,13 @@ public final class AnnotationProcessorRunner {
             return selection;
         }
 
+        // Files the pass rewrites get a fresh mtime; files that are still there
+        // with an unchanged mtime were not regenerated and are stale leftovers
+        // from an earlier source tree (e.g. an @AutoValhalla that was removed).
+        // Dropping them keeps stale sources out of the multi-release versions dir.
+        Map<File, Long> before = snapshotJavaFiles(generatedDir);
         runPass(input, generatedDir);
+        pruneStaleGeneratedFiles(generatedDir, before);
         collectGeneratedFiles(generatedDir, selection);
         return selection;
     }
@@ -133,6 +141,35 @@ public final class AnnotationProcessorRunner {
                         selection.generatedFiles.computeIfAbsent(rel, k -> new ArrayList<>())
                                 .add(new Generated(rel, rel));
                     });
+        }
+    }
+
+    private static Map<File, Long> snapshotJavaFiles(File dir) throws IOException {
+        Map<File, Long> mtimes = new HashMap<>();
+        if (!dir.isDirectory()) {
+            return mtimes;
+        }
+        try (Stream<Path> stream = Files.walk(dir.toPath())) {
+            stream.filter(path -> path.toString().endsWith(".java"))
+                    .forEach(path -> mtimes.put(path.toFile(), path.toFile().lastModified()));
+        }
+        return mtimes;
+    }
+
+    private static void pruneStaleGeneratedFiles(File generatedDir, Map<File, Long> before)
+            throws IOException {
+        if (before.isEmpty()) {
+            return;
+        }
+        List<Path> stale = new ArrayList<>();
+        try (Stream<Path> stream = Files.walk(generatedDir.toPath())) {
+            stream.filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> before.containsKey(path.toFile()))
+                    .filter(path -> path.toFile().lastModified() == before.get(path.toFile()))
+                    .forEach(stale::add);
+        }
+        for (Path path : stale) {
+            Files.deleteIfExists(path);
         }
     }
 
