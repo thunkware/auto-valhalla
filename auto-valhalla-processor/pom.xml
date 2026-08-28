@@ -53,12 +53,16 @@
   </properties>
 
   <dependencies>
-    <!-- tools.jar from JDK8 -->
+    <!-- tools.jar from JDK8; provided scope keeps it out of the published
+         artifact and the consumers' classpaths. The processor only uses the
+         com.sun.source APIs at compile time and runs inside javac, where the
+         tools are always present. -->
     <dependency>
       <groupId>io.github.thunkware.sun</groupId>
       <artifactId>com.sun.tools.8</artifactId>
       <version>0.1.0</version>
       <classifier>linux_x64</classifier>
+      <scope>provided</scope>
     </dependency>
 
     <!-- Only used by the tests, which compile fixture sources carrying the
