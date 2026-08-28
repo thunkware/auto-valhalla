@@ -17,13 +17,19 @@ public final class JdkVersionValidator {
      * JDK 28 itself.
      */
     public static void validate(String executableOverride) throws MojoFailureException {
-        validate(CompileGeneratedSourcesMojo.jdkFeature(), executableOverride);
+        // The environment scan (java<N>.home / JAVA<N>_HOME) belongs here, to
+        // the entry point the mojos use, so the (int, String) forms below stay
+        // deterministic and don't change with the caller's environment.
+        validate(CompileGeneratedSourcesMojo.jdkFeature(),
+                isNotBlank(executableOverride)
+                        || Javac.hasValhallaCompiler(null, MIN_VALHALLA_JDK));
     }
 
+    /** Validates against an explicitly-configured {@code java<N>.home} only;
+     *  the ambient environment is deliberately not consulted. */
     public static void validate(int feature, String java28Home)
             throws MojoFailureException {
-        validate(feature, isNotBlank(java28Home)
-                || Javac.hasValhallaCompiler(null, MIN_VALHALLA_JDK));
+        validate(feature, isNotBlank(java28Home));
     }
 
     private static void validate(int feature, boolean hasValhallaCompiler)
