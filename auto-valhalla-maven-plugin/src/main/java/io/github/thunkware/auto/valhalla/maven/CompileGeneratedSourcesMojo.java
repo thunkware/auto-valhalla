@@ -85,6 +85,15 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     private boolean skipCompileGeneratedSources;
 
     /**
+     * Strip the {@code @AutoValhalla} marker (and its import) from the
+     * generated value-class sources. Mirrors the {@code generate-sources} goal's
+     * parameter so that goal's output is not clobbered when this goal re-runs
+     * the selection pass.
+     */
+    @Parameter(defaultValue = "false", property = "auto-valhalla.removeAnnotation")
+    private boolean removeAnnotation;
+
+    /**
      * The compiled classes directory; the versioned value classes are written
      * under {@code META-INF/versions/<versionDirectory>} here.
      */
@@ -155,6 +164,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .compilerConfiguration(mavenCompiler)
                 .release(resolveRelease())
                 .enablePreview(resolveEnablePreview())
+                .removeAnnotation(removeAnnotation)
                 .session(session)
                 .project(project)
                 .pluginManager(pluginManager)
