@@ -1,6 +1,5 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.asBoolean;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_SOURCES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
@@ -156,11 +155,29 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String resolveRelease() {
-        return firstCompilerValue("release");
+        String release = firstCompilerValue("release");
+        if (release != null) {
+            return release;
+        }
+        // The plugin also accepts maven.compiler.release / maven.compiler.target
+        // properties (e.g. consumers that steer the default-bound compile purely
+        // through properties); mirror that so the selection pass compiles at the
+        // same level as the base classes.
+        release = project.getProperties().getProperty("maven.compiler.release");
+        if (Utils.isNotBlank(release)) {
+            return release;
+        }
+        String target = project.getProperties().getProperty("maven.compiler.target");
+        return Utils.isNotBlank(target) ? Utils.trim(target) : null;
     }
 
     private boolean resolveEnablePreview() {
-        return asBoolean(firstCompilerBoolean("enablePreview"));
+        Boolean preview = firstCompilerBoolean("enablePreview");
+        if (preview != null) {
+            return preview;
+        }
+        String property = project.getProperties().getProperty("maven.compiler.enablePreview");
+        return Utils.isNotBlank(property) && Boolean.parseBoolean(Utils.trim(property));
     }
 
     private String resolveExecutableOverride() {

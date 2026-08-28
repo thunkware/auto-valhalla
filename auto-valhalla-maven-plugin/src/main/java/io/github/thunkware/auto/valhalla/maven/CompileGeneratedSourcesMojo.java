@@ -237,13 +237,31 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     String resolveRelease() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
         ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
-        return configEvaluator.resolveString("release");
+        String release = configEvaluator.resolveString("release");
+        if (release != null) {
+            return release;
+        }
+        // The plugin also accepts maven.compiler.release / maven.compiler.target
+        // properties (e.g. consumers that steer the default-bound compile purely
+        // through properties); mirror that so the selection pass compiles at the
+        // same level as the base classes.
+        release = project.getProperties().getProperty("maven.compiler.release");
+        if (isNotBlank(release)) {
+            return release;
+        }
+        String target = project.getProperties().getProperty("maven.compiler.target");
+        return isNotBlank(target) ? trim(target) : null;
     }
 
     boolean resolveEnablePreview() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
         ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
-        return asBoolean(configEvaluator.resolveBoolean("enablePreview"));
+        Boolean preview = configEvaluator.resolveBoolean("enablePreview");
+        if (preview != null) {
+            return preview;
+        }
+        String property = project.getProperties().getProperty("maven.compiler.enablePreview");
+        return isNotBlank(property) && Boolean.parseBoolean(trim(property));
     }
 
     protected PlexusConfiguration getCompilerPluginConfiguration() {
