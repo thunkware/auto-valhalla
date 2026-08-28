@@ -1,6 +1,5 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
-import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import static java.util.Comparator.comparing;
 
@@ -118,8 +117,8 @@ public final class AnnotationProcessorRunner {
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 .compilerArgs(options.subList(1, options.size()))
-                .release(Integer.toString(MIN_VALHALLA_JDK))
-                .enablePreview(true)
+                .release(input.release())
+                .enablePreview(input.enablePreview())
                 .proc("only")
                 .build();
         ProcessResult process = mavenCompilerInvoker.compile(mavenCompilerInput);

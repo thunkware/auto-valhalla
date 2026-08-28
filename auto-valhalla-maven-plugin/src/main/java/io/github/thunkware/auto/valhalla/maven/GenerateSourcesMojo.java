@@ -1,5 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.support.Utils.asBoolean;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_SOURCES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
@@ -126,6 +127,8 @@ public class GenerateSourcesMojo extends AbstractMojo {
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())
                     .compilerConfiguration(mavenCompiler)
+                    .release(resolveRelease())
+                    .enablePreview(resolveEnablePreview())
                     .removeAnnotation(removeAnnotation)
                     .session(session)
                     .project(project)
@@ -152,6 +155,14 @@ public class GenerateSourcesMojo extends AbstractMojo {
         return Utils.normalizeEncoding(firstCompilerValue("encoding"));
     }
 
+    private String resolveRelease() {
+        return firstCompilerValue("release");
+    }
+
+    private boolean resolveEnablePreview() {
+        return asBoolean(firstCompilerBoolean("enablePreview"));
+    }
+
     private String resolveExecutableOverride() {
         return firstCompilerValue("executable");
     }
@@ -164,6 +175,11 @@ public class GenerateSourcesMojo extends AbstractMojo {
     private String firstCompilerValue(String name) {
         return ConfigEvaluator.of(mavenCompiler, compilerPluginConfiguration(), configOrigin)
                 .resolveString(name);
+    }
+
+    private Boolean firstCompilerBoolean(String name) {
+        return ConfigEvaluator.of(mavenCompiler, compilerPluginConfiguration(), configOrigin)
+                .resolveBoolean(name);
     }
 
     private PlexusConfiguration compilerPluginConfiguration() {

@@ -153,6 +153,8 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .encoding(resolvedEncoding)
                 .compilerArgs(extraCompilerArgs)
                 .compilerConfiguration(mavenCompiler)
+                .release(resolveRelease())
+                .enablePreview(resolveEnablePreview())
                 .session(session)
                 .project(project)
                 .pluginManager(pluginManager)
@@ -230,6 +232,18 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
         String encoding = configEvaluator.resolveString("encoding");
         return normalizeEncoding(encoding);
+    }
+
+    String resolveRelease() {
+        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
+        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
+        return configEvaluator.resolveString("release");
+    }
+
+    boolean resolveEnablePreview() {
+        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
+        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
+        return asBoolean(configEvaluator.resolveBoolean("enablePreview"));
     }
 
     protected PlexusConfiguration getCompilerPluginConfiguration() {
