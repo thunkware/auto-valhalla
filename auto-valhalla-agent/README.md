@@ -1,4 +1,3 @@
-![stable](https://img.shields.io/badge/stability-experimental-orange.svg)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.thunkware/auto-valhalla-agent)](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-agent)
 [![javadoc](https://javadoc.io/badge2/io.github.thunkware/auto-valhalla-agent/javadoc.svg)](https://javadoc.io/doc/io.github.thunkware/auto-valhalla-agent)
 
@@ -9,31 +8,33 @@ A Java agent that rewrites eligible identity classes into
 Existing code (compiled on older JDKs) transparently gets the memory and
 performance benefits of value classes when run on a Valhalla-enabled JVM.
 
-For the annotation used to opt in, see the
-[auto-valhalla-api project](../auto-valhalla-api). For attaching the agent
-without `-javaagent`, see the
-[auto-valhalla-agent-attach project](../auto-valhalla-agent-attach). For
-compiling the value-class variants at build time instead, see the
-[auto-valhalla-maven-plugin](../auto-valhalla-maven-plugin). For an overview,
-see the [auto-valhalla README](../README.md).
+For compiling the value-class at build time, see the [auto-valhalla-maven-plugin](../auto-valhalla-maven-plugin) instead. 
 
 ## Quickstart
 
-Annotate the class (see the
-[api quickstart](../auto-valhalla-api#quickstart)):
+### 1. Opt in with the annotation
+
+Add [`auto-valhalla-api` dependency](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-api) and annotate plain identity
+class or record in your JDK1.5+ codebase:
 
 ```java
 import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
 @AutoValhalla
-public final class Point {
-    public final int x;
+public final class Point {        // class must be final
+    public final int x;           // with final instance fields
     public final int y;
-    public Point(int x, int y) { this.x = x; this.y = y; }
+    public Point(int x, int y) { 
+        this.x = x; 
+        this.y = y; 
+    }
 }
+
+@AutoValhalla
+public record Currency(String code) { }  // or a record class
 ```
 
-Download the agent and run on JDK 28:
+Then download the agent and run the app on JDK28:
 
 ```bash
 wget -O auto-valhalla-agent.jar https://repo1.maven.org/maven2/io/github/thunkware/auto-valhalla-agent/0.1.0/auto-valhalla-agent-0.1.0.jar
@@ -42,59 +43,73 @@ java --enable-preview \
      -jar myapp.jar
 ```
 
+After transformation, your class or record behaves like a value object:
+* `Objects.hasIdentity(new Point(1, 2)) == false`
+* `Objects.hasIdentity(new Currency("USD")) == false`
+
+Because the `@AutoValhalla` annotation was compiled with Java 1.5, it is compatible with
+**JDK 1.5 and later**. You can apply the annotation in older codebases
+without raising their compile version to JDK28. The javaagent is similarly compatible
+with older JVMs; it will disable itself when run on a non-Valhalla JVM.
+
+To detect errors earlier at build time, run AutoValhallaVerifier in a unit test:
+```java
+import io.github.thunkware.auto.valhalla.api.AutoValhallaVerifier;
+
+@Test
+void test() {
+    AutoValhallaVerifier.verify(Point.class, Currency.class);
+}
+```
+
+### 2. Opt in with `includes` flag
+
+If you cannot or do not want to edit the source code, use `-Dauto-valhalla.includes` to convert to value classes.
+
+```bash
+java --enable-preview \
+     -Dauto-valhalla.includes=com.example.model,com.example.dto \
+     -javaagent:auto-valhalla-agent.jar \
+     -jar myapp.jar
+```
+
+### 3. Attach agent
+
+For some apps, it may be more convenient to attach the agent, which does not require adding `-javaagent` to app startup scripts.
+
+Add [`auto-valhalla-agent-attach` dependency](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-agent-attach), and activate it in your app's main class:
+
+```java
+public class Main {
+
+    // Attach auto-valhalla agent as early as possible.
+    static {
+        // If running on JDK28 with --enable-preview ...
+        if (AutoValhallaAttachAgent.isSupported()) {
+            System.setProperty("auto-valhalla.includes", "com.example"); // set options as needed
+            AutoValhallaAttachAgent.attach(); // ... then attach auto-valhalla agent
+        }
+    }
+    
+    private static final Logger logger = ...
+    
+    public static void main(String[] args) {
+        ...
+    }
+}
+```
+
 After transformation, `Objects.hasIdentity(new Point(1, 2)) == false`, and the
 class behaves like a value object.
 
-## Selecting classes
-
-Classes are selected for conversion in one of two ways — or both:
-
-* **`@AutoValhalla` annotation** — explicit, whole-codebase opt-in; the
-  recommended way for code you control.
-* **`includes` patterns** — for code you cannot or do not want to edit:
-
-  ```bash
-  java --enable-preview \
-       -Dauto-valhalla.includes=com.example.model,com.example.dto \
-       -javaagent:auto-valhalla-agent.jar \
-       -jar myapp.jar
-  ```
-
-`excludes` patterns are checked first and override both. A class selected by
-both the annotation and `includes` is treated as annotation-selected only.
-
-## Mode
-
-The annotation and `includes`/`excludes` decide *which* classes are selected.
-Mode further narrows *which* of those selected classes are actually converted,
-based on deeper class analysis, and *how* they are converted. If a class is
-selected but not convertible under the active mode, that is a failure; see
-[Success and failure handling](#success-and-failure-handling).
-
-| Option | Description |
-| --- | --- |
-| `auto-valhalla.annotation-mode` | Mode(s) applied to annotation-selected classes. Default: `safe`. |
-| `auto-valhalla.includes-mode` | Mode(s) applied to includes-selected classes. Default: `safe`. |
-
-Multiple modes are comma-separated and case-insensitive —
-`mark-class-final`, `mark_class_final` and `markClassFinal` are the same.
-
-| Mode | Effect |
-| --- | --- |
-| `safe` | Convert only classes that can safely be converted: `final` class with `final` instance fields. |
-| `mark-class-final` | Allow non-final classes by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load). |
-| `mark-fields-final` | Allow classes with non-`final` instance fields if those fields are written only once from a constructor. The fields are marked `final`. |
-| `remove-synchronized` | Allow classes with synchronized instance methods by removing the `synchronized` modifier. |
-| `yolo` | Shorthand for `mark-class-final,mark-fields-final,remove-synchronized`. |
-| `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. See [Synchronization monitor](#synchronization-monitor). |
-
 ## Synchronization monitor
 
-Before converting classes, it can be helpful to know whether they are used in
-`synchronized` blocks — converting those classes to value classes would cause an
+Before converting classes, it could be helpful to know if they are used in
+`synchronized` blocks. Converting those classes to value classes would cause
 `IdentityException` at every synchronization site.
 
-Run the application with the agent in `synchronization-monitor` mode:
+To find which classes are synchronized on, run the application with the agent
+in `synchronization-monitor` mode:
 
 ```bash
 java --enable-preview \
@@ -104,11 +119,15 @@ java --enable-preview \
     -jar myapp.jar
 ```
 
-Instead of converting, this instruments all selected classes and logs the class
-names that are synchronized on — to the console or to
-`auto-valhalla.synchronization.txt`. Feed the file back as `excludes-files` so
-those classes are skipped in a later run. This mode cannot be combined with
-other modes.
+Instead of converting to value classes, this will instrument all classes
+(because of `includes='*'`) and log class names that are synchronized on.
+See log output in the console or in `auto-valhalla.synchronization.txt`.
+
+You can use the file to:
+- more confidently apply `@AutoValhalla` annotation to classes, or
+- feed back as `excludes-files` in a later run to avoid converting those classes.
+
+This mode cannot be combined with other modes.
 
 | Option | Description |
 | --- | --- |
@@ -116,11 +135,18 @@ other modes.
 
 ## Options
 
-All options are system properties (`-Dauto-valhalla.option=value`) and can also
-be set as environment variables — see
+Flags are supplied via system properties (`-Dauto-valhalla.option=value`).
+All options can also be set as environment variables — see
 [Configuring with Environment Variables](#configuring-with-environment-variables).
 
+Canonical form uses the `auto-valhalla.` prefix.
+
 ### Selection
+
+Classes are selected for conversion by the `@AutoValhalla` annotation, by
+`includes` patterns, or both. `excludes` patterns are checked first and
+override both. A class selected by both the annotation and `includes` is
+treated as annotation-selected.
 
 | Option | Description |
 | --- | --- |
@@ -129,32 +155,57 @@ be set as environment variables — see
 | `auto-valhalla.includes-files` | Path to a file with one pattern per line. Blank lines and `#` comments are ignored. |
 | `auto-valhalla.excludes-files` | As above, for excludes. |
 
+### Mode
+
+The `@AutoValhalla` annotation and `includes`/`excludes` decide _which_
+classes are selected based on very basic class information. Mode further narrows _which_ of those selected classes
+are actually converted, based on deeper class definition, and _how_ they are converted. If a class is selected but not convertible
+under the active mode, that is a failure; see [Success and failure handling](#success-and-failure-handling).
+
+| Option | Description |
+| --- | --- |
+| `auto-valhalla.annotation-mode` | Mode(s) applied to annotation-selected classes. Default: `safe`. |
+| `auto-valhalla.includes-mode` | Mode(s) applied to includes-selected classes. Default: `safe`. |
+
+#### Mode values
+
+| Mode | Effect                                                                                                        |
+| --- |----------------------------------------------------------------------------------------------------------------|
+| `safe` | Convert only classes that can safely be converted: `final` class with `final` instance fields.              |
+| `mark-class-final` | Allow non-final classes by marking the class `final`. Only opt in when nothing subclasses them (or subclasses fail to load).                                    |
+| `mark-fields-final` | Allow classes with non-`final` instance fields if those fields written only once in a constructor. The fields are marked `final`.                               |
+| `remove-synchronized` | Allow classes with synchronized instance methods by removing `synchronized` modifier.        |
+| `yolo` | Shorthand for `mark-class-final,mark-fields-final,remove-synchronized`.                                     |
+| `synchronization-monitor` | Instead of converting, instrument selected classes to log which objects are synchronized on at runtime. See [Synchronization Monitor](#synchronization-monitor) |
+
+Multiple modes are comma-separated. Mode names are case-insensitive and
+accept `-`, `_`, or camelCase (`mark-class-final`, `mark_class_final`, and
+`markClassFinal` are all the same).
+
 ### Success and failure handling
 
-Controlled via per-logger level overrides — see [Log levels](#log-levels).
+Controlled via [per-logger level overrides](#log-levels).
 
-- **rejected** — class was selected but did not meet the suitability requirements (e.g. not final, non-final fields).
+- **rejected** — class was selected but did not meet suitability requirements (e.g. not final, non-final fields).
 - **fail** — class passed suitability checks but hit an unexpected error during transformation.
 - **success** — class was selected, passed checks, and was successfully transformed to a value class.
 
-| Logger name | Default level | Effect |
-| --- | --- | --- |
-| `auto-valhalla.annotation.success` | `info` | If annotation-selected classes are successfully transformed, treat as info. |
-| `auto-valhalla.includes.success` | `info` | If includes-selected classes are successfully transformed, treat as info. |
-| `auto-valhalla.annotation.rejected` | `fatal` | If annotation-selected classes are rejected, treat as fatal. |
+| Logger name | Default level | Effect                                                                            |
+| --- | --- |-----------------------------------------------------------------------------------|
+| `auto-valhalla.annotation.success` | `info` | If annotation-selected classes are successfully transformed, treat as info.       |
+| `auto-valhalla.includes.success` | `info` | If includes-selected classes are successfully transformed, treat as info.         |
+| `auto-valhalla.annotation.rejected` | `fatal` | If annotation-selected classes are rejected, treat as fatal.                      |
 | `auto-valhalla.annotation.fail` | `fatal` | If annotation-selected classes hit an unexpected transform error, treat as fatal. |
-| `auto-valhalla.includes.rejected` | `debug` | If includes-selected classes are rejected, treat as debug. |
-| `auto-valhalla.includes.fail` | `debug` | If includes-selected classes hit an unexpected transform error, treat as debug. |
+| `auto-valhalla.includes.rejected` | `debug` | If includes-selected classes are rejected, treat as debug.                        |
+| `auto-valhalla.includes.fail` | `debug` | If includes-selected classes hit an unexpected transform error, treat as debug.   |
 
-`fatal` causes a class-load exception (the JVM rejects the class rather than
-silently keeping an identity class). Any other level (`error`, `warning`,
-`info`, `debug`, `trace`, `off`) leaves the class as an identity class and logs
-at that level.
+`fatal` causes a class load exception (the JVM rejects the class rather than silently keeping an identity class).
+Any other level (`error`, `warning`, `info`, `debug`, `trace`, `off`) leaves the class as an identity class and logs at that level.
 
 ### Recording
 
-Each `*-append-to` file is read once at start-up so names already present are
-not re-appended, and a missing file is treated as empty.
+Each `*-append-to` file is read once at start-up so names already present
+are not re-appended, and a missing file is treated as empty.
 
 | Option | Description |
 | --- | --- |
@@ -165,28 +216,29 @@ not re-appended, and a missing file is treated as empty.
 
 ### Logging
 
-| Option | Description |
-| --- | --- |
-| `auto-valhalla.logging` | Logging system: `simple` (default), `none`, `application`. See below. |
-| `logging.level.<logger-name>` | Log level for the logger: `off`, `fatal`, `error`, `warning`, `info`, `debug`, `trace`. Default: `info`. |
+| Option | Description                                                                                            |
+| --- |--------------------------------------------------------------------------------------------------------|
+| `auto-valhalla.logging` | Logging system: `simple` (default), `none`, `application`. See below.                                  |
+| `logging.level.<logger-name>` | Log level for the logger. `off`, `fatal`, `error`, `warning`, `info`, `debug`, `trace`. Default: `info` |
 
-* `simple` — logs to standard error; only INFO or higher is printed. This is
-  the default.
-* `none` — the agent logs nothing.
-* `application` — redirects the agent's logs to the instrumented application's
-  slf4j logger. Works best for simple one-jar applications that do not use
-  multiple classloaders; Spring Boot apps are supported as well. The output can
-  be further configured by the application's own logging configuration (e.g.
-  logback.xml or log4j2.xml).
+#### Logging system
+
+`auto-valhalla.logging` controls the agent’s logging system. Three values are supported:
+* `simple`: The agent will print out its logs using the standard error stream. Only INFO or higher logs will be printed. This is the default Java agent logging system.
+* `none`: The agent will not log anything.
+* `application`: The agent will attempt to redirect its own logs to the instrumented application's slf4j logger. This
+  works the best for simple one-jar applications that do not use multiple classloaders; Spring Boot apps are supported
+  as well. The Java agent output logs can be further configured using the instrumented application's logging
+  configuration (e.g. logback.xml or log4j2.xml). Make sure to test that this logging system works for your application
+  before running it in a production environment.
 
 #### Log levels
 
-Levels are controlled by `logging.level.<logger-name>=<level>` where level is
-one of TRACE, DEBUG, INFO, WARN, ERROR, FATAL, or OFF. FATAL causes the passed-in
-or a new exception to be thrown. The root logger is `logging.level.root`.
+Log levels can be controlled by `logging.level.<logger-name>=<level>` where level is one of TRACE, DEBUG, INFO, WARN,
+ERROR, FATAL, or OFF. FATAL will cause passed-in or a new exception to be thrown. The root logger can be configured by
+using logging.level.root.
 
 Example:
-
 ```
 logging.level.root=WARN
 
@@ -206,11 +258,13 @@ logging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
 | --- | --- |
 | `auto-valhalla.config` | Path to a Java properties file supplying any of the options. |
 
-Config-file entries are applied first, so an environment variable or system
+Config file entries are applied first, so an environment variable or system
 property set alongside the file overrides it — including `includes` and
-`excludes`, which are replaced wholesale rather than merged. Each key is spelled
-exactly as the system property it stands for; any other key is logged as a
-warning and ignored.
+`excludes`, which are replaced wholesale rather than merged.
+
+Each key is spelled exactly as the system property it stands for — options keep
+their `auto-valhalla.` prefix, and per-logger levels their `logging.level.`
+prefix. Any other key is logged as a warning and ignored.
 
 ```properties
 auto-valhalla.includes=com.example
@@ -220,22 +274,22 @@ logging.level.auto-valhalla.includes.rejected=FATAL
 
 ### Feedback loop
 
-One or both of `includes.on-fail-append-to` and `synchronization-monitor.append-to`
-are designed to work together with `excludes-files`.
+One or both of `includes.on-fail-append-to` and `synchronization-monitor.append-to` are designed
+to work together with `excludes-files`.
 
-Run once with the default `includes.rejected=debug` (quiet) and
-`includes.on-fail-append-to` pointing at a file; every class that could not be
-safely transformed is recorded in the file. Similarly, run in
-`synchronization-monitor` mode to find classes used in synchronization blocks.
-Feed the files back as `excludes-files` on subsequent runs so those classes are
-skipped instead of surfacing errors:
+Run once with the default `includes.rejected=debug` (quiet) and `includes.on-fail-append-to` pointing at a file; every class that could not
+be safely transformed is recorded in the file. Similarly, run in `synchronization-monitor` mode and append to the file
+to find classes used in synchronization blocks.
+
+Feed the files back as `excludes-files` on subsequent runs so those classes are skipped instead of
+surfacing errors:
 
 ```bash
 # first pass: record anything that fails (includes.rejected defaults to debug)
 -Dauto-valhalla.includes=com.example \
 -Dauto-valhalla.includes.on-fail-append-to=/tmp/auto-valhalla-failures.txt
 
-# second pass: record classes used in synchronization blocks
+# second pass: record classes used in synchronization blocks 
 -Dauto-valhalla.includes=com.example \
 -Dauto-valhalla.includes-mode=synchronization-monitor \
 -Dauto-valhalla.synchronization-monitor.append-to=/tmp/auto-valhalla-synchronization.txt
@@ -246,86 +300,104 @@ skipped instead of surfacing errors:
 ```
 
 The companion `includes.on-success-append-to` records the classes that *were*
-converted, handy for applying `@AutoValhalla` or for turning a broad `includes`
-sweep into an explicit `includes-files` list.
+converted, which is handy for applying `@AutoValhalla` annotation or for turning a broad `includes` sweep into an
+explicit `includes-files` list:
+
+```bash
+# record what a broad sweep actually converted
+-Dauto-valhalla.includes='*' \
+-Dauto-valhalla.includes-mode=safe \
+-Dauto-valhalla.includes.on-success-append-to=/tmp/auto-valhalla-converted.txt
+```
 
 ## Configuring with Environment Variables
 
-Any setting configurable as a system property can also be set with an
-environment variable: uppercase the property name and replace `.` and `-` with
-`_`. For example, `auto-valhalla.includes` becomes
-`AUTO_VALHALLA_INCLUDES`, and `auto-valhalla.includes-mode` becomes
-`AUTO_VALHALLA_INCLUDES_MODE`. System properties take precedence over
-environment variables when both are set.
+In certain environments, configuring settings through environment variables
+is often preferred. Any setting that can be configured using a system
+property can also be set using an environment variable. To determine the
+correct environment variable name for a system property:
 
-## How it works
+1. Convert the system property name to uppercase.
+2. Replace all `.` and `-` characters with `_`.
 
-The agent's entry point is a JDK 5 class file, so the agent jar loads on any JVM
-from JDK 5 up. On a Valhalla-enabled JVM (JDK 28 with `--enable-preview`) it
-installs a class-file transformer that parses every loaded class and rewrites
-the selected ones as value classes; on any other JVM it prints a single warning
-and does nothing, so your application keeps its original behaviour. There is no
-need to guard its use behind a JVM-version check.
+For example, `auto-valhalla.includes` converts to `AUTO_VALHALLA_INCLUDES`,
+and `auto-valhalla.includes-mode` converts to `AUTO_VALHALLA_INCLUDES_MODE`.
 
-A transformed class has no identity: `==` becomes value equality, `equals`/
-`hashCode` derive from the fields, `synchronized` methods no longer take a
-monitor, and `System.identityHashCode`, `WeakReference`, and `IdentityHashMap`
-no longer see per-instance identity. See [Notes](#notes) for the full semantics.
+System properties take precedence over environment variables when both are
+set.
 
 ## Notes
 
 ### Selection
 
-- If annotation-selected classes fail conversion, the class is rejected by
-  default (`annotation.rejected` and `annotation.fail` default to `fatal`). Use
-  `-Dlogging.level.auto-valhalla.annotation.rejected=warning` to log and
-  continue instead.
+- If annotation-selected classes fail conversion, the class is rejected by default
+  (`annotation.rejected` and `annotation.fail` default to `fatal`). Use
+  `-Dlogging.level.auto-valhalla.annotation.rejected=warning` to log and continue instead.
 - If includes-selected classes fail conversion, the failure is logged at
-  `debug` by default (`includes.rejected` and `includes.fail` default to
-  `debug`). Use `-Dlogging.level.auto-valhalla.includes.rejected=fatal` to fail
-  loudly.
+  `debug` by default (`includes.rejected` and `includes.fail` default to `debug`). Use
+  `-Dlogging.level.auto-valhalla.includes.rejected=fatal` to fail loudly.
 
 ### Transformation
 
-- A converted class is `final`. If anything subclasses it, that subclass will
-  fail class loading.
+- A converted class is `final`. If anything subclasses it, that subclass
+  will fail class loading.
 - The agent rewrites identity records and final classes only. It never
   transforms JDK/system classes or its own support classes. Non-final classes
   are converted (as final) when the mode includes `mark-class-final`; any
   existing subclass then fails to load.
-- Classes loaded *before* the agent starts (or attaches) are not rewritten;
-  only classes loaded afterwards are.
 
-### JVM spec conformance
+### JVM Spec Conformance
 
-- **Semantics change.** For a converted class, identity-keyed caches and
-  `==`-based deduplication silently change behaviour. **This is especially
-  dangerous with `includes-mode`, which converts classes without annotating
-  them.**
-- **Safe to use with any JDK.** On a JVM older than JDK 28 (or on JDK 28
-  without `--enable-preview`) the agent prints a warning and does nothing.
+- **Semantics change.** For a converted class, `==` becomes value equality
+  (two instances with equal fields compare `==`), `equals`/`hashCode` of the
+  two fields, `synchronized` methods no longer take a monitor, and
+  `System.identityHashCode`, `WeakReference`, and `IdentityHashMap` no longer
+  see per-instance identity. A value class has no identity, so identity-keyed
+  caches and `==`-based deduplication silently change behavior. **This is
+  especially dangerous with `includes-mode`**, which converts classes without
+  annotating them.
+- **Safe to use with any JDK.** The agent's entry point is a JDK 5 class
+  file, so the agent jar loads on any JVM from JDK 5 up. On a JVM older than
+  JDK28 (or on JDK28 without `--enable-preview`) the agent prints a single
+  warning and does nothing — your classes keep their original (identity)
+  behavior and the application runs unchanged. There is no need to guard its
+  use behind a JVM-version check.
 - An already-loaded identity class cannot be retroactively made a value class
-  at runtime.
+  at runtime; classes loaded *after* the agent attaches (or from the start,
+  when attached via `-javaagent`) are the ones rewritten.
 
-### Performance overhead
+### Performance Overhead
 
-The agent parses every loaded class that is not on an `excludes` pattern once
-at class-load time and rewrites the selected ones — a small one-time CPU cost
-(typically well under a millisecond per class) to class loading. Once a class is
-loaded there is zero overhead in value-class-transformation mode. In
-synchronization-monitor mode there is non-zero but negligible overhead to every
+#### Instrumentation Overhead
+
+The agent parses every loaded class that is not on an `excludes` pattern once at
+class-load time, and rewrites the selected ones. It adds a small one-time CPU cost
+(typically well under a millisecond per class) to class loading.
+
+In value-class-transformation mode, there is absolutely zero overhead once a class
+is loaded. Transformed value classes behave exactly as JDK would compile and execute.
+
+In synchronization monitor mode, there is non-zero but negligible overhead to every
 synchronization block in instrumented classes.
 
 Turn these loggers to `DEBUG` to see per-class and total transform stats:
-
 ```
 -Dlogging.level.io.github.thunkware.auto.valhalla.ValueClassTransformer=DEBUG
 -Dlogging.level.io.github.thunkware.auto.valhalla.Stats=DEBUG
 ```
 
-## JFR
+#### Attach Overhead and Compatibility
 
-JFR can also be used to find classes used in synchronization:
+Compared to starting with the `-javaagent` option, <a href="#3-attach-agent">attaching the agent</a> can be a rather
+computationally heavy operation. However, once attached, the same instrumentation overhead applies.
+
+More importantly, attach mechanism is not compatible with all JVMs. It is less reliable and is [frowned upon](https://openjdk.org/jeps/451).
+Balance the convenience it provides with the downsides when choosing it. And make sure to test that it works for your app
+before running it in a production environment.
+
+### Synchronization
+
+JFR can also be employed to find classes used in synchronization:
 
 ```bash
 # record
@@ -335,13 +407,14 @@ java -XX:StartFlightRecording:filename=locks.jfr,settings=none,\
 +jdk.JavaMonitorWait#enabled=true,\
 +jdk.JavaMonitorWait#stackTrace=false\
      -jar myapp.jar
-
+    
 # print class names
 jfr print --json --events jdk.JavaMonitorEnter locks.jfr | \
     jq '.recording.events.[].values.monitorClass.name' | \
     sort | uniq | tr -d '"' | tr '/' '.'
 ```
 
-Because JFR is intended to find lock contention and samples, it misses many
-classes used in synchronization. The agent's synchronization-monitor mode does
-not sample but instruments all selected classes.
+However, because JFR is intended to find lock contention and because it performs sampling,
+it will miss many classes used in synchronization. In comparison, this agent's
+synchronization-monitor mode does not sample but instead instruments all selected classes
+to attempt to find all classes used in synchronization.

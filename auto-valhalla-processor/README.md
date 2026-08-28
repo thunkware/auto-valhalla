@@ -77,9 +77,9 @@ classes.
 
 * To **run** the processor, the javac that loads it must be JDK 23 or newer
   (it uses the two-argument `SourcePositions` API). The value-class compilation
-  it feeds needs JDK 28+ with `--enable-preview`, so in practice the whole
-  pipeline requires JDK 28.
-* The processor is compiled for Java 17 class files and has no dependencies
+  it feeds needs JDK28+ with `--enable-preview`, so in practice the whole
+  pipeline requires JDK28.
+* The processor is compiled for Java 8 class files and has no dependencies
   (it does not even need `auto-valhalla-api` on its processor path — selection
   is done by matching the annotation's simple or fully qualified name).
 

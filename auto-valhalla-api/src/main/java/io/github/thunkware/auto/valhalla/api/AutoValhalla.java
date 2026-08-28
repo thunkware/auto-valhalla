@@ -7,10 +7,34 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a class to be automatically transformed into a <i>value class</i> at load time by the
- * {@code auto-valhalla} agent. See <a href="https://openjdk.org/jeps/401">JEP-401</a> of Project Valhalla
+ * Marks a class to be automatically transformed into a <i>value class</i>
+ * <ul>
+ *     <li>at build time by auto-valhalla-maven-plugin, or</li>
+ *     <li>at load time by auto-valhalla javaagent</li>
+ *  </ul>
  *
- * <p>In default ({@code annotation-mode=safe}), the class must satisfy all of
+ * <br/>
+ * <br/>
+ * Example usage:
+ * <pre>
+ * &#64AutoValhalla
+ * public final class Point {
+ *     public final int x;           // final instance fields
+ *     public final int y;
+ *     public Point(int x, int y) {
+ *         this.x = x;
+ *         this.y = y;
+ *     }
+ * }
+ *
+ * &#64AutoValhalla
+ * public record Currency(String code) { }  // or a record class
+ * </pre>
+ *
+ * <b>For build time transformation</b>, see auto-valhalla-maven-plugin documentation. The remainder of javadoc
+ * focuses on auto-valhalla javaagent.
+ *
+ * <p>In javaagent's default ({@code annotation-mode=safe}), the class must satisfy all of
  * the following conditions:
  * <ul>
  *   <li>Is {@code final} (abstract classes are not yet supported).</li>
@@ -35,6 +59,8 @@ import java.lang.annotation.Target;
  * <pre>
  * AutoValhallaVerifier.verify(Foo.class, Bar.class);
  * </pre>
+ *
+ * See <a href="https://openjdk.org/jeps/401">JEP-401</a> of Project Valhalla for value class details.
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

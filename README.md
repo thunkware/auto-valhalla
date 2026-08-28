@@ -10,13 +10,12 @@
 
 ## What is auto-valhalla?
 
-auto-valhalla turns eligible identity classes into
-[JEP-401](https://openjdk.org/jeps/401) value classes — without rewriting your
-application. Existing code (compiled on older JDKs) transparently gets the
-memory and performance benefits of value classes when run on a Valhalla-enabled
-JVM, and stays an ordinary class everywhere else.
+auto-valhalla turns eligible ordinary classes into [JEP-401](https://openjdk.org/jeps/401)  _value_ classes. Existing 
+code (compiled for older JDKs) transparently gets the memory and performance
+benefits of value classes when run on a Valhalla-enabled JVM, and stays an
+ordinary class when run on older JVMs.
 
-It is available as a javaagent in two variations, and as a build-time
+It is available as javaagent (in two variations), and as a build-time
 plugin for Maven:
 
 - [auto-valhalla-api](auto-valhalla-api) — `@AutoValhalla` annotation and `AutoValhallaVerifier`.
@@ -24,35 +23,11 @@ plugin for Maven:
 - [auto-valhalla-agent-attach](auto-valhalla-agent-attach) — javaagent that rewrites classes at load time, started without `-javaagent` flag.
 - [auto-valhalla-maven-plugin](auto-valhalla-maven-plugin) — generates and compiles the value-classes at build time.
 
-## Why auto-valhalla?
-
-* **Codes like a class, runs like an int.** Write and test against ordinary
-  identity classes, and let the agent (or the build-time plugins) turn them
-  into value classes where it matters.
-
-* **Works on any JDK.** The annotation is Java 5 bytecode and the agent
-  self-disables on a non-Valhalla JVM with a single warning — your application
-  runs unchanged on JDK 5 through 27, and gets the value-class benefits on
-  JDK 28.
-
-* **Opt in, not opt out.** Convert exactly what you choose: the `@AutoValhalla`
-  annotation when you own the sources (build-time plugins), or the agent's
-  `includes`/`excludes` patterns when you don't (runtime agent) — never
-  everything at once.
-
-* **Catches problems at build time.** `AutoValhallaVerifier` checks the
-  structural prerequisites in a unit test, and the Maven plugin fails the
-  build instead of silently keeping an identity class.
-
-* **No bytecode rewriting.** The agent lets the JVM apply its own
-  value-class rules; the build-time plugins generate your sources and let `javac`
-  compile them natively.
-
 ## Quickstart
 
-* **Annotation** — see the [api quickstart](auto-valhalla-api#quickstart).
+* **Maven Plugin** — see the [maven-plugin quickstart](auto-valhalla-maven-plugin#quickstart).
 
-* **Runtime javaagent** — see the [agent quickstart](auto-valhalla-agent#quickstart):
+* **Startup javaagent** — see the [agent quickstart](auto-valhalla-agent#quickstart):
 
   ```bash
   java --enable-preview \
@@ -60,17 +35,15 @@ plugin for Maven:
        -jar myapp.jar
   ```
 
-* **Attach** — see the [attach quickstart](auto-valhalla-agent-attach#quickstart).
+* **Dynamic Attach javaagent** — see the [attach quickstart](auto-valhalla-agent-attach#quickstart).
 
-* **Maven** — see the [maven-plugin quickstart](auto-valhalla-maven-plugin#quickstart).
-
-## How it works
+## Background
 
 Value objects provide _flattening_ (denser, more compact memory usage) and
 _scalarization_ (the JVM stack-allocates more easily). Consider an array of
 `Point` objects. Before conversion, the array holds references to separately
-allocated identity objects, one heap object per element — poor memory density
-and poor reference locality:
+allocated identity objects, one heap object per element which leads to poor
+memory density and poor reference locality:
 
 ```text
 +----------+
@@ -94,7 +67,7 @@ and poor reference locality:
             +-----------+
 ```
 
-After conversion, each `Point`'s fields are stored directly in the array, like
+After conversion, each `Point`'s fields are stored directly, flattened in the array, like
 primitives, in a single contiguous block:
 
 ```text
@@ -112,31 +85,30 @@ primitives, in a single contiguous block:
 
 auto-valhalla can be applied in these ways (choose one):
 
+* **At build time** — the [Maven plugin](auto-valhalla-maven-plugin) generates
+  and compiles `value class` or `value record` to be packaged in a multi-release jar,
+  so JDK 28+ uses the value variants and older JDKs use the original identity classes.
 * **At load time** — the [agent](auto-valhalla-agent) rewrites the selected
   classes when the JVM loads them, so nothing in the build changes.
   * See also dynamic [attach agent](auto-valhalla-agent-attach)
-* **At build time** — the [Maven plugin](auto-valhalla-maven-plugin) generates
-  and compiles `value class`/`value record` to be packaged in a multi-release jar, 
-  so JDK 28+ uses the value variants and older JDKs use the original identity classes.
+  * For the full configuration reference (modes, logging, synchronization monitor, feedback loop),
+     see the [agent documentation](auto-valhalla-agent#options).
 
-For the full configuration reference (modes, logging, synchronization monitor,
-feedback loop), see the [agent documentation](auto-valhalla-agent#options).
+## Why auto-valhalla?
 
-## Project structure
+* **Codes like a class, runs like an int.** Continue to maintain your codebase as is with little or no change. Let the 
+  maven plugin or javaagent turn them into value classes where it matters.
 
-| Module | Purpose |
-| --- | --- |
-| [`auto-valhalla-api`](auto-valhalla-api) | The `@AutoValhalla` annotation and `AutoValhallaVerifier`. |
-| [`auto-valhalla-agent`](auto-valhalla-agent) | The runtime javaagent. |
-| [`auto-valhalla-agent-attach`](auto-valhalla-agent-attach) | Attach helper built on a relocated Byte Buddy. |
-| [`auto-valhalla-maven-plugin`](auto-valhalla-maven-plugin) | Build-time multi-release jar plugin for Maven. |
-| `test/` | Demos, the demo runner, and the e2e verification scripts. |
+* **Works on any JDK.**
+  * The annotation is compatible with JDK5+.
+  * The maven plugin is compatible with JDK8+. Provided with a JDK28, it will generate value classes for identity classes
+    of your choice. Classes will then be arranged for creating a Multi-Release jar.
+  * The javaagent compatible with JDK5+. On JDK 5 through 27, the agent disables itself. On JDK28 Valhalla JVM, it
+    instruments identity classes of your choice into value classes.
 
-## Getting help
-
-* Questions: open a [GitHub issue](https://github.com/thunkware/auto-valhalla/issues).
-* Reporting bugs: file an issue with a minimal reproduction and the agent's
-  debug logs (`-Dlogging.level.io.github.thunkware.auto.valhalla=DEBUG`).
+* **Opt in, not opt out.** Convert exactly what you choose: 
+  * maven plugin if you want to edit and re-compile the source code
+  * javaagent if you do not want to edit or re-compile the source code
 
 ## Contributing
 

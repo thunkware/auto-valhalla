@@ -5,6 +5,8 @@ import java.util.List;
 /**
  * Checks at build time that classes marked {@link AutoValhalla} satisfy
  * the structural prerequisites the agent enforces at load/deploy time.
+ * <br><br>
+ * If you use auto-valhalla-maven-plugin, you do not need to use this class.
  *
  * <p>Entry points:
  * <ul>

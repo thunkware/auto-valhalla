@@ -3,14 +3,16 @@
 
 # auto-valhalla agent attach
 
-Attaches the [auto-valhalla agent](../auto-valhalla-agent) to an
-already-running JVM — no `-javaagent` flag needed in your startup scripts.
+Dynamically attaches the [auto-valhalla agent](../auto-valhalla-agent) to an already-running JVM — no `-javaagent` flag needed in your
+startup scripts.
 
-For the agent itself, see the
-[auto-valhalla-agent project](../auto-valhalla-agent). For an overview of the
-whole project, see the [auto-valhalla README](../README.md).
+For starting using `-javaagent` flag, see the [auto-valhalla-agent project](../auto-valhalla-agent).
+
+For an overview of the whole project, see the [auto-valhalla README](../README.md).
 
 ## Quickstart
+
+For some apps, it may be more convenient to attach the agent, which does not require adding `-javaagent` to app startup scripts.
 
 Add the dependency and call `AutoValhallaAttachAgent.attach()` as early as
 possible at startup — e.g. from a static initializer of the main class:
@@ -19,7 +21,7 @@ possible at startup — e.g. from a static initializer of the main class:
 <dependency>
   <groupId>io.github.thunkware</groupId>
   <artifactId>auto-valhalla-agent-attach</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
@@ -30,7 +32,7 @@ public class Main {
 
     // Attach the agent as early as possible.
     static {
-        // On JDK 28+ with --enable-preview ...
+        // On JDK28+ with --enable-preview ...
         if (AutoValhallaAttachAgent.isSupported()) {
             System.setProperty("auto-valhalla.includes", "com.example"); // options as needed
             AutoValhallaAttachAgent.attach(); // ... then attach the agent
@@ -43,30 +45,16 @@ public class Main {
 }
 ```
 
-`isSupported()` returns `true` only on a JVM that can transform classes
-(JDK 28+ launched with `--enable-preview`); `attach()` throws
-`IllegalStateException` otherwise, so guard the call with `isSupported()`.
-
-## How it works
-
-The `auto-valhalla-agent-attach` jar bundles a relocated copy of Byte Buddy on
-top of the regular `auto-valhalla-agent` dependency. At attach time it installs
-Byte Buddy's agent, appends the agent jar to the bootstrap classpath, and
-installs the value-class transformer.
-
-Because Byte Buddy is relocated into
-`io.github.thunkware.auto.valhalla.internal.bytebuddy`, it never leaks onto your
-application classpath. The jar contains no own sources — it ships
-MANIFEST-only `-sources` and `-javadoc` placeholders for Maven Central.
+`isSupported()` returns `true` only on a JVM that can transform classes (JDK28+ launched with `--enable-preview`)
 
 ## Compatibility and caveats
 
 - Only classes loaded *after* `attach()` are rewritten — call it as early as
   possible so application classes are still upcoming.
-- Attach is a heavier operation than starting with `-javaagent`, and it is not
-  compatible with all JVMs. It is also [frowned upon](https://openjdk.org/jeps/451)
-  by the JDK. Prefer `-javaagent` when you control the startup scripts, and
-  test that attach works for your application before using it in production.
+- Attach incurs a one-time computationally heavy cost, and it is not compatible with all JVMs. It is 
+  also [frowned upon](https://openjdk.org/jeps/451) and is on a deprecation path. Prefer `-javaagent` when you control
+  the startup scripts when possible. If you do use the dynamic attach agent, test that attach works for your application
+  before using it in production.
 
 Compare the overhead and compatibility trade-offs in the
 [agent documentation](../auto-valhalla-agent#performance-overhead).

@@ -3,10 +3,12 @@
 
 # auto-valhalla maven plugin
 
-Compiles the value-class variants of your selected classes at build time and
-packages them into a multi-release jar. Your classes stay ordinary identity
-classes (usable on any JDK), while JDK 28+ loads the value-class variants from
-`META-INF/versions/28`.
+For identity classes annotated with `@AutoValhalla`, the plugin
+compiles them as value classes and packages them into a multi-release 
+jar under `META-INF/versions/28`.
+
+When running on older JDKs, your classes stay ordinary identity classes, 
+while on Valhalla-enabled JDK28, your identity classes are loaded as value classes.
 
 For the runtime javaagent alternative, see the
 [auto-valhalla-agent project](../auto-valhalla-agent). For an
@@ -18,17 +20,17 @@ There are two common setups.
 
 ### 1. Develop on an older JDK, deploy value classes on Valhalla JVMs
 
-You work on JDK 8, 17, 21, or 25 and want your code to take advantage of
-value classes when run on a Valhalla-enabled JVM.
+You typically work on older JDK and you want your code to take advantage of
+value classes when run on a Valhalla-enabled JDK28.
 
 Set `$JAVA_HOME` to your older JDK and `$JAVA28_HOME` to a JDK 28
-installation, then add the plugin to your `pom.xml`:
+installation. Then add the plugin to `pom.xml`:
 
 ```xml
 <plugin>
   <groupId>io.github.thunkware</groupId>
   <artifactId>auto-valhalla-maven-plugin</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
+  <version>0.2.0</version>
   <executions>
     <execution>
       <goals>
@@ -50,13 +52,13 @@ Valhalla-enabled JVM (JDK 28+), the `@AutoValhalla` classes are loaded as
 value classes:
 
 ```bash
-java --enable-preview -jar myapp.jar
+$JAVA28_HOME/bin/java --enable-preview -jar myapp.jar
 ```
 
 ### 2. Develop on JDK 28, target an older JDK for compatibility
 
-You use JDK 28 as your day-to-day `$JAVA_HOME` but want to compile for an
-older JDK for widest possible compatibility.
+In this less common scenario, you use JDK28 as your day-to-day `$JAVA_HOME` but 
+want to compile your code for an older JDK, for widest possible compatibility.
 
 Configure `maven-compiler-plugin` to target the older JDK (if not already):
 
@@ -65,7 +67,7 @@ Configure `maven-compiler-plugin` to target the older JDK (if not already):
   <groupId>org.apache.maven.plugins</groupId>
   <artifactId>maven-compiler-plugin</artifactId>
   <configuration>
-    <release>17</release>
+    <release>17</release> <!-- or 8, 21, etc -->
   </configuration>
 </plugin>
 ```
@@ -76,7 +78,7 @@ Then add the plugin:
 <plugin>
   <groupId>io.github.thunkware</groupId>
   <artifactId>auto-valhalla-maven-plugin</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
+  <version>0.2.0</version>
   <executions>
     <execution>
       <goals>
@@ -105,33 +107,30 @@ mvn auto-valhalla:generate-sources auto-valhalla:compile-generated-sources
 
 ## Goals
 
-| Goal | Default phase | Description |
-| --- | --- | --- |
-| `generate-sources` | `generate-sources` | Runs only the annotation processor: selects the `@AutoValhalla` classes and generates their copies under `target/auto-valhalla-generated-sources`. Nothing is compiled and nothing is written to the project's output directory (`target/classes`) — useful to inspect or post-process what would be transformed. |
-| `compile-generated-sources` | `process-classes` | Compiles generated sources left by `generate-sources` under `target/auto-valhalla-generated-sources` into `META-INF/versions/28`. |
+| Goal | Default phase | Description                                                                                                  |
+| --- | --- |--------------------------------------------------------------------------------------------------------------|
+| `generate-sources` | `generate-sources` | Runs the annotation processor on main code, to generate code under `target/auto-valhalla-generated-sources`. |
+| `compile-generated-sources` | `process-classes` | Compiles generated sources left by `generate-sources` into `META-INF/versions/28`.                           |
 
 ## How it works
 
 There is no bytecode rewriting anywhere: the `auto-valhalla-processor`
-annotation processor selects the top-level types that carry the `@AutoValhalla`
-annotation, and writes generated copies of their source files into a generated
-directory with the `class`/`record` declarations turned into
-`value class`/`value record`. The `compile-generated-sources` goal then delegates to
-the JDK compiler — `javac --release 28 --enable-preview` — which produces the
-value-class files natively and enforces the value-class rules. The base classes
-are left untouched, so they keep working on JDKs older than 28.
+annotation processor selects classes marked with `@AutoValhalla`
+annotation, and generate source files with `value class`/`value record`. 
+The `compile-generated-sources` goal then delegates to the JDK28 compiler — `javac --release 28 --enable-preview` — 
+which produces the value-class files natively and enforces the value-class rules. 
+
+Generated source is enabled only for JDK28. On older JDKs, they remain identity classes.
 
 Because javac enforces the rules, an `@AutoValhalla` class that cannot be a
 value class (a non-final class, a class with mutable fields, or one using
 `synchronized`) fails the build instead of silently staying an identity class.
-The base classes must therefore be compiled without preview (`--release` lower
-than 28) — the value-class compilation itself is preview.
 
 ## Requirements
 
-- **JDK 28** — the plugin uses the JDK running Maven for the value-class
+- **$JAVA_HOME=JDK28** — the plugin uses the JDK running Maven for the value-class
   compilation. No extra environment variables needed.
-- **JDK 8–27** — set `JAVA28_HOME` to a JDK 28 installation. The plugin
+- **$JAVA_HOME=JDK8–27** — set `JAVA28_HOME` to a JDK 28 installation. The plugin
   uses that JDK's `javac` for the value-class compilation.
 
 The `maven-jar-plugin` (≥ 3.4.0) handles the `Multi-Release: true` manifest
@@ -142,28 +141,41 @@ trigger a warning from the plugin.
 
 All parameters are optional:
 
-| parameter | property | default | description |
-| --- | --- | --- | --- |
-| `skipGenerateSources` | `auto-valhalla.skipGenerateSources` | `false` | skip the annotation-processor pass |
-| `removeAnnotation` | `auto-valhalla.removeAnnotation` | `false` | strip the `@AutoValhalla` annotation from the generated source files (`generate-sources`). Only the generated copies are affected; the original sources are never modified |
-| `skipCompileGeneratedSources` | `auto-valhalla.skipCompileGeneratedSources` | `false` | skip the value-class compilation |
-| `compiler` | — | — | nested configuration block (`<compiler>`) containing compiler-plugin options such as `executable` and `encoding` |
+| parameter | property | default | description                                                                                                |
+| --- | --- | --- |------------------------------------------------------------------------------------------------------------|
+| `skipGenerateSources` | `auto-valhalla.skipGenerateSources` | `false` | skip or disable generate-sources goal                                                                      |
+| `removeAnnotation` | `auto-valhalla.removeAnnotation` | `false` | remove the `@AutoValhalla` annotation from the generated source files.                                     |
+| `skipCompileGeneratedSources` | `auto-valhalla.skipCompileGeneratedSources` | `false` | skip or disable compile-generated-sources goal                                                             |
+| `compiler` | — | — | nested configuration block (`<compiler>`) containing compiler-plugin options such as `parameter` or `debug` |
 
 Compiler configuration options can be specified nested inside a `<compiler>` block, or
 automatically inherited from the project's `maven-compiler-plugin` configuration:
 
 ```xml
-<configuration>
-  <!-- nested compiler configuration. parameters can any parameter accepted by maven-compiler-plugin -->
-  <compiler>
-    <debug>true</debug>
-    <parameters>true</parameters>
-    <compilerArgs>
-      <arg>-parameters</arg>
-      <arg>-Xlint:all</arg>
-    </compilerArgs>
-  </compiler>
-</configuration>
+<plugin>
+  <groupId>io.github.thunkware</groupId>
+  <artifactId>auto-valhalla-maven-plugin</artifactId>
+  <version>0.2.0</version>
+  <executions>
+    <execution>
+      <goals>
+        <goal>generate-sources</goal>
+        <goal>compile-generated-sources</goal>
+      </goals>
+    </execution>
+  </executions>
+  <configuration>
+    <!-- nested compiler configuration. parameters can be any parameter accepted by maven-compiler-plugin -->
+    <compiler>
+      <debug>true</debug>
+      <parameters>true</parameters>
+      <compilerArgs>
+        <arg>-parameters</arg>
+        <arg>-Xlint:all</arg>
+      </compilerArgs>
+    </compiler>
+  </configuration>
+</plugin>
 ```
 
 ## Example

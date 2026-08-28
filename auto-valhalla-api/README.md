@@ -4,13 +4,13 @@
 
 # auto-valhalla api
 
-The `@AutoValhalla` annotation and `AutoValhallaVerifier`. This is the only
-artifact your application code needs to depend on to opt in to value-class
-transformation.
+The `@AutoValhalla` annotation. 
 
-For the agent that performs the transformation, see the
-[auto-valhalla-agent project](../auto-valhalla-agent). For an overview of the
-whole project, see the [auto-valhalla README](../README.md).
+If using the maven plugin, use the annotation to mark ordinary identity classes for transformation at build time.
+
+If using the javaagent, you may use the annotation or you may configure the agent's `-includes` flag.
+
+For an overview of the whole project, see the [auto-valhalla README](../README.md).
 
 ## Quickstart
 
@@ -20,7 +20,7 @@ Add the dependency and annotate the classes you want converted:
 <dependency>
   <groupId>io.github.thunkware</groupId>
   <artifactId>auto-valhalla-api</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
@@ -28,7 +28,7 @@ Add the dependency and annotate the classes you want converted:
 import io.github.thunkware.auto.valhalla.api.AutoValhalla;
 
 @AutoValhalla
-public final class Point {     // class must be final
+public final class Point {
     public final int x;        // with final instance fields
     public final int y;
     public Point(int x, int y) {
@@ -41,29 +41,12 @@ public final class Point {     // class must be final
 public record Currency(String code) { }  // or a record
 ```
 
-Then run the application on JDK 28 with `--enable-preview` and the agent;
-without the agent, `@AutoValhalla` is a harmless marker and the classes stay
-ordinary identity classes.
-
-## Prerequisites
-
-In the default `safe` mode the agent will only convert a class that:
-
-* is `final` (abstract classes are not yet supported);
-* extends only `java.lang.Object` or `java.lang.Record`;
-* has at least one instance field;
-* has only `final` instance fields;
-* has no `synchronized` instance methods and no `synchronized` blocks.
-
-If any condition is not met, transformation fails (by default with a
-`LinkageError`). Other modes such as `mark-class-final` or
-`remove-synchronized` relax individual conditions — see the
-[auto-valhalla-agent documentation](../auto-valhalla-agent#mode).
+Then either configure the maven plugin or the javaagent.
 
 ## Verify at build time
 
-`AutoValhallaVerifier` checks the structural prerequisites at build time, before
-you ever run the agent:
+If using javaagent, you want also want to use `AutoValhallaVerifier` to check the structural prerequisites at build time,
+before you ever run the agent:
 
 ```java
 import io.github.thunkware.auto.valhalla.api.AutoValhallaVerifier;
