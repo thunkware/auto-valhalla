@@ -1,4 +1,3 @@
-![stable](https://img.shields.io/badge/stability-experimental-orange.svg)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.thunkware/auto-valhalla-api)](https://central.sonatype.com/search?q=auto-valhalla&namespace=io.github.thunkware&sort=name)
 [![javadoc](https://javadoc.io/badge2/io.github.thunkware/auto-valhalla-api/javadoc.svg)](https://javadoc.io/doc/io.github.thunkware/auto-valhalla-api)
 

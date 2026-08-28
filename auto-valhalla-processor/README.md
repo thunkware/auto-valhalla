@@ -1,4 +1,3 @@
-![stable](https://img.shields.io/badge/stability-experimental-orange.svg)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.thunkware/auto-valhalla-processor)](https://central.sonatype.com/artifact/io.github.thunkware/auto-valhalla-processor)
 
 # auto-valhalla processor
