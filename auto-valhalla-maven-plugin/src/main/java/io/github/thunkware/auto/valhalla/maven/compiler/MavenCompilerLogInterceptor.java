@@ -21,15 +21,20 @@ final class MavenCompilerLogInterceptor {
     private final Log interceptorLog;
     private Mojo mojo;
     private Log oldMojoLog;
+    private boolean installed;
 
     MavenCompilerLogInterceptor(Log log) {
         this.interceptorLog = log;
     }
 
     void installLogInterceptor(BuildPluginManager buildPluginManager) {
-        try {
-            synchronized (INSTALL_LOCK) {
-                if (installCount++ == 0) {
+        synchronized (INSTALL_LOCK) {
+            if (installed) {
+                return;
+            }
+            boolean first = installCount == 0;
+            try {
+                if (first) {
                     sharedBpm = buildPluginManager;
                     sharedField = buildPluginManager.getClass().getDeclaredField("mavenPluginManager");
                     sharedField.setAccessible(true);
@@ -61,10 +66,27 @@ final class MavenCompilerLogInterceptor {
                     MavenPluginManager newMavenPluginManager = (MavenPluginManager) Proxy.newProxyInstance(MavenPluginManager.class.getClassLoader(), ifaces, handler);
                     sharedField.set(buildPluginManager, newMavenPluginManager);
                 }
+                // Only count the install once the reflection and proxy setup
+                // succeeded, so a partially installed interceptor never leaves
+                // installCount positive (cleanUp would otherwise uninstall the
+                // shared proxy for every later compile).
                 ACTIVE.set(this);
+                installed = true;
+                installCount++;
+            } catch (Exception e) {
+                interceptorLog.debug(e);
+                if (first) {
+                    try {
+                        if (sharedField != null && originalManager != null) {
+                            sharedField.set(sharedBpm, originalManager);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    sharedField = null;
+                    originalManager = null;
+                    sharedBpm = null;
+                }
             }
-        } catch (Exception e) {
-            interceptorLog.debug(e);
         }
     }
 
@@ -74,16 +96,24 @@ final class MavenCompilerLogInterceptor {
             if (mojo != null && oldMojoLog != null) {
                 mojo.setLog(oldMojoLog);
             }
-            synchronized (INSTALL_LOCK) {
+        } catch (Exception e) {
+            interceptorLog.debug(e);
+        }
+        synchronized (INSTALL_LOCK) {
+            if (!installed) {
+                return;
+            }
+            installed = false;
+            try {
                 if (--installCount == 0 && sharedField != null && originalManager != null) {
                     sharedField.set(sharedBpm, originalManager);
                     sharedField = null;
                     originalManager = null;
                     sharedBpm = null;
                 }
+            } catch (Exception e) {
+                interceptorLog.debug(e);
             }
-        } catch (Exception e) {
-            interceptorLog.debug(e);
         }
     }
 
