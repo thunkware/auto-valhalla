@@ -50,9 +50,9 @@ public final class AnnotationProcessorRunner {
      * is recreated, the processor selects the {@code @AutoValhalla}-annotated
      * top-level types and generates their copies, and the generated source
      * files are collected into the returned {@link Selection}. Nothing is
-     * compiled and nothing is written under an output directory; the
-     * {@code versionDirectory}, {@code outputDirectory} and
-     * {@code compilerArgs} input fields are ignored.
+     * compiled to a real output directory: the pass's {@code outputDirectory}
+     * is only a scratch dir that keeps the compiler from skipping a project
+     * whose classes are already up to date.
      *
      * @param input the compiler inputs (source roots, build directory, javac,
      *              processor path, compile classpath, encoding)
@@ -116,6 +116,7 @@ public final class AnnotationProcessorRunner {
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
+                .outputDirectory(new File(input.buildDirectory(), "auto-valhalla-selection-classes"))
                 .compilerArgs(options.subList(1, options.size()))
                 .release(input.release())
                 .enablePreview(input.enablePreview())

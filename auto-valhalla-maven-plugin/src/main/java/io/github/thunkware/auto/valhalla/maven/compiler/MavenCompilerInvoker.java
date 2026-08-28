@@ -4,6 +4,11 @@ import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.stream.Stream;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -56,6 +61,17 @@ public final class MavenCompilerInvoker {
                     session.getRepositorySession());
             MojoExecution execution = new MojoExecution(descriptor, "auto-valhalla-generated");
             execution.setConfiguration(configuration(input));
+
+            // The compiler mojo skips ("Nothing to compile - all classes are
+            // up to date.") when it finds class files newer than the sources,
+            // which a fresh build of the consuming project always is. That
+            // short-circuit must never apply here: the annotation-processor
+            // selection pass has to run on every build, and the value classes
+            // must be recompiled from the regenerated sources. Wiping the
+            // output directory (a scratch dir for the selection pass, the
+            // META-INF/versions/<N> dir for the value-class compile) keeps the
+            // sources permanently stale.
+            deleteRecursively(input.outputDirectory());
 
             log.info("auto-valhalla: Running " + ARTIFACT_ID);
             logInterceptor.installLogInterceptor(pluginManager);
@@ -143,6 +159,23 @@ public final class MavenCompilerInvoker {
         Xpp3Dom node = new Xpp3Dom(name);
         node.setValue(value);
         return node;
+    }
+
+    private void deleteRecursively(File dir) {
+        if (dir == null || !dir.exists()) {
+            return;
+        }
+        try (Stream<Path> stream = Files.walk(dir.toPath())) {
+            stream.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException e) {
+                    log.debug("could not delete " + path, e);
+                }
+            });
+        } catch (IOException e) {
+            log.debug("could not delete " + dir, e);
+        }
     }
 
     private static void child(Xpp3Dom parent, String name, String value) {
