@@ -4,19 +4,18 @@
 
   <parent>
     <groupId>io.github.thunkware</groupId>
-    <artifactId>auto-valhalla</artifactId>
+    <artifactId>auto-valhalla-tests</artifactId>
     <version>0.1.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>test-maven-plugin-jdk8</artifactId>
   <name>test-maven-plugin-jdk8</name>
 
   <description>
-    A consumer project where maven-compiler-plugin only builds the base
-    classes at release 8: there is no java 28 compiler execution. The
+    A consumer project where $JAVA_HOME=JDK8. The
     auto-valhalla-maven-plugin's compile-generated-sources goal does the value-class
-    compilation itself, writing the variants under META-INF/versions/28,
+    compilation using $JAVA28_HOME, writing the variants under META-INF/versions/28,
     and the jar goal marks the packaged jar multi-release.
   </description>
 
@@ -77,6 +76,26 @@
             </manifest>
           </archive>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+          <execution>
+            <id>enforce-java</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[8,9)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

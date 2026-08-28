@@ -5,9 +5,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.github.thunkware</groupId>
-    <artifactId>auto-valhalla</artifactId>
+    <artifactId>auto-valhalla-tests</artifactId>
     <version>0.1.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>test-maven-plugin-parent-config</artifactId>
   <packaging>pom</packaging>

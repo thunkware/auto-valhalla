@@ -42,8 +42,8 @@ class PluginOutputTest {
                 "value classes are not identity classes (no ACC_SUPER)");
 
         String basePoint = javap("target/classes/demo/Point.class");
-        assertTrue(basePoint.contains("major version: 69"),
-                "base Point keeps its pre-Valhalla class file (compiled at release 25)");
+        assertTrue(basePoint.contains("major version: 52"),
+                "base Point keeps its pre-Valhalla class file (compiled at release 8)");
         assertTrue(basePoint.contains("ACC_SUPER"), "base Point stays an identity class");
         assertFalse(basePoint.contains("value class demo.Point"), "base Point must not be a value class");
     }
@@ -53,9 +53,8 @@ class PluginOutputTest {
         assertTrue(Files.isRegularFile(file), relativePath + " must exist");
         Path out = Files.createTempFile("javap-out-", ".txt");
         Path err = Files.createTempFile("javap-err-", ".txt");
-        Process process = null;
         try {
-            process = new ProcessBuilder(
+            Process process = new ProcessBuilder(
                     JAVAP.getAbsolutePath(), "-v", file.toAbsolutePath().toString())
                     .redirectOutput(out.toFile())
                     .redirectError(err.toFile())

@@ -187,10 +187,11 @@ classes are active at runtime.
 
 Additional test modules verify other configurations:
 
-| Module                              | What it tests                                     |
-|-------------------------------------|---------------------------------------------------|
-| `test-maven-plugin-jdk25`           | Base classes at release 25                        |
-| `test-maven-plugin-no-compiler`     | No explicit `maven-compiler-plugin` declaration   |
-| `test-maven-plugin-nested-compiler` | Nested `<compiler>` block with different settings |
-| `test-maven-plugin-parent-config`   | Compiler settings inherited from a parent POM     |
+| Module                                | What it tests                                                                                    |
+|---------------------------------------|--------------------------------------------------------------------------------------------------|
+| `test-maven-plugin-jdk8`              | JAVA_HOME at JDK8                                                                                |
+| `test-maven-plugin-jdk28`             | JAVA_HOME at JDK28, with compile target at JDK8                                                  |
+| `test-maven-plugin-no-compiler`       | No explicit `maven-compiler-plugin` declaration                                                  |
+| `test-maven-plugin-nested-compiler`   | Nested `<compiler>` block with different settings                                                |
+| `test-maven-plugin-parent-config`     | Compiler settings inherited from a parent POM                                                    |
 | `test-maven-plugin-remove-annotation` | `removeAnnotation=true` strips the `@AutoValhalla` marker from the generated value-class sources |

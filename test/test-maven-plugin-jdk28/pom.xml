@@ -4,21 +4,19 @@
 
   <parent>
     <groupId>io.github.thunkware</groupId>
-    <artifactId>auto-valhalla</artifactId>
+    <artifactId>auto-valhalla-tests</artifactId>
     <version>0.1.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>test-maven-plugin-jdk25</artifactId>
-  <name>test-maven-plugin-jdk25</name>
+  <artifactId>test-maven-plugin-jdk28</artifactId>
+  <name>test-maven-plugin-jdk28</name>
 
   <description>
-    A consumer project that applies the auto-valhalla-maven-plugin: the
-    @AutoValhalla classes are compiled into value-class variants under
-    META-INF/versions/28 while the base classes stay ordinary identity classes,
-    and the jar goal marks the packaged jar multi-release. The surefire test
-    asserts the structural result and build.sh runs the packaged jar on JDK 28
-    to prove the value classes are active at runtime.
+    A consumer project where $JAVA_HOME=JDK28, targeting JDK8. The
+    auto-valhalla-maven-plugin's compile-generated-sources goal does the value-class
+    compilation using, writing the variants under META-INF/versions/28,
+    and the jar goal marks the packaged jar multi-release.
   </description>
 
   <properties>
@@ -46,9 +44,9 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <source>25</source>
-          <target>25</target>
-          <release>25</release>
+          <source>8</source>
+          <target>8</target>
+          <release>8</release>
           <parameters>true</parameters>
           <encoding>${project.build.sourceEncoding}</encoding>
           <showDeprecation>true</showDeprecation>
@@ -82,6 +80,26 @@
             </manifest>
           </archive>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+          <execution>
+            <id>enforce-java</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[28,)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

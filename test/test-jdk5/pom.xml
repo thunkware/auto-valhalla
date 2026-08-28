@@ -6,9 +6,9 @@
 
   <parent>
     <groupId>io.github.thunkware</groupId>
-    <artifactId>auto-valhalla</artifactId>
+    <artifactId>auto-valhalla-tests</artifactId>
     <version>0.1.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>auto-valhalla-tests-jdk5</artifactId>

@@ -37,8 +37,8 @@
   <modules>
     <module>test-jdk5</module>
     <module>test-jdk17</module>
-    <module>test-maven-plugin-jdk25</module>
-    <module>test-maven-plugin-jdk8</module>
+    <!--<module>test-maven-plugin-jdk8</module> don't add to module list -->
+    <module>test-maven-plugin-jdk28</module>
     <module>test-maven-plugin-no-compiler</module>
     <module>test-maven-plugin-nested-compiler</module>
     <module>test-maven-plugin-parent-config</module>

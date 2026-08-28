@@ -6,16 +6,20 @@
 #   3. JDK 5 safety: the agent must warn and return on an ancient JVM
 #   4. JDK 28 agent-attach integration test (real transformation path)
 #   5. end-to-end tests (with vs without the agent) (./test/run-tests.sh)
+#   6. maven-plugin consumers: jdk28 demo on JDK 28, and the jdk8 consumer
+#      built with Maven running on the JDK 8 in JAVA8_HOME
 #
-# Requires JAVA_HOME (JDK 28+) and JAVA5_HOME.
+# Requires JAVA_HOME (JDK 28+), JAVA5_HOME, and JAVA8_HOME.
 set -uo pipefail
 
 cd "$(dirname "$0")"
 
 : "${JAVA_HOME:?JAVA_HOME must point to a JDK 28 (or later) build}"
 : "${JAVA5_HOME:?JAVA5_HOME must point to an old JDK (5/6) for the shim/demos}"
+: "${JAVA8_HOME:?JAVA8_HOME must point to a JDK 8 build for the jdk8 plugin consumer}"
 export JAVA_HOME
 export JAVA5_HOME
+export JAVA8_HOME
 
 RUNNER5_CLASSES=test/test-jdk5/test-main-jdk5/target/classes
 # agent / demo5 jars follow Maven's artifactId-version convention; resolved after the build
@@ -88,7 +92,7 @@ echo "== 5. end-to-end demo =="
 check $? "run-tests.sh (with and without agent)"
 
 echo "== 6. maven-plugin end-to-end =="
-PLUGIN_DEMO_JAR=$(ls test/test-maven-plugin-jdk25/target/test-maven-plugin-jdk25-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
+PLUGIN_DEMO_JAR=$(ls test/test-maven-plugin-jdk28/target/test-maven-plugin-jdk28-*.jar 2>/dev/null | grep -vE -- '-(javadoc|sources)\.jar$' | head -n1)
 [ -n "$PLUGIN_DEMO_JAR" ]; check $? "maven-plugin demo jar built [got $PLUGIN_DEMO_JAR]"
 unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "Multi-Release: true"; check $? "maven-plugin demo jar manifest is multi-release"
 unzip -p "$PLUGIN_DEMO_JAR" META-INF/MANIFEST.MF 2>/dev/null | grep -q "^Main-Class: demo.Main"; check $? "maven-plugin demo jar declares Main-Class"
@@ -99,6 +103,25 @@ echo "$OUTPLUGIN" | grep -q "Point.isValue()=true"; check $? "annotated demo.Poi
 echo "$OUTPLUGIN" | grep -q "sum=7"; check $? "maven-plugin demo app runs from the multi-release jar"
 echo "$OUTPLUGIN" | grep -q "OK: all classes are value classes"; check $? "maven-plugin demo Main force-checks the value classes"
 [ "$RUNPLUGIN_RC" = "0" ]; check $? "maven-plugin demo Main exits 0 [got $RUNPLUGIN_RC]"
+
+echo "== 6b. maven-plugin consumer on JDK 8 (test-maven-plugin-jdk8) =="
+# test-maven-plugin-jdk8 excludes itself from the reactor and enforces Maven on
+# [8,9), so this module is built standalone with JAVA_HOME="$JAVA8_HOME". The
+# value-class javac still comes from the JDK 28 in JAVA28_HOME; capture the JDK
+# 28 path first because bash expands assignment words left-to-right, so a bare
+# JAVA_HOME="$JAVA8_HOME" JAVA28_HOME="$JAVA_HOME" mvn ... would already see the
+# (now JDK-8) JAVA_HOME.
+JDK28_CAPTURED="$JAVA_HOME"
+JAVA_HOME="$JAVA8_HOME" JAVA28_HOME="$JDK28_CAPTURED" \
+    mvn -f test/test-maven-plugin-jdk8/pom.xml clean package -Dauto-valhalla.build-script-running=true
+check $? "test-maven-plugin-jdk8 builds (Maven on JDK 8, value-class javac from JAVA28_HOME)"
+
+JDK8_BASE=test/test-maven-plugin-jdk8/target/classes/demo/Point.class
+JDK8_VALUE=test/test-maven-plugin-jdk8/target/classes/META-INF/versions/28/demo/Point.class
+[ -f "$JDK8_VALUE" ]; check $? "jdk8 module produced the versioned value-class variant"
+"$JAVA_HOME/bin/javap" -v "$JDK8_VALUE" 2>/dev/null | grep -q "value class demo.Point"; check $? "jdk8 versioned Point is a value class"
+[ "$("$JAVA_HOME/bin/javap" -v "$JDK8_VALUE" 2>/dev/null | grep -oE "major version: [0-9]+" | grep -oE "[0-9]+")" = "72" ]; check $? "jdk8 versioned Point is class-file 72 (JDK 28)"
+[ "$("$JAVA_HOME/bin/javap" -v "$JDK8_BASE" 2>/dev/null | grep -oE "major version: [0-9]+" | grep -oE "[0-9]+")" = "52" ]; check $? "jdk8 base Point stays class-file 52 (Java 8)"
 
 echo
 echo "==================== RESULT ===================="
