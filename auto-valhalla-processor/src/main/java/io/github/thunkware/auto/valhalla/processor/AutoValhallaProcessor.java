@@ -1,11 +1,12 @@
 package io.github.thunkware.auto.valhalla.processor;
 
+import static javax.tools.Diagnostic.Kind.ERROR;
+
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -28,8 +29,6 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
-
-import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * The annotation processor that drives the compile-time value-class

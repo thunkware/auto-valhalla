@@ -29,6 +29,11 @@ For each selected type it writes a generated copy of its source file — with th
 directory, preserving the package-relative layout. Several selected types in one
 file share one generated copy.
 
+With the `removeAnnotation` option enabled, the `@AutoValhalla` marker is
+stripped from the generated copies as well, so the value-class variants no
+longer carry the compile-time opt-in annotation. Only the generated copies are
+affected; the original sources are never modified.
+
 The processor never compiles anything. Turning the generated sources into value
 classes is the job of the enclosing build (the maven plugin) or your own javac
 invocation with `--enable-preview`.
@@ -66,6 +71,7 @@ classes.
 | `-A` option | default | description                                                          |
 | --- | --- |----------------------------------------------------------------------|
 | `outdir` | (required) | directory that receives the generated sources      |
+| `removeAnnotation` | `false` | strip the `@AutoValhalla` annotation from the generated copies; the original sources are never modified |
 
 ## Prerequisites
 
