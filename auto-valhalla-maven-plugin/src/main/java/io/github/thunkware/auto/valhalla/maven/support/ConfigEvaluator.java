@@ -88,7 +88,7 @@ public final class ConfigEvaluator {
         if (configuration == null) {
             return null;
         }
-        PlexusConfiguration child = configuration.getChild(name);
+        PlexusConfiguration child = configuration.getChild(name, false);
         String value = child == null ? null : child.getValue(null);
         return isNotBlank(value) ? trim(value) : null;
     }
@@ -97,9 +97,9 @@ public final class ConfigEvaluator {
         if (configuration == null) {
             return Collections.emptyList();
         }
-        PlexusConfiguration args = configuration.getChild("compilerArgs");
+        PlexusConfiguration args = configuration.getChild("compilerArgs", false);
         if (args == null) {
-            args = configuration.getChild("compilerArguments");
+            args = configuration.getChild("compilerArguments", false);
         }
         if (args == null) {
             return Collections.emptyList();
