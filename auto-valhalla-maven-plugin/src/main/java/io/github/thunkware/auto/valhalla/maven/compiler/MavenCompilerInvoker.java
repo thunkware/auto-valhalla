@@ -3,6 +3,7 @@ package io.github.thunkware.auto.valhalla.maven.compiler;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
+import java.io.File;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -45,6 +46,10 @@ public final class MavenCompilerInvoker {
         }
 
         MavenCompilerLogInterceptor logInterceptor = new MavenCompilerLogInterceptor(log);
+        // The compiler mojo rewrites projectArtifact.getFile() to its (versioned)
+        // outputDirectory; restore the previous artifact file so downstream reactor
+        // modules resolve target/classes instead of a META-INF/versions subdirectory.
+        File artifactFile = project.getArtifact() == null ? null : project.getArtifact().getFile();
         try {
             MojoDescriptor descriptor = pluginManager.getMojoDescriptor(
                     plugin, "compile", project.getRemotePluginRepositories(),
@@ -62,6 +67,9 @@ public final class MavenCompilerInvoker {
             return new ProcessResult(1, e.getMessage() == null ? e.toString() : e.getMessage());
 
         } finally {
+            if (project.getArtifact() != null && artifactFile != null) {
+                project.getArtifact().setFile(artifactFile);
+            }
             logInterceptor.cleanUp();
         }
     }
