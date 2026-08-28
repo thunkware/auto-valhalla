@@ -76,6 +76,15 @@ public final class MavenCompilerInvoker {
 
     private Xpp3Dom configuration(MavenCompilerInput input) {
         Xpp3Dom root = new Xpp3Dom("configuration");
+        // The consuming project's nested <compiler> block is merged first and
+        // the mandatory settings below are appended after, so that duplicate
+        // keys (release, proc, outputDirectory, ...) default to the value-class
+        // pass instead of a user mirroring e.g. <release>17</release>.
+        if (input.compilerConfiguration() != null) {
+            for (PlexusConfiguration child : input.compilerConfiguration().getChildren()) {
+                root.addChild(copy(child));
+            }
+        }
         child(root, "basedir", "${project.basedir}");
         child(root, "buildDirectory", "${project.build.directory}");
         child(root, "project", "${project}");
@@ -116,11 +125,6 @@ public final class MavenCompilerInvoker {
         child(root, "encoding", input.encoding());
         child(root, "useIncrementalCompilation", "false");
         child(root, "forceLegacyJavacApi", "true");
-        if (input.compilerConfiguration() != null) {
-            for (PlexusConfiguration child : input.compilerConfiguration().getChildren()) {
-                root.addChild(copy(child));
-            }
-        }
 
         Xpp3Dom args = new Xpp3Dom("compilerArgs");
         for (String value : input.compilerArgs()) {
