@@ -2,8 +2,10 @@ package io.github.thunkware.auto.valhalla.processor;
 
 import static javax.tools.Diagnostic.Kind.ERROR;
 
+import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.Tree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
@@ -156,7 +158,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             return;
         }
         if (removeAnnotation) {
-            source = removeAnnotation(source);
+            source = removeAnnotation(source, trees, selectedUnits);
         }
 
         Selected selected = selectedUnits.get(0);
@@ -176,11 +178,52 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         }
     }
 
-    private String removeAnnotation(String source) {
-        source = source.replace("import io.github.thunkware.auto.valhalla.api.AutoValhalla;", "");
-        source = source.replace("@io.github.thunkware.auto.valhalla.api.AutoValhalla", "");
-        source = source.replace("@AutoValhalla", "");
-        return source;
+    /**
+     * Removes the {@code @AutoValhalla} annotations from the generated copy by
+     * deleting the exact source ranges of the annotation trees on the selected
+     * classes, so arguments (e.g. {@code @AutoValhalla()}) disappear with the
+     * annotation instead of leaving a stray {@code ()}. The import is removed
+     * only when the simple name is no longer referenced anywhere else.
+     */
+    private String removeAnnotation(String source, Trees trees, List<Selected> selectedUnits) {
+        List<int[]> ranges = new ArrayList<>();
+        for (Selected selected : selectedUnits) {
+            for (AnnotationTree annotation : selected.classTree.getModifiers().getAnnotations()) {
+                if (!isAutoValhalla(annotation)) {
+                    continue;
+                }
+                long start = trees.getSourcePositions().getStartPosition(selected.unit, annotation);
+                long end = trees.getSourcePositions().getEndPosition(selected.unit, annotation);
+                if (start >= 0 && end >= 0 && start < end && end <= source.length()) {
+                    ranges.add(new int[] {(int) start, (int) end});
+                }
+            }
+        }
+        ranges.sort((a, b) -> Integer.compare(b[0], a[0]));
+        StringBuilder generated = new StringBuilder(source);
+        for (int[] range : ranges) {
+            generated.delete(range[0], range[1]);
+        }
+        String result = generated.toString();
+        String withoutImport = result.replaceAll(
+                "(?m)^[ \\t]*import io\\.github\\.thunkware\\.auto\\.valhalla\\.api\\.AutoValhalla;[ \\t]*(\\r?\\n|$)",
+                "");
+        if (withoutImport.matches("(?s).*\\bAutoValhalla\\b.*")) {
+            return result;
+        }
+        return withoutImport;
+    }
+
+    private static boolean isAutoValhalla(AnnotationTree annotation) {
+        Tree type = annotation.getAnnotationType();
+        if (type == null) {
+            return false;
+        }
+        String name = type.toString();
+        if (name.contains(".")) {
+            return ANNOTATION.equals(name);
+        }
+        return ANNOTATION_SIMPLE.equals(name);
     }
 
     private String insertValueKeyword(Trees trees, List<Selected> unit) {
