@@ -38,13 +38,16 @@ class NestedCompilerConfigurationTest {
                 JAVAP.getAbsolutePath(), "-v", file.toAbsolutePath().toString())
                 .redirectErrorStream(true)
                 .start();
-        int rc = process.waitFor();
+        // Drain the process output to EOF before waitFor(): javap -v on a
+        // large class file can fill the pipe buffer, and waiting on the process
+        // before reading its stream would deadlock.
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         int count;
         while ((count = process.getInputStream().read(buffer)) != -1) {
             bytes.write(buffer, 0, count);
         }
+        int rc = process.waitFor();
         String output = new String(bytes.toByteArray(), StandardCharsets.UTF_8);
         assertEquals(0, rc, "javap failed:\n" + output);
         return output;
