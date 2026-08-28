@@ -81,7 +81,19 @@ public final class MavenCompilerInvoker {
         child(root, "project", "${project}");
         child(root, "session", "${session}");
         child(root, "projectArtifact", "${project.artifact}");
-        child(root, "compilePath", "${project.compileClasspathElements}");
+        // Use the resolved input classpath (the test mojo supplies test
+        // elements, so generated test value classes can see JUnit and
+        // target/test-classes) instead of the ${project.compileClasspathElements}
+        // expression, which only ever resolves to the main compile classpath.
+        if (input.compileClasspath() != null && !input.compileClasspath().isEmpty()) {
+            Xpp3Dom compilePath = new Xpp3Dom("compilePath");
+            for (String entry : input.compileClasspath()) {
+                if (Utils.isNotBlank(entry)) {
+                    child(compilePath, "path", Utils.trim(entry));
+                }
+            }
+            root.addChild(compilePath);
+        }
         child(root, "mojoExecution", "${mojoExecution}");
         Xpp3Dom sourceRoots = new Xpp3Dom("compileSourceRoots");
         for (String sourceRoot : input.sourceRoots()) {
