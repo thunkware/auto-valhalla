@@ -11,10 +11,14 @@ import org.apache.maven.plugin.logging.Log;
 
 final class MavenCompilerLogInterceptor {
 
+    private static final Object INSTALL_LOCK = new Object();
+    private static int installCount = 0;
+    private static Field sharedField;
+    private static BuildPluginManager sharedBpm;
+    private static MavenPluginManager originalManager;
+    private static final ThreadLocal<MavenCompilerLogInterceptor> ACTIVE = new ThreadLocal<>();
+
     private final Log interceptorLog;
-    private BuildPluginManager buildPluginManager;
-    private Field field;
-    private MavenPluginManager oldMavenPluginManager;
     private Mojo mojo;
     private Log oldMojoLog;
 
@@ -22,45 +26,60 @@ final class MavenCompilerLogInterceptor {
         this.interceptorLog = log;
     }
 
-    synchronized void installLogInterceptor(BuildPluginManager buildPluginManager) {
+    void installLogInterceptor(BuildPluginManager buildPluginManager) {
         try {
-            this.buildPluginManager = buildPluginManager;
-            field = buildPluginManager.getClass().getDeclaredField("mavenPluginManager");
-            field.setAccessible(true);
-            oldMavenPluginManager = (MavenPluginManager) field.get(buildPluginManager);
+            synchronized (INSTALL_LOCK) {
+                if (installCount++ == 0) {
+                    sharedBpm = buildPluginManager;
+                    sharedField = buildPluginManager.getClass().getDeclaredField("mavenPluginManager");
+                    sharedField.setAccessible(true);
+                    originalManager = (MavenPluginManager) sharedField.get(buildPluginManager);
 
-            InvocationHandler handler = (proxy, method, args) -> {
-                Object result;
-                try {
-                    result = method.invoke(oldMavenPluginManager, args);
-                } catch (InvocationTargetException e) {
-                    throw e.getCause();
-                }
-                if (method.getName().equals("getConfiguredMojo") && result instanceof Mojo
-                        && result.getClass().getName().equals("org.apache.maven.plugin.compiler.CompilerMojo")) {
+                    InvocationHandler handler = (proxy, method, args) -> {
+                        Object result;
+                        try {
+                            result = method.invoke(originalManager, args);
+                        } catch (InvocationTargetException e) {
+                            throw e.getCause();
+                        }
+                        if (method.getName().equals("getConfiguredMojo") && result instanceof Mojo
+                                && result.getClass().getName().equals("org.apache.maven.plugin.compiler.CompilerMojo")) {
 
-                    mojo = (Mojo) result;
-                    oldMojoLog = mojo.getLog();
-                    if (oldMojoLog != null) {
-                        mojo.setLog(new FilteringLog(oldMojoLog));
-                    }
+                            MavenCompilerLogInterceptor active = ACTIVE.get();
+                            if (active != null) {
+                                active.mojo = (Mojo) result;
+                                Log oldMojoLog = active.mojo.getLog();
+                                if (oldMojoLog != null && !(oldMojoLog instanceof FilteringLog)) {
+                                    active.oldMojoLog = oldMojoLog;
+                                    active.mojo.setLog(new FilteringLog(active.oldMojoLog));
+                                }
+                            }
+                        }
+                        return result;
+                    };
+                    Class<?>[] ifaces = {MavenPluginManager.class};
+                    MavenPluginManager newMavenPluginManager = (MavenPluginManager) Proxy.newProxyInstance(MavenPluginManager.class.getClassLoader(), ifaces, handler);
+                    sharedField.set(buildPluginManager, newMavenPluginManager);
                 }
-                return result;
-            };
-            Class<?>[] ifaces = {MavenPluginManager.class};
-            MavenPluginManager newMavenPluginManager = (MavenPluginManager) Proxy.newProxyInstance(MavenPluginManager.class.getClassLoader(), ifaces, handler);
-            field.set(buildPluginManager, newMavenPluginManager);
+                ACTIVE.set(this);
+            }
         } catch (Exception e) {
             interceptorLog.debug(e);
         }
     }
 
     public void cleanUp() {
+        ACTIVE.remove();
         try {
-            if (field != null && oldMavenPluginManager != null) {
-                field.set(buildPluginManager, oldMavenPluginManager);
-                if (mojo != null && oldMojoLog != null) {
-                    mojo.setLog(oldMojoLog);
+            if (mojo != null && oldMojoLog != null) {
+                mojo.setLog(oldMojoLog);
+            }
+            synchronized (INSTALL_LOCK) {
+                if (--installCount == 0 && sharedField != null && originalManager != null) {
+                    sharedField.set(sharedBpm, originalManager);
+                    sharedField = null;
+                    originalManager = null;
+                    sharedBpm = null;
                 }
             }
         } catch (Exception e) {
