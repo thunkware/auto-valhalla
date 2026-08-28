@@ -55,9 +55,10 @@
   <dependencies>
     <!-- tools.jar from JDK8 -->
     <dependency>
-      <groupId>com.perfma.wrapped</groupId>
-      <artifactId>com.sun.tools</artifactId>
-      <version>1.8.0_jdk8u275-b01_linux_x64</version>
+      <groupId>io.github.thunkware.sun</groupId>
+      <artifactId>com.sun.tools.8</artifactId>
+      <version>0.1.0</version>
+      <classifier>linux_x64</classifier>
     </dependency>
 
     <!-- Only used by the tests, which compile fixture sources carrying the
