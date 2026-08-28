@@ -69,25 +69,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>3.5.0</version>
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <id>run-build-script</id>
-            <phase>test</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>${session.executionRootDirectory}/build.sh</executable>
-              <skip>${auto-valhalla.build-script-running}</skip>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>${maven-jar-plugin.version}</version>
@@ -204,4 +185,43 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>run-build-script</id>
+      <!-- Hosts the build.sh execution (proxy for running ./build.sh through
+           the maven test phase). Deactivated by -DskipTests so a build with
+           skipped tests never executes the script; the exec goal itself then
+           also self-gates on -Dauto-valhalla.build-script-running=true. -->
+      <activation>
+        <property>
+          <name>skipTests</name>
+          <value>!true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>run-build-script</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${session.executionRootDirectory}/build.sh</executable>
+                  <skip>${auto-valhalla.build-script-running}</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
