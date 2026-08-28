@@ -263,7 +263,12 @@
 
   <profiles>
     <!-- When JAVA5_HOME is absent (local dev without the old JDK), compile
-         the agent with the normal compiler and skip the legacy shim steps. -->
+         the agent with the normal compiler and skip the legacy shim steps.
+         Compiling and testing still work so local IDEs and `mvn test` keep
+         functioning, but packaging is refused: without the shim the jar's
+         Premain/Agent entry points would be plain release-28 class files and
+         silently UnsupportedClassVersionError on the JDK 5/8 JVMs the shim
+         is meant to load on. -->
     <profile>
       <id>skip-jdk5</id>
       <activation>
@@ -273,6 +278,33 @@
       </activation>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <version>3.6.3</version>
+            <executions>
+              <execution>
+                <id>require-java5-shim</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <property>env.JAVA5_HOME</property>
+                      <message>Cannot package the auto-valhalla agent without JAVA5_HOME.
+The agent jar's entry points (AutoValhallaAgent, AutoValhallaAttachAgent,
+ByteBuddyAgent) must be JDK 5 class-file version 49 so they load on the JDK
+5/8 shim targets; skipping that step and packaging anyway would publish a
+jar whose Premain-Class is a release-28 class file. Point JAVA5_HOME at a
+real JDK 5 installation.</message>
+                    </requireProperty>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
