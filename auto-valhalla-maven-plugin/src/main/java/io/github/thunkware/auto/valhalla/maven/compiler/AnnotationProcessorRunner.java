@@ -78,6 +78,9 @@ public final class AnnotationProcessorRunner {
         File generatedDir = input.generatedSourcesDirectory();
 
         Selection selection = new Selection(generatedDir);
+        if (!generatedDir.isDirectory()) {
+            return selection;
+        }
         collectGeneratedFiles(generatedDir, selection);
         return selection;
     }
