@@ -9,17 +9,22 @@
 #   6. maven-plugin consumers: jdk28 demo on JDK 28, and the jdk8 consumer
 #      built with Maven running on the JDK 8 in JAVA8_HOME
 #
-# Requires JAVA_HOME (JDK 28+), JAVA5_HOME, and JAVA8_HOME.
+# Requires JAVA28_HOME, JAVA5_HOME, and JAVA8_HOME; JAVA_HOME is derived from
+# JAVA28_HOME. jdk-setup.sh is used to auto-configure from the JDKs installed
+# beside JAVA_HOME; otherwise they must be exported in the environment.
 set -uo pipefail
 
 cd "$(dirname "$0")"
 
-: "${JAVA_HOME:?JAVA_HOME must point to a JDK 28 (or later) build}"
-: "${JAVA5_HOME:?JAVA5_HOME must point to an old JDK (5/6) for the shim/demos}"
+source ./jdk-setup.sh
+
+: "${JAVA28_HOME:?JAVA28_HOME must point to a JDK 28 build}"
+: "${JAVA5_HOME:?JAVA5_HOME must point to a JDK 5 build for the shim/demos}"
 : "${JAVA8_HOME:?JAVA8_HOME must point to a JDK 8 build for the jdk8 plugin consumer}"
-export JAVA_HOME
+export JAVA_HOME="$JAVA28_HOME"
 export JAVA5_HOME
 export JAVA8_HOME
+export JAVA28_HOME
 
 RUNNER5_CLASSES=test/test-jdk5/test-main-jdk5/target/classes
 # agent / demo5 jars follow Maven's artifactId-version convention; resolved after the build
@@ -111,7 +116,7 @@ echo "== 6b. maven-plugin consumer on JDK 8 (test-maven-plugin-jdk8) =="
 # 28 path first because bash expands assignment words left-to-right, so a bare
 # JAVA_HOME="$JAVA8_HOME" JAVA28_HOME="$JAVA_HOME" mvn ... would already see the
 # (now JDK-8) JAVA_HOME.
-JDK28_CAPTURED="$JAVA_HOME"
+JDK28_CAPTURED="${JAVA28_HOME:-$JAVA_HOME}"
 JAVA_HOME="$JAVA8_HOME" JAVA28_HOME="$JDK28_CAPTURED" \
     mvn -f test/test-maven-plugin-jdk8/pom.xml clean package -Dauto-valhalla.build-script-running=true
 check $? "test-maven-plugin-jdk8 builds (Maven on JDK 8, value-class javac from JAVA28_HOME)"

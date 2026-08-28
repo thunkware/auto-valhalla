@@ -35,12 +35,15 @@ public final class Javac {
      *  {@code --release} — {@code --enable-preview} only works there.
      */
     public static String resolveExecutable(String override, int preferredVersion) {
+        return resolveExecutable(override, preferredVersion, System.getProperties(), System.getenv());
+    }
+
+    static String resolveExecutable(String override, int preferredVersion, Properties properties, Map<String, String> env) {
         if (override != null && !override.trim().isEmpty()) {
             return override.trim();
         }
 
         Map<Integer, List<Home>> homes = new TreeMap<>();
-        Properties properties = System.getProperties();
         for (String name : properties.stringPropertyNames()) {
             int version = numberedVersion(name, "java", ".home");
             if (version >= MIN_SCAN_VERSION) {
@@ -48,7 +51,7 @@ public final class Javac {
                         "system property " + name);
             }
         }
-        for (Map.Entry<String, String> entry : System.getenv().entrySet()) {
+        for (Map.Entry<String, String> entry : env.entrySet()) {
             int version = numberedVersion(entry.getKey(), "JAVA", "_HOME");
             if (version >= MIN_SCAN_VERSION) {
                 addHome(homes, version, entry.getValue(),

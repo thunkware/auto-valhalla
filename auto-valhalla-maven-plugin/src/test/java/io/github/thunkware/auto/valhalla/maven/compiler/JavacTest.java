@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -65,18 +67,20 @@ class JavacTest {
 
     @Test
     void configuredHomeWithoutJavacFallsBackToRunningJvm() {
-        System.setProperty("java100.home", temp.toString());
+        Properties properties = new Properties();
+        properties.setProperty("java28.home", temp.toString());
 
         String expected = new File(System.getProperty("java.home"), "bin/javac").getAbsolutePath();
-        assertEquals(expected, Javac.resolveExecutable(null, 100));
+        assertEquals(expected, Javac.resolveExecutable(null, 100, properties, Collections.emptyMap()));
     }
 
     @Test
     void blankHomesFallThroughToTheRunningJvm() {
-        System.setProperty("java28.home", "  ");
+        Properties properties = new Properties();
+        properties.setProperty("java28.home", "  ");
 
         String expected = new File(System.getProperty("java.home"), "bin/javac").getAbsolutePath();
-        assertEquals(expected, Javac.resolveExecutable(null, 28));
+        assertEquals(expected, Javac.resolveExecutable(null, 28, properties, Collections.emptyMap()));
     }
 
     /** Creates a minimal JDK layout ({@code bin/javac}) under the temp dir and
