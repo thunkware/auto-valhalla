@@ -101,7 +101,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
             return;
         }
         JarPluginChecker.checkOnce(session, project, getLog());
-        JdkVersionValidator.validate();
+        JdkVersionValidator.validate(resolveExecutableOverride());
         List<String> compileClasspath;
         try {
             compileClasspath = compileClasspath();
@@ -152,8 +152,12 @@ public class GenerateSourcesMojo extends AbstractMojo {
         return Utils.normalizeEncoding(firstCompilerValue("encoding"));
     }
 
+    private String resolveExecutableOverride() {
+        return firstCompilerValue("executable");
+    }
+
     private String resolveExecutable() {
-        return Javac.resolveExecutable(firstCompilerValue("executable"),
+        return Javac.resolveExecutable(resolveExecutableOverride(),
                 CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
     }
 

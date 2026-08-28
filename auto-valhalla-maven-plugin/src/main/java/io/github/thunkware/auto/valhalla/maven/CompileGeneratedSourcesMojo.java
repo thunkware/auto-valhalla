@@ -126,7 +126,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
             return;
         }
         JarPluginChecker.checkOnce(session, project, getLog());
-        JdkVersionValidator.validate();
+        JdkVersionValidator.validate(resolveExecutableOverride());
         List<String> compileClasspath;
         try {
             compileClasspath = compileClasspath();
@@ -259,11 +259,14 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         this.mavenCompiler = mavenCompiler == null ? null : new XmlPlexusConfiguration(mavenCompiler);
     }
 
-    protected String resolveExecutable() {
+    protected String resolveExecutableOverride() {
         PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        String executable = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin)
+        return ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin)
                 .resolveString("executable");
-        return Javac.resolveExecutable(executable, MIN_VALHALLA_JDK);
+    }
+
+    protected String resolveExecutable() {
+        return Javac.resolveExecutable(resolveExecutableOverride(), MIN_VALHALLA_JDK);
     }
 
     protected List<String> sourceRoots() {

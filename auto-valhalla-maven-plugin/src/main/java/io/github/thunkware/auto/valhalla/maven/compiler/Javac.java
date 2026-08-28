@@ -38,11 +38,34 @@ public final class Javac {
         return resolveExecutable(override, preferredVersion, System.getProperties(), System.getenv());
     }
 
+    /**
+     * True when a JDK {@code preferredVersion} {@code javac} is available to
+     * the build: an explicit {@code override} counts, otherwise any
+     * {@code java<N>.home}/{@code JAVA<N>_HOME} with N >= {@code preferredVersion}
+     * that carries a {@code bin/javac}. This mirrors the acceptance of
+     * {@link #resolveExecutable} but never falls back to the running JVM.
+     */
+    public static boolean hasValhallaCompiler(String override, int preferredVersion) {
+        if (override != null && !override.trim().isEmpty()) {
+            return true;
+        }
+        return resolveScannedHome(preferredVersion, System.getProperties(), System.getenv()) != null;
+    }
+
     static String resolveExecutable(String override, int preferredVersion, Properties properties, Map<String, String> env) {
         if (override != null && !override.trim().isEmpty()) {
             return override.trim();
         }
 
+        Home home = resolveScannedHome(preferredVersion, properties, env);
+        if (home == null) {
+            return new File(System.getProperty("java.home", "java"),
+                    "bin/javac").getAbsolutePath();
+        }
+        return new File(home.path.trim(), "bin/javac").getAbsolutePath();
+    }
+
+    private static Home resolveScannedHome(int preferredVersion, Properties properties, Map<String, String> env) {
         Map<Integer, List<Home>> homes = new TreeMap<>();
         for (String name : properties.stringPropertyNames()) {
             int version = numberedVersion(name, "java", ".home");
@@ -65,12 +88,10 @@ public final class Javac {
                 if (!executable.isFile()) {
                     continue;
                 }
-                return executable.getAbsolutePath();
+                return home;
             }
         }
-
-        return new File(System.getProperty("java.home", "java"),
-                "bin/javac").getAbsolutePath();
+        return null;
     }
 
     private static int numberedVersion(String name, String prefix, String suffix) {
