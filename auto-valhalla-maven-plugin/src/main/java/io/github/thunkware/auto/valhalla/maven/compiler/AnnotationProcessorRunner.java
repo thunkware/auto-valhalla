@@ -6,6 +6,7 @@ import static java.util.Comparator.comparing;
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
+import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +17,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import org.apache.maven.plugin.logging.Log;
 
 /**
@@ -132,16 +132,15 @@ public final class AnnotationProcessorRunner {
 
     private static void collectGeneratedFiles(File generatedDir, Selection selection)
             throws IOException {
-        try (Stream<Path> stream = Files.walk(generatedDir.toPath())) {
-            stream.filter(path -> path.toString().endsWith(".java"))
-                    .sorted()
-                    .forEach(path -> {
-                        String rel = generatedDir.toPath().relativize(path).toString();
-                        selection.selectedTypes.add(rel);
-                        selection.generatedFiles.computeIfAbsent(rel, k -> new ArrayList<>())
-                                .add(new Generated(rel, rel));
-                    });
-        }
+        Utils.walkJavaFiles(generatedDir.toPath())
+                .stream()
+                .sorted()
+                .forEach(path -> {
+                    String rel = generatedDir.toPath().relativize(path).toString();
+                    selection.selectedTypes.add(rel);
+                    selection.generatedFiles.computeIfAbsent(rel, k -> new ArrayList<>())
+                            .add(new Generated(rel, rel));
+                });
     }
 
     private static Map<File, Long> snapshotJavaFiles(File dir) throws IOException {
@@ -149,10 +148,9 @@ public final class AnnotationProcessorRunner {
         if (!dir.isDirectory()) {
             return mtimes;
         }
-        try (Stream<Path> stream = Files.walk(dir.toPath())) {
-            stream.filter(path -> path.toString().endsWith(".java"))
-                    .forEach(path -> mtimes.put(path.toFile(), path.toFile().lastModified()));
-        }
+
+        Utils.walkJavaFiles(dir.toPath())
+                .forEach(path -> mtimes.put(path.toFile(), path.toFile().lastModified()));
         return mtimes;
     }
 
@@ -162,12 +160,11 @@ public final class AnnotationProcessorRunner {
             return;
         }
         List<Path> stale = new ArrayList<>();
-        try (Stream<Path> stream = Files.walk(generatedDir.toPath())) {
-            stream.filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> before.containsKey(path.toFile()))
-                    .filter(path -> path.toFile().lastModified() == before.get(path.toFile()))
-                    .forEach(stale::add);
-        }
+        Utils.walkJavaFiles(generatedDir.toPath())
+                .stream()
+                .filter(path -> before.containsKey(path.toFile()))
+                .filter(path -> path.toFile().lastModified() == before.get(path.toFile()))
+                .forEach(stale::add);
         for (Path path : stale) {
             Files.deleteIfExists(path);
         }
@@ -182,11 +179,10 @@ public final class AnnotationProcessorRunner {
             if (!root.isDirectory()) {
                 continue;
             }
-            try (Stream<Path> stream = Files.walk(root.toPath())) {
-                stream.filter(p -> p.toString().endsWith(".java"))
-                        .filter(p -> !isMetaFile(p.getFileName().toString()))
-                        .forEach(p -> files.add(p.toFile()));
-            }
+            Utils.walkJavaFiles(root.toPath())
+                    .stream()
+                    .filter(p -> !isMetaFile(p.getFileName().toString()))
+                    .forEach(p -> files.add(p.toFile()));
         }
         Collections.sort(files, comparing(File::getAbsolutePath));
         return files;

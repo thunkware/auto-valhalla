@@ -3,12 +3,6 @@ package io.github.thunkware.auto.valhalla.maven.compiler;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.stream.Stream;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -18,6 +12,13 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Compiles generated sources by invoking the consuming project's
@@ -165,17 +166,15 @@ public final class MavenCompilerInvoker {
         if (dir == null || !dir.exists()) {
             return;
         }
-        try (Stream<Path> stream = Files.walk(dir.toPath())) {
-            stream.sorted(Comparator.reverseOrder()).forEach(path -> {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException e) {
-                    log.debug("could not delete " + path, e);
-                }
-            });
-        } catch (IOException e) {
-            log.debug("could not delete " + dir, e);
-        }
+        List<Path> files = new ArrayList<>();
+        Utils.run(() -> files.addAll(Utils.walk(dir.toPath())),
+                e -> log.debug("could not delete " + dir, e));
+
+        files.stream()
+                .sorted(Comparator.reverseOrder())
+                .forEach(path ->
+                        Utils.run(() -> Files.deleteIfExists(path),
+                                e -> log.debug("could not delete " + path, e)));
     }
 
     private static void child(Xpp3Dom parent, String name, String value) {

@@ -1,11 +1,11 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
+import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.Mojo;
@@ -39,15 +39,14 @@ final class MavenCompilerLogInterceptor {
                 if (isFirstInstall) {
                     sharedBuildPluginManager = buildPluginManager;
                     sharedField = buildPluginManager.getClass().getDeclaredField("mavenPluginManager");
-                    sharedField.setAccessible(true);
                     sharedMavenPluginManager = (MavenPluginManager) sharedField.get(buildPluginManager);
 
                     InvocationHandler handler = getSharedInvocationHandler();
                     Class<?>[] ifaces = {MavenPluginManager.class};
                     MavenPluginManager newMavenPluginManager = (MavenPluginManager) Proxy.newProxyInstance(MavenPluginManager.class.getClassLoader(), ifaces, handler);
-                    sharedField.set(buildPluginManager, newMavenPluginManager);
+                    set(sharedField, buildPluginManager, newMavenPluginManager);
                 }
-                // Only count the install once the reflection and proxy setup
+                // Only count once the reflection and proxy setup
                 // succeeded, so a partially installed interceptor never leaves
                 // installCount positive (cleanUp would otherwise uninstall the
                 // shared proxy for every later compile).
@@ -59,7 +58,7 @@ final class MavenCompilerLogInterceptor {
                 if (isFirstInstall) {
                     try {
                         if (sharedField != null && sharedMavenPluginManager != null) {
-                            sharedField.set(sharedBuildPluginManager, sharedMavenPluginManager);
+                            set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager);
                         }
                     } catch (Exception ignored) {
                     }
@@ -84,10 +83,12 @@ final class MavenCompilerLogInterceptor {
                 MavenCompilerLogInterceptor thisInterceptor = THIS_INTERCEPTOR.get();
                 if (thisInterceptor != null) {
                     thisInterceptor.mojo = (Mojo) result;
-                    Log oldMojoLog = thisInterceptor.mojo.getLog();
-                    if (oldMojoLog != null && !(oldMojoLog instanceof FilteringLog)) {
-                        thisInterceptor.oldMojoLog = oldMojoLog;
-                        thisInterceptor.mojo.setLog(new FilteringLog(thisInterceptor.oldMojoLog));
+                    if (thisInterceptor.mojo != null) {
+                        Log oldMojoLog = thisInterceptor.mojo.getLog();
+                        if (oldMojoLog != null && !(oldMojoLog instanceof FilteringLog)) {
+                            thisInterceptor.oldMojoLog = oldMojoLog;
+                            thisInterceptor.mojo.setLog(new FilteringLog(thisInterceptor.oldMojoLog));
+                        }
                     }
                 }
             }
@@ -100,14 +101,19 @@ final class MavenCompilerLogInterceptor {
                 && result.getClass().getName().equals("org.apache.maven.plugin.compiler.CompilerMojo");
     }
 
+    @SuppressWarnings("all")
+    private static void set(Field field, Object obj, Object value) throws IllegalAccessException {
+        if (!field.isAccessible()) {
+            field.setAccessible(true);
+        }
+        field.set(obj, value);
+    }
+
     public void cleanUp() {
         THIS_INTERCEPTOR.remove();
         if (mojo != null && oldMojoLog != null) {
-            try {
-                mojo.setLog(oldMojoLog);
-            } catch (Exception e) {
-                interceptorLog.debug(e);
-            }
+            Utils.run(() -> mojo.setLog(oldMojoLog),
+                    interceptorLog::debug);
         }
 
         synchronized (SHARED_INSTALL_LOCK) {
@@ -117,11 +123,8 @@ final class MavenCompilerLogInterceptor {
             installed = false;
             --sharedInstallCount;
             if (sharedInstallCount == 0 && sharedField != null && sharedMavenPluginManager != null) {
-                try {
-                    sharedField.set(sharedBuildPluginManager, sharedMavenPluginManager);
-                } catch (Exception e) {
-                    interceptorLog.debug(e);
-                }
+                Utils.run(() -> set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager),
+                        interceptorLog::debug);
                 sharedField = null;
                 sharedMavenPluginManager = null;
                 sharedBuildPluginManager = null;
