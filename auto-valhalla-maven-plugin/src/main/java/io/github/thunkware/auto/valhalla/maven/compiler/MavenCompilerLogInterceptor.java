@@ -35,38 +35,36 @@ final class MavenCompilerLogInterceptor {
                 return;
             }
             boolean isFirstInstall = sharedInstallCount == 0;
-            try {
-                if (isFirstInstall) {
+            if (isFirstInstall) {
+                try {
                     sharedBuildPluginManager = buildPluginManager;
                     sharedField = buildPluginManager.getClass().getDeclaredField("mavenPluginManager");
+                    ensureAccessible(sharedField);
                     sharedMavenPluginManager = (MavenPluginManager) sharedField.get(buildPluginManager);
 
                     InvocationHandler handler = getSharedInvocationHandler();
                     Class<?>[] ifaces = {MavenPluginManager.class};
                     MavenPluginManager newMavenPluginManager = (MavenPluginManager) Proxy.newProxyInstance(MavenPluginManager.class.getClassLoader(), ifaces, handler);
                     set(sharedField, buildPluginManager, newMavenPluginManager);
-                }
-                // Only count once the reflection and proxy setup
-                // succeeded, so a partially installed interceptor never leaves
-                // installCount positive (cleanUp would otherwise uninstall the
-                // shared proxy for every later compile).
-                THIS_INTERCEPTOR.set(this);
-                installed = true;
-                sharedInstallCount++;
-            } catch (Exception e) {
-                interceptorLog.debug(e);
-                if (isFirstInstall) {
-                    try {
-                        if (sharedField != null && sharedMavenPluginManager != null) {
-                            set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager);
-                        }
-                    } catch (Exception ignored) {
+                } catch (Exception e) {
+                    interceptorLog.debug(e);
+                    if (sharedField != null && sharedMavenPluginManager != null) {
+                        Utils.run(() -> set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager));
                     }
                     sharedField = null;
                     sharedMavenPluginManager = null;
                     sharedBuildPluginManager = null;
+                    return; // early return
                 }
             }
+
+            // Only count once the reflection and proxy setup
+            // succeeded, so a partially installed interceptor never leaves
+            // installCount positive (cleanUp would otherwise uninstall the
+            // shared proxy for every later compile).
+            THIS_INTERCEPTOR.set(this);
+            installed = true;
+            sharedInstallCount++;
         }
     }
 
@@ -79,16 +77,14 @@ final class MavenCompilerLogInterceptor {
                 throw e.getCause();
             }
 
-            if (!isCompilerMojoGetConfiguredMojoCall(method, result)) {
+            if (isCompilerMojoGetConfiguredMojoCall(method, result)) {
                 MavenCompilerLogInterceptor thisInterceptor = THIS_INTERCEPTOR.get();
-                if (thisInterceptor != null) {
+                if (thisInterceptor != null && result != null) {
                     thisInterceptor.mojo = (Mojo) result;
-                    if (thisInterceptor.mojo != null) {
-                        Log oldMojoLog = thisInterceptor.mojo.getLog();
-                        if (oldMojoLog != null && !(oldMojoLog instanceof FilteringLog)) {
-                            thisInterceptor.oldMojoLog = oldMojoLog;
-                            thisInterceptor.mojo.setLog(new FilteringLog(thisInterceptor.oldMojoLog));
-                        }
+                    Log oldMojoLog = thisInterceptor.mojo.getLog();
+                    if (oldMojoLog != null) {
+                        thisInterceptor.oldMojoLog = oldMojoLog;
+                        thisInterceptor.mojo.setLog(new FilteringLog(thisInterceptor.oldMojoLog));
                     }
                 }
             }
@@ -103,10 +99,15 @@ final class MavenCompilerLogInterceptor {
 
     @SuppressWarnings("all")
     private static void set(Field field, Object obj, Object value) throws IllegalAccessException {
+        ensureAccessible(field);
+        field.set(obj, value);
+    }
+
+    @SuppressWarnings("all")
+    private static void ensureAccessible(Field field) {
         if (!field.isAccessible()) {
             field.setAccessible(true);
         }
-        field.set(obj, value);
     }
 
     public void cleanUp() {
@@ -140,9 +141,10 @@ final class MavenCompilerLogInterceptor {
             this.delegate = delegate;
         }
 
-        private boolean suppressed(CharSequence message) {
-            return message != null
-                    && message.toString().startsWith("Overwriting artifact's file from ");
+        private boolean isAllowed(CharSequence message) {
+            return message == null
+                    || (!message.toString().contains("value classes are a preview feature")
+                    && !message.toString().startsWith("Overwriting artifact's file from "));
         }
 
         public boolean isDebugEnabled() {
@@ -182,13 +184,13 @@ final class MavenCompilerLogInterceptor {
         }
 
         public void warn(CharSequence content) {
-            if (!suppressed(content)) {
+            if (isAllowed(content)) {
                 delegate.warn(content);
             }
         }
 
         public void warn(CharSequence content, Throwable error) {
-            if (!suppressed(content)) {
+            if (isAllowed(content)) {
                 delegate.warn(content, error);
             }
         }

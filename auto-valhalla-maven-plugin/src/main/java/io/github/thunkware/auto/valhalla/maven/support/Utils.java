@@ -21,6 +21,10 @@ public final class Utils {
         void run() throws Throwable;
     }
 
+    public static void run(ThrowingRunnable runnable) {
+        run(runnable, e -> {});
+    }
+
     public static void run(ThrowingRunnable runnable, Consumer<Throwable> onFail) {
         try {
             runnable.run();

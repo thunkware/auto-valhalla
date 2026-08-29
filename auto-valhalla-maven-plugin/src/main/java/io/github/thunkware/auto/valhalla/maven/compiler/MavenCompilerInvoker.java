@@ -3,6 +3,12 @@ package io.github.thunkware.auto.valhalla.maven.compiler;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -12,13 +18,6 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
 
 /**
  * Compiles generated sources by invoking the consuming project's
@@ -107,19 +106,8 @@ public final class MavenCompilerInvoker {
         child(root, "project", "${project}");
         child(root, "session", "${session}");
         child(root, "projectArtifact", "${project.artifact}");
-        // Use the resolved input classpath (the test mojo supplies test
-        // elements, so generated test value classes can see JUnit and
-        // target/test-classes) instead of the ${project.compileClasspathElements}
-        // expression, which only ever resolves to the main compile classpath.
-        if (input.compileClasspath() != null && !input.compileClasspath().isEmpty()) {
-            Xpp3Dom compilePath = new Xpp3Dom("compilePath");
-            for (String entry : input.compileClasspath()) {
-                if (Utils.isNotBlank(entry)) {
-                    child(compilePath, "path", Utils.trim(entry));
-                }
-            }
-            root.addChild(compilePath);
-        }
+        child(root, "compilePath", "${project.compileClasspathElements}");
+//        configureCompilePath(input, root);
         child(root, "mojoExecution", "${mojoExecution}");
         Xpp3Dom sourceRoots = new Xpp3Dom("compileSourceRoots");
         for (String sourceRoot : input.sourceRoots()) {
@@ -154,6 +142,25 @@ public final class MavenCompilerInvoker {
             log.debug("maven-compiler configuration: " + root);
         }
         return root;
+    }
+
+    private static void configureCompilePath(MavenCompilerInput input, Xpp3Dom root) {
+        // Use the resolved input classpath (the test mojo supplies test
+        // elements, so generated test value classes can see JUnit and
+        // target/test-classes) instead of the ${project.compileClasspathElements}
+        // expression, which only ever resolves to the main compile classpath.
+        List<String> elements = input.compileClasspath();
+        if (elements == null || elements.isEmpty()) {
+            child(root, "compilePath", "${project.compileClasspathElements}");
+            return;
+        }
+        Xpp3Dom compilePath = new Xpp3Dom("compilePath");
+        for (String element : elements) {
+            if (Utils.isNotBlank(element)) {
+                child(compilePath, "path", Utils.trim(element));
+            }
+        }
+        root.addChild(compilePath);
     }
 
     private static Xpp3Dom child(String name, String value) {
