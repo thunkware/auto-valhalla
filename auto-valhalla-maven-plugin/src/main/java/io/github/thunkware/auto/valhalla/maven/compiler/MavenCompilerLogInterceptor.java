@@ -3,7 +3,9 @@ package io.github.thunkware.auto.valhalla.maven.compiler;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.Mojo;
@@ -11,12 +13,12 @@ import org.apache.maven.plugin.logging.Log;
 
 final class MavenCompilerLogInterceptor {
 
-    private static final Object INSTALL_LOCK = new Object();
-    private static int installCount = 0;
+    private static final Object SHARED_INSTALL_LOCK = new Object();
+    private static int sharedInstallCount = 0;
     private static Field sharedField;
-    private static BuildPluginManager sharedBpm;
-    private static MavenPluginManager originalManager;
-    private static final ThreadLocal<MavenCompilerLogInterceptor> ACTIVE = new ThreadLocal<>();
+    private static BuildPluginManager sharedBuildPluginManager;
+    private static MavenPluginManager sharedMavenPluginManager;
+    private static final ThreadLocal<MavenCompilerLogInterceptor> THIS_INTERCEPTOR = new ThreadLocal<>();
 
     private final Log interceptorLog;
     private Mojo mojo;
@@ -28,40 +30,19 @@ final class MavenCompilerLogInterceptor {
     }
 
     void installLogInterceptor(BuildPluginManager buildPluginManager) {
-        synchronized (INSTALL_LOCK) {
+        synchronized (SHARED_INSTALL_LOCK) {
             if (installed) {
                 return;
             }
-            boolean first = installCount == 0;
+            boolean isFirstInstall = sharedInstallCount == 0;
             try {
-                if (first) {
-                    sharedBpm = buildPluginManager;
+                if (isFirstInstall) {
+                    sharedBuildPluginManager = buildPluginManager;
                     sharedField = buildPluginManager.getClass().getDeclaredField("mavenPluginManager");
                     sharedField.setAccessible(true);
-                    originalManager = (MavenPluginManager) sharedField.get(buildPluginManager);
+                    sharedMavenPluginManager = (MavenPluginManager) sharedField.get(buildPluginManager);
 
-                    InvocationHandler handler = (proxy, method, args) -> {
-                        Object result;
-                        try {
-                            result = method.invoke(originalManager, args);
-                        } catch (InvocationTargetException e) {
-                            throw e.getCause();
-                        }
-                        if (method.getName().equals("getConfiguredMojo") && result instanceof Mojo
-                                && result.getClass().getName().equals("org.apache.maven.plugin.compiler.CompilerMojo")) {
-
-                            MavenCompilerLogInterceptor active = ACTIVE.get();
-                            if (active != null) {
-                                active.mojo = (Mojo) result;
-                                Log oldMojoLog = active.mojo.getLog();
-                                if (oldMojoLog != null && !(oldMojoLog instanceof FilteringLog)) {
-                                    active.oldMojoLog = oldMojoLog;
-                                    active.mojo.setLog(new FilteringLog(active.oldMojoLog));
-                                }
-                            }
-                        }
-                        return result;
-                    };
+                    InvocationHandler handler = getSharedInvocationHandler();
                     Class<?>[] ifaces = {MavenPluginManager.class};
                     MavenPluginManager newMavenPluginManager = (MavenPluginManager) Proxy.newProxyInstance(MavenPluginManager.class.getClassLoader(), ifaces, handler);
                     sharedField.set(buildPluginManager, newMavenPluginManager);
@@ -70,49 +51,80 @@ final class MavenCompilerLogInterceptor {
                 // succeeded, so a partially installed interceptor never leaves
                 // installCount positive (cleanUp would otherwise uninstall the
                 // shared proxy for every later compile).
-                ACTIVE.set(this);
+                THIS_INTERCEPTOR.set(this);
                 installed = true;
-                installCount++;
+                sharedInstallCount++;
             } catch (Exception e) {
                 interceptorLog.debug(e);
-                if (first) {
+                if (isFirstInstall) {
                     try {
-                        if (sharedField != null && originalManager != null) {
-                            sharedField.set(sharedBpm, originalManager);
+                        if (sharedField != null && sharedMavenPluginManager != null) {
+                            sharedField.set(sharedBuildPluginManager, sharedMavenPluginManager);
                         }
                     } catch (Exception ignored) {
                     }
                     sharedField = null;
-                    originalManager = null;
-                    sharedBpm = null;
+                    sharedMavenPluginManager = null;
+                    sharedBuildPluginManager = null;
                 }
             }
         }
     }
 
-    public void cleanUp() {
-        ACTIVE.remove();
-        try {
-            if (mojo != null && oldMojoLog != null) {
-                mojo.setLog(oldMojoLog);
+    private static InvocationHandler getSharedInvocationHandler() {
+        return (proxy, method, args) -> {
+            Object result;
+            try {
+                result = method.invoke(sharedMavenPluginManager, args);
+            } catch (InvocationTargetException e) {
+                throw e.getCause();
             }
-        } catch (Exception e) {
-            interceptorLog.debug(e);
+
+            if (!isCompilerMojoGetConfiguredMojoCall(method, result)) {
+                MavenCompilerLogInterceptor thisInterceptor = THIS_INTERCEPTOR.get();
+                if (thisInterceptor != null) {
+                    thisInterceptor.mojo = (Mojo) result;
+                    Log oldMojoLog = thisInterceptor.mojo.getLog();
+                    if (oldMojoLog != null && !(oldMojoLog instanceof FilteringLog)) {
+                        thisInterceptor.oldMojoLog = oldMojoLog;
+                        thisInterceptor.mojo.setLog(new FilteringLog(thisInterceptor.oldMojoLog));
+                    }
+                }
+            }
+            return result;
+        };
+    }
+
+    private static boolean isCompilerMojoGetConfiguredMojoCall(Method method, Object result) {
+        return method.getName().equals("getConfiguredMojo") && result instanceof Mojo
+                && result.getClass().getName().equals("org.apache.maven.plugin.compiler.CompilerMojo");
+    }
+
+    public void cleanUp() {
+        THIS_INTERCEPTOR.remove();
+        if (mojo != null && oldMojoLog != null) {
+            try {
+                mojo.setLog(oldMojoLog);
+            } catch (Exception e) {
+                interceptorLog.debug(e);
+            }
         }
-        synchronized (INSTALL_LOCK) {
+
+        synchronized (SHARED_INSTALL_LOCK) {
             if (!installed) {
                 return;
             }
             installed = false;
-            try {
-                if (--installCount == 0 && sharedField != null && originalManager != null) {
-                    sharedField.set(sharedBpm, originalManager);
-                    sharedField = null;
-                    originalManager = null;
-                    sharedBpm = null;
+            --sharedInstallCount;
+            if (sharedInstallCount == 0 && sharedField != null && sharedMavenPluginManager != null) {
+                try {
+                    sharedField.set(sharedBuildPluginManager, sharedMavenPluginManager);
+                } catch (Exception e) {
+                    interceptorLog.debug(e);
                 }
-            } catch (Exception e) {
-                interceptorLog.debug(e);
+                sharedField = null;
+                sharedMavenPluginManager = null;
+                sharedBuildPluginManager = null;
             }
         }
     }
