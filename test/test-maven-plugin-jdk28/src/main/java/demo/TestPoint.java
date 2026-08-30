@@ -22,3 +22,21 @@ public final class TestPoint {
         this.y = y;
     }
 }
+
+@AutoValhalla
+@API(status = EXPERIMENTAL) // verify compile-time classpath
+final class MorePoint {
+
+    static {
+        // verify compile-time classpath
+        Main.class.getName();
+    }
+
+    public final int x;
+    public final int y;
+
+    public MorePoint(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+}
