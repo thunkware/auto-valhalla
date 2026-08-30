@@ -10,6 +10,10 @@ import org.apache.maven.plugin.MojoFailureException;
 
 public final class JdkVersionValidator {
 
+    private JdkVersionValidator() {
+        throw new AssertionError();
+    }
+
     /**
      * Accepts any JDK 28 javac the plugin would compile value classes with:
      * the consuming project's {@code <executable>} configuration, a

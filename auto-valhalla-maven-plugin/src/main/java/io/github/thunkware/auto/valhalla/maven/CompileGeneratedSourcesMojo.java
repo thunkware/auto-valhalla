@@ -5,7 +5,6 @@ import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.plural;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.asBoolean;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.PROCESS_CLASSES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
@@ -22,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
@@ -250,6 +248,13 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
             }
         }
         return args;
+    }
+
+    private static boolean asBoolean(Boolean value) {
+        if (value == null) {
+            return false;
+        }
+        return value;
     }
 
     String resolveEncoding() {

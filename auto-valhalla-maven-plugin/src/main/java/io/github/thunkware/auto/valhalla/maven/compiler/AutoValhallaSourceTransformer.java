@@ -4,7 +4,6 @@ import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMoj
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import static java.util.Collections.singletonList;
 
-import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;

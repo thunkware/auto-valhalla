@@ -15,24 +15,29 @@ public final class Javac {
     private Javac() {
     }
 
-    /** Joins classpath entries with the platform path separator. */
+    /**
+     * Joins classpath entries with the platform path separator.
+     */
     public static String joinClasspath(List<String> paths) {
         return String.join(File.pathSeparator, paths);
     }
 
-    /** Lowest JDK feature version scanned for {@code java<N>.home} /
-     *  {@code JAVA<N>_HOME}. */
+    /**
+     * Lowest JDK feature version scanned for {@code java<N>.home} /
+     * {@code JAVA<N>_HOME}.
+     */
     private static final int MIN_SCAN_VERSION = 28;
 
-    /** Resolves the {@code javac} executable: an explicit {@code override}
-     *  wins; otherwise every {@code java<N>.home} system property and
-     *  {@code JAVA<N>_HOME} environment variable is checked for N >= 28, with
-     *  the preferred version first and then increasing versions. The first
-     *  usable home provides the compiler ({@code <home>/bin/javac}); otherwise
-     *  the JDK running this JVM does. An exact
-     *  {@code java<preferredVersion>.home}/{@code JAVA<preferredVersion>_HOME}
-     *  is tried before the scan because its javac matches the target
-     *  {@code --release} — {@code --enable-preview} only works there.
+    /**
+     * Resolves the {@code javac} executable: an explicit {@code override}
+     * wins; otherwise every {@code java<N>.home} system property and
+     * {@code JAVA<N>_HOME} environment variable is checked for N >= 28, with
+     * the preferred version first and then increasing versions. The first
+     * usable home provides the compiler ({@code <home>/bin/javac}); otherwise
+     * the JDK running this JVM does. An exact
+     * {@code java<preferredVersion>.home}/{@code JAVA<preferredVersion>_HOME}
+     * is tried before the scan because its javac matches the target
+     * {@code --release} — {@code --enable-preview} only works there.
      */
     public static String resolveExecutable(String override, int preferredVersion) {
         return resolveExecutable(override, preferredVersion, System.getProperties(), System.getenv());
@@ -58,11 +63,11 @@ public final class Javac {
         }
 
         Home home = resolveScannedHome(preferredVersion, properties, env);
+        String javac = "bin/javac";
         if (home == null) {
-            return new File(System.getProperty("java.home", "java"),
-                    "bin/javac").getAbsolutePath();
+            return new File(System.getProperty("java.home", "/"), javac).getAbsolutePath();
         }
-        return new File(home.path.trim(), "bin/javac").getAbsolutePath();
+        return new File(home.path.trim(), javac).getAbsolutePath();
     }
 
     private static Home resolveScannedHome(int preferredVersion, Properties properties, Map<String, String> env) {
@@ -110,7 +115,7 @@ public final class Javac {
     }
 
     private static void addHome(Map<Integer, List<Home>> homes, int version,
-            String path, String source) {
+                                String path, String source) {
         if (path != null && !path.trim().isEmpty()) {
             homes.computeIfAbsent(version, ignored -> new ArrayList<>())
                     .add(new Home(path, source));
@@ -118,7 +123,7 @@ public final class Javac {
     }
 
     private static List<Integer> versionsInPreferenceOrder(Map<Integer, List<Home>> homes,
-            int preferredVersion) {
+                                                           int preferredVersion) {
         List<Integer> versions = new ArrayList<>();
         if (homes.containsKey(preferredVersion)) {
             versions.add(preferredVersion);
