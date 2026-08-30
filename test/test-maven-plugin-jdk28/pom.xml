@@ -70,6 +70,8 @@
             <goals>
               <goal>generate-sources</goal>
               <goal>compile-generated-sources</goal>
+              <goal>generate-test-sources</goal>
+              <goal>compile-generated-test-sources</goal>
             </goals>
           </execution>
         </executions>

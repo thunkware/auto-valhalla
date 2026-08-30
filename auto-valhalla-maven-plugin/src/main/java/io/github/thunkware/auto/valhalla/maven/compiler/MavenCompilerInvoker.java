@@ -5,6 +5,7 @@ import static io.github.thunkware.auto.valhalla.maven.support.LogTool.debug;
 import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
+import static io.github.thunkware.auto.valhalla.maven.support.Undocumented.undocumented;
 
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
@@ -14,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
@@ -34,7 +36,9 @@ public final class MavenCompilerInvoker {
 
     private static final String GROUP_ID = "org.apache.maven.plugins";
     private static final String ARTIFACT_ID = "maven-compiler-plugin";
-    private static final String DEFAULT_VERSION = "3.13.0";
+    private static final String DEFAULT_VERSION = "3.15.0";
+    public static final String COMPILE_CLASSPATH_ELEMENTS = "${project.compileClasspathElements}";
+    public static final String TEST_CLASSPATH_ELEMENTS = "${project.testClasspathElements}";
 
     private final Log log;
 
@@ -62,11 +66,13 @@ public final class MavenCompilerInvoker {
         // modules resolve target/classes instead of a META-INF/versions subdirectory.
         File artifactFile = project.getArtifact() == null ? null : project.getArtifact().getFile();
         try {
+            String goal = input.isTest() ? "testCompile" : "compile";
             MojoDescriptor descriptor = pluginManager.getMojoDescriptor(
-                    plugin, "compile", project.getRemotePluginRepositories(),
+                    plugin, goal, project.getRemotePluginRepositories(),
                     session.getRepositorySession());
             MojoExecution execution = new MojoExecution(descriptor, "auto-valhalla-generated");
-            execution.setConfiguration(configuration(input));
+            Xpp3Dom configuration = configuration(input);
+            execution.setConfiguration(configuration);
 
             // The compiler mojo skips ("Nothing to compile - all classes are
             // up to date.") when it finds class files newer than the sources,
@@ -77,9 +83,12 @@ public final class MavenCompilerInvoker {
             // output directory (a scratch dir for the selection pass, the
             // META-INF/versions/<N> dir for the value-class compile) keeps the
             // sources permanently stale.
-            deleteRecursively(input.outputDirectory());
+            if (!undocumented("skip-clean") && !input.isTest()) {
+                // don't delete for tests. otherwise target/classes are removed when compiling test classes
+                deleteRecursively(input.outputDirectory());
+            }
 
-            info(log, "Running {}", ARTIFACT_ID);
+            info(log, "Running compiler:{}:{}", DEFAULT_VERSION, goal);
             logInterceptor.installLogInterceptor(pluginManager);
             pluginManager.executeMojo(session, execution);
 
@@ -111,9 +120,18 @@ public final class MavenCompilerInvoker {
         child(root, "buildDirectory", "${project.build.directory}");
         child(root, "project", "${project}");
         child(root, "session", "${session}");
-        child(root, "projectArtifact", "${project.artifact}");
-        child(root, "compilePath", "${project.compileClasspathElements}");
-//        configureCompilePath(input, root);
+        if (!input.isTest()) {
+            child(root, "projectArtifact", "${project.artifact}");
+        }
+
+        if (undocumented("dynamically-resolve-compile-path")) {
+            configureCompilePath(input, root);
+        } else if (undocumented("simple-compile-path") || !input.isTest()) {
+            child(root, "compilePath", COMPILE_CLASSPATH_ELEMENTS);
+        } else {
+            configureCompilePath(input, root);
+        }
+
         child(root, "mojoExecution", "${mojoExecution}");
         Xpp3Dom sourceRoots = new Xpp3Dom("compileSourceRoots");
         for (String sourceRoot : input.sourceRoots()) {
@@ -151,15 +169,17 @@ public final class MavenCompilerInvoker {
     private static void configureCompilePath(MavenCompilerInput input, Xpp3Dom root) {
         // Use the resolved input classpath (the test mojo supplies test
         // elements, so generated test value classes can see JUnit and
-        // target/test-classes) instead of the ${project.compileClasspathElements}
+        // target/test-classes) instead of the project.compileClasspathElements
         // expression, which only ever resolves to the main compile classpath.
         List<String> elements = input.compileClasspath();
+        String configName = input.isTest() ? "testPath" : "compilePath";
         if (elements == null || elements.isEmpty()) {
-            child(root, "compilePath", "${project.compileClasspathElements}");
+            String propertyName = input.isTest() ? TEST_CLASSPATH_ELEMENTS : COMPILE_CLASSPATH_ELEMENTS;
+            child(root, configName, propertyName);
             return;
         }
-        Xpp3Dom compilePath = new Xpp3Dom("compilePath");
-        for (String element : elements) {
+        Xpp3Dom compilePath = new Xpp3Dom(configName);
+        for (String element : new LinkedHashSet<>(elements)) {
             if (isNotBlank(element)) {
                 child(compilePath, "path", trim(element));
             }

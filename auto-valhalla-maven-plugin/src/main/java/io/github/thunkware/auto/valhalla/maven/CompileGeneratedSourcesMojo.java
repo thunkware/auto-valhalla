@@ -172,6 +172,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .session(session)
                 .project(project)
                 .pluginManager(pluginManager)
+                .isTest(isTest())
                 .build();
         Result result;
         try {
@@ -190,6 +191,10 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         } else {
             info(getLog(), "compiled no generated source files");
         }
+    }
+
+    protected boolean isTest() {
+        return false;
     }
 
     static String relativeSubDir(File buildDirectory, File subDir) {

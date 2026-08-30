@@ -140,6 +140,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
                     .session(session)
                     .project(project)
                     .pluginManager(pluginManager)
+                    .isTest(isTest())
                     .build();
             AnnotationProcessorRunner runner = new AnnotationProcessorRunner(getLog());
             selection = runner.run(input);
@@ -156,6 +157,10 @@ public class GenerateSourcesMojo extends AbstractMojo {
             info(getLog(), "generated {} source file{} to {}",
                     count, plural(count), simpleVersionsDir);
         }
+    }
+
+    protected boolean isTest() {
+        return false;
     }
 
     private String resolveEncoding() {

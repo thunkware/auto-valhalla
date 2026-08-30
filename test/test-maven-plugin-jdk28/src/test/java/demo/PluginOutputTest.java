@@ -30,22 +30,28 @@ class PluginOutputTest {
 
     @Test
     void versionedClassesAreValueClassesAndBaseClassesStayIdentity() throws Exception {
+        doTest("target/classes/META-INF/versions/28/demo/Point.class", "target/classes/demo/Point.class");
+        doTest("target/classes/META-INF/versions/28/demo/TestPoint.class", "target/classes/demo/TestPoint.class");
+        doTest("target/test-classes/META-INF/versions/28/demo/AnotherTestPoint.class", "target/test-classes/demo/AnotherTestPoint.class");
+    }
+
+    void doTest(String valueClass, String identityClass) throws Exception {
         Assumptions.assumeTrue(jdkFeature() >= 28,
                 "value-class compilation (and reading its output) requires JDK 28+");
 
-        String versionedPoint = javap("target/classes/META-INF/versions/28/demo/Point.class");
-        assertTrue(versionedPoint.contains("value class demo.Point"),
+        String versionedPoint = javap(valueClass);
+        assertTrue(versionedPoint.contains("value class "),
                 "versioned Point must be a value class:\n" + versionedPoint);
         assertTrue(versionedPoint.contains("major version: 72"));
         assertTrue(versionedPoint.contains("minor version: 65535"));
         assertFalse(versionedPoint.contains("ACC_SUPER"),
                 "value classes are not identity classes (no ACC_SUPER)");
 
-        String basePoint = javap("target/classes/demo/Point.class");
+        String basePoint = javap(identityClass);
         assertTrue(basePoint.contains("major version: 52"),
                 "base Point keeps its pre-Valhalla class file (compiled at release 8)");
         assertTrue(basePoint.contains("ACC_SUPER"), "base Point stays an identity class");
-        assertFalse(basePoint.contains("value class demo.Point"), "base Point must not be a value class");
+        assertFalse(basePoint.contains("value class "), "base Point must not be a value class");
     }
 
     private static String javap(String relativePath) throws Exception {

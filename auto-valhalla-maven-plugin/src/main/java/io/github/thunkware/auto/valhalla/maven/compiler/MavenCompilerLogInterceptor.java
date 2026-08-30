@@ -15,6 +15,9 @@ import org.apache.maven.plugin.logging.Log;
 
 final class MavenCompilerLogInterceptor {
 
+    public static final String COMPILER_MOJO = "org.apache.maven.plugin.compiler.CompilerMojo";
+    public static final String TEST_COMPILER_MOJO = "org.apache.maven.plugin.compiler.TestCompilerMojo";
+
     private static final Object SHARED_INSTALL_LOCK = new Object();
     private static int sharedInstallCount = 0;
     private static Field sharedField;
@@ -96,7 +99,8 @@ final class MavenCompilerLogInterceptor {
 
     private static boolean isCompilerMojoGetConfiguredMojoCall(Method method, Object result) {
         return method.getName().equals("getConfiguredMojo") && result instanceof Mojo
-                && result.getClass().getName().equals("org.apache.maven.plugin.compiler.CompilerMojo");
+                && (result.getClass().getName().equals(COMPILER_MOJO)
+                || result.getClass().getName().equals(TEST_COMPILER_MOJO));
     }
 
     @SuppressWarnings("all")

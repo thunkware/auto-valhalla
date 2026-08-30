@@ -2,6 +2,7 @@ package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
+import static io.github.thunkware.auto.valhalla.maven.support.Undocumented.undocumented;
 import static java.util.Collections.singletonList;
 
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
@@ -59,7 +60,7 @@ public final class AutoValhallaSourceTransformer {
         // run() prunes stale generated sources (an @AutoValhalla that was
         // removed leaves a leftover copy that would otherwise still be compiled
         // into META-INF/versions/28).
-        Selection selection = Boolean.getBoolean("auto-valhalla.always-run-processor") // undocumented flag
+        Selection selection = undocumented("always-run-processor")
                 ? runner.run(input)
                 : runner.findGeneratedFiles(input);
         result.selected.addAll(selection.selectedTypes);

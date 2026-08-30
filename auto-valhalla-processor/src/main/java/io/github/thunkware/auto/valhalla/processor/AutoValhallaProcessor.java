@@ -153,15 +153,18 @@ public class AutoValhallaProcessor extends AbstractProcessor {
      * carry the in-source opt-in marker.
      */
     private void generateUnit(Trees trees, List<Selected> selectedUnits, Path out, boolean removeAnnotation) {
-        String source = insertValueKeyword(trees, selectedUnits);
+        selectedUnits.forEach(it -> generateUnitEach(trees, it, out, removeAnnotation));
+    }
+
+    private void generateUnitEach(Trees trees, Selected selected, Path out, boolean removeAnnotation) {
+        String source = insertValueKeywordEach(trees, selected);
         if (source == null) {
             return;
         }
         if (removeAnnotation) {
-            source = removeAnnotation(source, trees, selectedUnits);
+            source = removeAnnotation(source, trees, selected);
         }
 
-        Selected selected = selectedUnits.get(0);
         CompilationUnitTree compilationUnit = selected.unit;
         String fileName = fileName(compilationUnit);
         String relDir = selected.pkg.isEmpty() ? "" : selected.pkg.replace('.', '/') + "/";
@@ -172,9 +175,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
             Files.write(target, source.getBytes(StandardCharsets.UTF_8));
             processingEnv.getMessager().printMessage(Kind.NOTE, "Writing " + target);
         } catch (IOException e) {
-            for (Selected selectedUnit : selectedUnits) {
-                failIo(selectedUnit, "cannot write " + fqClassFileName + ": " + e);
-            }
+            failIo(selected, "cannot write " + fqClassFileName + ": " + e);
         }
     }
 
@@ -185,18 +186,16 @@ public class AutoValhallaProcessor extends AbstractProcessor {
      * annotation instead of leaving a stray {@code ()}. The import is removed
      * only when the simple name is no longer referenced anywhere else.
      */
-    private String removeAnnotation(String source, Trees trees, List<Selected> selectedUnits) {
+    private String removeAnnotation(String source, Trees trees, Selected selected) {
         List<int[]> ranges = new ArrayList<>();
-        for (Selected selected : selectedUnits) {
-            for (AnnotationTree annotation : selected.classTree.getModifiers().getAnnotations()) {
-                if (!isAutoValhalla(annotation)) {
-                    continue;
-                }
-                long start = trees.getSourcePositions().getStartPosition(selected.unit, annotation);
-                long end = trees.getSourcePositions().getEndPosition(selected.unit, annotation);
-                if (start >= 0 && end >= 0 && start < end && end <= source.length()) {
-                    ranges.add(new int[]{Math.toIntExact(start), Math.toIntExact(end)});
-                }
+        for (AnnotationTree annotation : selected.classTree.getModifiers().getAnnotations()) {
+            if (!isAutoValhalla(annotation)) {
+                continue;
+            }
+            long start = trees.getSourcePositions().getStartPosition(selected.unit, annotation);
+            long end = trees.getSourcePositions().getEndPosition(selected.unit, annotation);
+            if (start >= 0 && end >= 0 && start < end && end <= source.length()) {
+                ranges.add(new int[]{Math.toIntExact(start), Math.toIntExact(end)});
             }
         }
         ranges.sort((a, b) -> Integer.compare(b[0], a[0]));
@@ -226,33 +225,33 @@ public class AutoValhallaProcessor extends AbstractProcessor {
         return ANNOTATION_SIMPLE.equals(name);
     }
 
-    private String insertValueKeyword(Trees trees, List<Selected> unit) {
-        CompilationUnitTree compilationUnit = unit.get(0).unit;
+    private String insertValueKeywordEach(Trees trees, Selected selected) {
+        CompilationUnitTree compilationUnit = selected.unit;
         SourcePositions positions = trees.getSourcePositions();
         String source;
         try {
             source = compilationUnit.getSourceFile().getCharContent(true).toString();
         } catch (IOException e) {
-            for (Selected selected : unit) {
-                failIo(selected, "cannot read source: " + e);
-            }
+            failIo(selected, "cannot read source: " + e);
             return null;
         }
 
         List<Integer> insertIndexes = new ArrayList<>();
-        for (Selected selected : unit) {
-            int insertIndex = (int) positions.getEndPosition(
-                    compilationUnit, selected.classTree.getModifiers());
-            if (insertIndex < 0 || insertIndex > source.length()) {
-                insertIndex = 0;
-            }
-            while (insertIndex < source.length()
-                    && Character.isWhitespace(source.charAt(insertIndex))) {
-                insertIndex++;
-            }
-            insertIndexes.add(insertIndex);
+        int insertIndex = (int) positions.getEndPosition(compilationUnit, selected.classTree.getModifiers());
+        if (insertIndex < 0 || insertIndex > source.length()) {
+            insertIndex = 0;
         }
+        while (insertIndex < source.length()
+                && Character.isWhitespace(source.charAt(insertIndex))) {
+            insertIndex++;
+        }
+        insertIndexes.add(insertIndex);
         insertIndexes.sort((a, b) -> Integer.compare(b, a));
+
+        return insert(source, insertIndexes);
+    }
+
+    private static String insert(String source, List<Integer> insertIndexes) {
         StringBuilder generated = new StringBuilder(source);
         for (int insertIndex : insertIndexes) {
             generated.insert(insertIndex, "value ");

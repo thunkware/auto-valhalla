@@ -123,6 +123,7 @@ public final class AnnotationProcessorRunner {
                 .proc("only")
                 .build();
         ProcessResult process = mavenCompilerInvoker.compile(mavenCompilerInput);
+        System.out.println(process.output);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass "
                     + "(maven-compiler-plugin) failed:\n"

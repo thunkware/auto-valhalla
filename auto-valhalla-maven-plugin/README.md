@@ -106,10 +106,13 @@ mvn auto-valhalla:generate-sources auto-valhalla:compile-generated-sources
 
 ## Goals
 
-| Goal | Default phase | Description                                                                                                  |
-| --- | --- |--------------------------------------------------------------------------------------------------------------|
-| `generate-sources` | `generate-sources` | Runs the annotation processor on main code, to generate code under `target/auto-valhalla-generated-sources`. |
-| `compile-generated-sources` | `process-classes` | Compiles generated sources left by `generate-sources` into `META-INF/versions/28`.                           |
+| Goal                             | Default phase           | Description                                                                                                       |
+|----------------------------------|-------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `generate-sources`               | `generate-sources`      | Runs the annotation processor on main code, to generate code under `target/auto-valhalla-generated-sources`.      |
+| `compile-generated-sources`      | `process-classes`       | Compiles generated sources left by `generate-sources` into `target/classes/META-INF/versions/28`.                                |
+|                                  |                         |                                                                                                                   |
+| `generate-test-sources`          | `generate-test-sources` | Runs the annotation processor on test code, to generate code under `target/auto-valhalla-generated-test-sources`. |
+| `compile-generated-test-sources` | `process-test-classes`  | Compiles generated test sources left by `generate-test-sources` into `target/test-classes/META-INF/versions/28`.                      |
 
 ## How it works
 
@@ -140,17 +143,31 @@ trigger a warning from the plugin.
 
 All parameters are optional:
 
-| parameter | property | default | description                                                                                                |
-| --- | --- | --- |------------------------------------------------------------------------------------------------------------|
-| `skipGenerateSources` | `auto-valhalla.skipGenerateSources` | `false` | skip or disable generate-sources goal                                                                      |
-| `removeAnnotation` | `auto-valhalla.removeAnnotation` | `false` | remove the `@AutoValhalla` annotation from the generated source files.                                     |
-| `skipCompileGeneratedSources` | `auto-valhalla.skipCompileGeneratedSources` | `false` | skip or disable compile-generated-sources goal                                                             |
+| parameter | property | default | description                                                                                                 |
+| --- | --- | --- |-------------------------------------------------------------------------------------------------------------|
 | `compiler` | — | — | nested configuration block (`<compiler>`) containing compiler-plugin options such as `parameter` or `debug` |
+| `configOrigin`| `auto-valhalla.config-origin` | `NESTED_FIRST` | origin of compiler config. NESTED_FIRST, PROJECT_FIRST, NESTED_ONLY, PROJECT_ONLY                           |
+| `removeAnnotation` | `auto-valhalla.removeAnnotation` | `false` | remove the `@AutoValhalla` annotation from the generated source files.                                      |
+| `skipGenerateSources` | `auto-valhalla.skipGenerateSources` | `false` | skip or disable generate-sources goal                                                                       |
+| `skipCompileGeneratedSources` | `auto-valhalla.skipCompileGeneratedSources` | `false` | skip or disable compile-generated-sources goal                                                              |
 
-Compiler configuration options can be specified nested inside a `<compiler>` block, or
-automatically inherited from the project's `maven-compiler-plugin` configuration:
+Compiler configuration options can be specified
+  * nested inside a `<compiler>` block, or
+  * automatically inherited from the project's `maven-compiler-plugin` configuration
+
+Nested compiler configuration overrides project compiler configuration. See also `configOrigin`. Some configurations
+like `<release>` or `<enablePreview>` will always be forcibly set in particular ways when executing the plugin.
 
 ```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <release>17</release>
+    <debug>true</debug>
+    <parameters>true</parameters>
+  </configuration>
+</plugin>
 <plugin>
   <groupId>io.github.thunkware</groupId>
   <artifactId>auto-valhalla-maven-plugin</artifactId>
@@ -164,18 +181,20 @@ automatically inherited from the project's `maven-compiler-plugin` configuration
     </execution>
   </executions>
   <configuration>
-    <!-- nested compiler configuration. parameters can be any parameter accepted by maven-compiler-plugin -->
+    <!-- nested compiler configuration. parameters can be any parameter accepted by maven-compiler-plugin. -->
+    <!-- this configuration turns off debug but retains parameters=true from project's compiler configuration -->
     <compiler>
-      <debug>true</debug>
-      <parameters>true</parameters>
-      <compilerArgs>
-        <arg>-parameters</arg>
-        <arg>-Xlint:all</arg>
-      </compilerArgs>
+      <debug>false</debug>
     </compiler>
   </configuration>
 </plugin>
 ```
+
+### Includes/excludes
+
+Unlike auto-valhalla-agent, the maven plugin does not have `includes` or `excludes` option. If you use the plugin to
+edit and re-compile your source code, you should prefer the more robust and explicit option of applying or not applying
+the annotation.
 
 ## Example
 

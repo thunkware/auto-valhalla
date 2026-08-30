@@ -88,6 +88,10 @@ public final class MavenCompilerInput {
         return builder.compilerConfiguration;
     }
 
+    public boolean isTest() {
+        return builder.isTest;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -118,6 +122,7 @@ public final class MavenCompilerInput {
         private String proc;
         private boolean removeAnnotation;
         private PlexusConfiguration compilerConfiguration;
+        private boolean isTest;
 
         public Builder session(MavenSession session) {
             this.session = session;
@@ -201,6 +206,11 @@ public final class MavenCompilerInput {
 
         public Builder compilerConfiguration(PlexusConfiguration compilerConfiguration) {
             this.compilerConfiguration = compilerConfiguration;
+            return this;
+        }
+
+        public Builder isTest(boolean isTest) {
+            this.isTest = isTest;
             return this;
         }
 

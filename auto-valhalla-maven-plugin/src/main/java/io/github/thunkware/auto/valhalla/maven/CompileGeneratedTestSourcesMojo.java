@@ -5,10 +5,12 @@ import java.util.List;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 
 /** Compiles transformed sources from the project's test source roots. */
 @Mojo(name = "compile-generated-test-sources",
         defaultPhase = LifecyclePhase.PROCESS_TEST_CLASSES,
+        requiresDependencyResolution = ResolutionScope.TEST,
         threadSafe = true
 )
 public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo {
@@ -44,7 +46,8 @@ public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo
         return skipCompileGeneratedTestSources;
     }
 
-    protected void setSkipCompileGeneratedTestSources(boolean skipCompileGeneratedTestSources) {
-        this.skipCompileGeneratedTestSources = skipCompileGeneratedTestSources;
+    @Override
+    protected boolean isTest() {
+        return true;
     }
 }

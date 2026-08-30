@@ -1,15 +1,18 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_TEST_SOURCES;
+import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
 
 import java.io.File;
 import java.util.List;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 
 /** Generates transformed sources from the project's test source roots. */
 @Mojo(name = "generate-test-sources",
         defaultPhase = GENERATE_TEST_SOURCES,
+        requiresDependencyResolution = TEST,
         threadSafe = true)
 public class GenerateTestSourcesMojo extends GenerateSourcesMojo {
 
@@ -36,7 +39,8 @@ public class GenerateTestSourcesMojo extends GenerateSourcesMojo {
         return skipGenerateTestSources;
     }
 
-    protected void setSkipGenerateTestSources(boolean skipGenerateTestSources) {
-        this.skipGenerateTestSources = skipGenerateTestSources;
+    @Override
+    protected boolean isTest() {
+        return true;
     }
 }
