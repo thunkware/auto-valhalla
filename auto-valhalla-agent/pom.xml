@@ -92,7 +92,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>${maven-dependency-plugin.version}</version>
         <executions>
           <!-- Unpack the JDK 5 annotation classes into this jar so the agent is
                self-contained and can read @AutoValhalla at load time without the
@@ -121,7 +121,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
+        <version>${maven-compiler-plugin.version}</version>
         <configuration>
           <parameters>true</parameters>
           <debug>true</debug>
@@ -138,7 +138,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>3.5.0</version>
+        <version>${exec-maven-plugin.version}</version>
         <executions>
           <!-- Ensure the output directories exist; the JDK 5 compiler will not
                create them on its own. -->
@@ -199,7 +199,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.4.2</version>
+        <version>${maven-jar-plugin.version}</version>
         <configuration>
           <archive>
             <manifestEntries>
@@ -214,7 +214,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.6</version>
+        <version>${maven-surefire-plugin.version}</version>
         <configuration>
           <!-- allow the verifier to accept the preview-version class files
                produced by the rewriter -->
@@ -281,7 +281,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-enforcer-plugin</artifactId>
-            <version>3.6.3</version>
+            <version>${maven-enforcer-plugin.version}</version>
             <executions>
               <execution>
                 <id>require-java5-shim</id>
@@ -308,13 +308,13 @@ real JDK 5 installation.</message>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.13.0</version>
+            <version>${maven-compiler-plugin.version}</version>
             <configuration combine.self="override" />
           </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>3.5.0</version>
+            <version>${exec-maven-plugin.version}</version>
             <executions>
               <execution>
                 <id>compile-shim-jdk5</id>

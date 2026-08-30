@@ -21,7 +21,6 @@
 
   <properties>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
-    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -31,9 +30,14 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apiguardian</groupId>
+      <artifactId>apiguardian-api</artifactId>
+      <version>${apiguardian-api.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.10.2</version>
+      <version>${junit-jupiter.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -43,7 +47,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
+        <version>${maven-compiler-plugin.version}</version>
         <configuration>
           <release>8</release>
           <encoding>${project.build.sourceEncoding}</encoding>
@@ -80,7 +84,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.6.3</version>
+        <version>${maven-enforcer-plugin.version}</version>
         <executions>
           <execution>
             <id>enforce-java</id>

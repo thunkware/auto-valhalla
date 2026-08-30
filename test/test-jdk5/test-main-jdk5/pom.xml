@@ -43,7 +43,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>3.5.0</version>
+        <version>${exec-maven-plugin.version}</version>
         <executions>
           <execution>
             <id>compile-jdk5</id>
@@ -106,7 +106,7 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>3.5.0</version>
+            <version>${exec-maven-plugin.version}</version>
             <executions>
               <execution>
                 <id>compile-jdk5</id>

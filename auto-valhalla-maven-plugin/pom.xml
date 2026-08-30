@@ -129,7 +129,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
+        <version>${maven-compiler-plugin.version}</version>
         <configuration>
           <!-- The auto-valhalla processor is on this module's own classpath; it
                must not auto-run during the plugin's compilation. It only runs
@@ -140,7 +140,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.15.1</version>
+        <version>${maven-plugin-plugin.version}</version>
         <configuration>
           <goalPrefix>auto-valhalla</goalPrefix>
           <requiredJavaVersion>8</requiredJavaVersion>
@@ -149,7 +149,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.6</version>
+        <version>${maven-surefire-plugin.version}</version>
         <configuration>
           <systemPropertyVariables>
             <org.slf4j.simpleLogger.defaultLogLevel>info</org.slf4j.simpleLogger.defaultLogLevel>
