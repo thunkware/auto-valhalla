@@ -59,7 +59,9 @@ public final class AutoValhallaSourceTransformer {
         // run() prunes stale generated sources (an @AutoValhalla that was
         // removed leaves a leftover copy that would otherwise still be compiled
         // into META-INF/versions/28).
-        Selection selection = runner.run(input);
+        Selection selection = Boolean.getBoolean("auto-valhalla.always-run-processor") // undocumented flag
+                ? runner.run(input)
+                : runner.findGeneratedFiles(input);
         result.selected.addAll(selection.selectedTypes);
         result.generatedSources = selection.generatedSources;
         if (selection.generatedFiles.isEmpty()) {
