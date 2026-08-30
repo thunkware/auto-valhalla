@@ -1,5 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.relativeSubDir;
 import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
 import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
@@ -21,10 +22,10 @@ import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -33,8 +34,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
-import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /**
  * Runs only the {@code auto-valhalla} annotation processor: a
@@ -99,12 +98,16 @@ public class GenerateSourcesMojo extends AbstractMojo {
     @Inject
     private BuildPluginManager pluginManager;
 
+    private Supplier<ConfigEvaluator> configEvaluatorSupplier;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (isSkipped()) {
             info(getLog(), "skipping source processing");
             return;
         }
+        configEvaluatorSupplier = ConfigEvaluator.of(project, mavenCompiler, configOrigin);
+
         JarPluginChecker.checkOnce(session, project, getLog());
         JdkVersionValidator.validate(resolveExecutableOverride());
         List<String> compileClasspath;
@@ -124,7 +127,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
             MavenCompilerInput input = MavenCompilerInput.builder()
                     .sourceRoots(sourceRoots())
                     .buildDirectory(buildDirectory)
-                    .outputDirectory(outputDirectory())
+                    .outputDirectory(outputDirectory)
                     .generatedSourcesDirectory(generatedSourcesDirectory())
                     .executable(resolveExecutable())
                     .processorPath(processorPath)
@@ -190,56 +193,36 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String resolveExecutable() {
-        return Javac.resolveExecutable(resolveExecutableOverride(),
-                CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
+        return Javac.resolveExecutable(resolveExecutableOverride(), MIN_VALHALLA_JDK);
     }
 
     private String firstCompilerValue(String name) {
-        return ConfigEvaluator.of(mavenCompiler, compilerPluginConfiguration(), configOrigin)
-                .resolveString(name);
+        return configEvaluatorSupplier.get().resolveString(name);
     }
 
     private Boolean firstCompilerBoolean(String name) {
-        return ConfigEvaluator.of(mavenCompiler, compilerPluginConfiguration(), configOrigin)
-                .resolveBoolean(name);
-    }
-
-    private PlexusConfiguration compilerPluginConfiguration() {
-        Plugin plugin = project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
-        if (plugin == null) {
-            plugin = project.getPlugin("maven-compiler-plugin");
-        }
-        if (plugin != null && plugin.getConfiguration() instanceof Xpp3Dom) {
-            return new XmlPlexusConfiguration((Xpp3Dom) plugin.getConfiguration());
-        }
-        return null;
+        return configEvaluatorSupplier.get().resolveBoolean(name);
     }
 
     protected List<String> sourceRoots() {
         return project.getCompileSourceRoots();
     }
 
-    protected List<String> compileClasspath() throws DependencyResolutionRequiredException {
-        return project.getCompileClasspathElements();
-    }
-
     protected File generatedSourcesDirectory() {
         return new File(buildDirectory, "auto-valhalla-generated-sources");
     }
 
-    protected File outputDirectory() {
-        return outputDirectory;
+    /**
+     * The classpath the test source roots are selected against; overridden by
+     * the test goal to supply the test classpath so the selection pass can
+     * resolve test-only dependencies.
+     */
+    protected List<String> compileClasspath() throws DependencyResolutionRequiredException {
+        return project.getCompileClasspathElements();
     }
 
     protected boolean isSkipped() {
         return skipGenerateSources;
     }
 
-    protected void setSkipGenerateSources(boolean skipGenerateSources) {
-        this.skipGenerateSources = skipGenerateSources;
-    }
-
-    void setRemoveAnnotation(boolean removeAnnotation) {
-        this.removeAnnotation = removeAnnotation;
-    }
 }

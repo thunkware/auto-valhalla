@@ -21,11 +21,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -129,12 +129,15 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     @Inject
     private BuildPluginManager pluginManager;
 
+    private Supplier<ConfigEvaluator> configEvaluatorSupplier;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (isSkipped()) {
             info(getLog(), "skipping transformation");
             return;
         }
+
         JarPluginChecker.checkOnce(session, project, getLog());
         JdkVersionValidator.validate(resolveExecutableOverride());
         List<String> compileClasspath;
@@ -201,16 +204,13 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     }
 
     List<String> resolveCompilerArgs() {
-        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-
-        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
-        Boolean resolvedParameters = configEvaluator.resolveBoolean("parameters");
-        Boolean resolvedDebug = configEvaluator.resolveBoolean("debug");
-        String resolvedDebuglevel = configEvaluator.resolveString("debuglevel");
-        Boolean resolvedShowWarnings = configEvaluator.resolveBoolean("showWarnings");
-        Boolean resolvedShowDeprecation = configEvaluator.resolveBoolean("showDeprecation");
-        String resolvedCompilerArgument = configEvaluator.resolveString("compilerArgument");
-        List<String> resolvedCompilerArgs = configEvaluator.resolveCompilerArgs();
+        Boolean resolvedParameters = getConfigEvaluator().resolveBoolean("parameters");
+        Boolean resolvedDebug = getConfigEvaluator().resolveBoolean("debug");
+        String resolvedDebuglevel = getConfigEvaluator().resolveString("debuglevel");
+        Boolean resolvedShowWarnings = getConfigEvaluator().resolveBoolean("showWarnings");
+        Boolean resolvedShowDeprecation = getConfigEvaluator().resolveBoolean("showDeprecation");
+        String resolvedCompilerArgument = getConfigEvaluator().resolveString("compilerArgument");
+        List<String> resolvedCompilerArgs = getConfigEvaluator().resolveCompilerArgs();
 
         List<String> args = new ArrayList<>();
         if (asBoolean(resolvedParameters)) {
@@ -257,17 +257,20 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return value;
     }
 
+    private ConfigEvaluator getConfigEvaluator() {
+        if (configEvaluatorSupplier == null) {
+            configEvaluatorSupplier = ConfigEvaluator.of(project, mavenCompiler, configOrigin);
+        }
+        return configEvaluatorSupplier.get();
+    }
+
     String resolveEncoding() {
-        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
-        String encoding = configEvaluator.resolveString("encoding");
+        String encoding = getConfigEvaluator().resolveString("encoding");
         return normalizeEncoding(encoding);
     }
 
     String resolveRelease() {
-        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
-        String release = configEvaluator.resolveString("release");
+        String release = getConfigEvaluator().resolveString("release");
         if (release != null) {
             return release;
         }
@@ -284,30 +287,13 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     }
 
     boolean resolveEnablePreview() {
-        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        ConfigEvaluator configEvaluator = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
-        Boolean preview = configEvaluator.resolveBoolean("enablePreview");
+        Boolean preview = getConfigEvaluator().resolveBoolean("enablePreview");
         if (preview != null) {
             return preview;
         }
         String property = project.getProperties().getProperty("maven.compiler.enablePreview");
         return isNotBlank(property) && Boolean.parseBoolean(trim(property));
     }
-
-    protected PlexusConfiguration getCompilerPluginConfiguration() {
-        if (project == null) {
-            return null;
-        }
-        Plugin plugin = project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
-        if (plugin == null) {
-            plugin = project.getPlugin("maven-compiler-plugin");
-        }
-        if (plugin != null && plugin.getConfiguration() instanceof Xpp3Dom) {
-            return new XmlPlexusConfiguration((Xpp3Dom) plugin.getConfiguration());
-        }
-        return null;
-    }
-
 
     void setProject(MavenProject project) {
         this.project = project;
@@ -321,22 +307,16 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         this.mavenCompiler = mavenCompiler == null ? null : new XmlPlexusConfiguration(mavenCompiler);
     }
 
-    protected String resolveExecutableOverride() {
-        PlexusConfiguration compilerConfig = getCompilerPluginConfiguration();
-        return ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin)
-                .resolveString("executable");
+    private String resolveExecutableOverride() {
+        return getConfigEvaluator().resolveString("executable");
     }
 
-    protected String resolveExecutable() {
+    private String resolveExecutable() {
         return Javac.resolveExecutable(resolveExecutableOverride(), MIN_VALHALLA_JDK);
     }
 
     protected List<String> sourceRoots() {
         return project.getCompileSourceRoots();
-    }
-
-    protected List<String> compileClasspath() throws DependencyResolutionRequiredException {
-        return project.getCompileClasspathElements();
     }
 
     protected File generatedSourcesDirectory() {
@@ -347,27 +327,17 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return outputDirectory;
     }
 
+    /**
+     * The classpath the generated sources are selected and compiled against;
+     * overridden by the test goals to supply the test classpath so generated
+     * test value classes can see JUnit and {@code target/test-classes}.
+     */
+    protected List<String> compileClasspath() throws DependencyResolutionRequiredException {
+        return project.getCompileClasspathElements();
+    }
+
     protected boolean isSkipped() {
         return skipCompileGeneratedSources;
     }
 
-    protected void setSkipCompileGeneratedSources(boolean skipCompileGeneratedSources) {
-        this.skipCompileGeneratedSources = skipCompileGeneratedSources;
-    }
-
-    /**
-     * The Java feature version of the current JVM (28 for JDK 28), parsed from
-     * the specification version so it works on every JDK.
-     */
-    public static int jdkFeature() {
-        String spec = System.getProperty("java.specification.version", "1.8");
-        if (spec.startsWith("1.")) {
-            spec = spec.substring(2);
-        }
-        try {
-            return Integer.parseInt(spec);
-        } catch (NumberFormatException e) {
-            return 8;
-        }
-    }
 }

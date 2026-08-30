@@ -4,7 +4,6 @@ import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMoj
 import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 
-import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import org.apache.maven.plugin.MojoFailureException;
 
@@ -26,16 +25,31 @@ public final class JdkVersionValidator {
         // deterministic and don't change with the caller's environment.
         boolean hasValhallaCompiler = isNotBlank(executableOverride)
                 || Javac.hasValhallaCompiler(null, MIN_VALHALLA_JDK);
-        validate(CompileGeneratedSourcesMojo.jdkFeature(), hasValhallaCompiler);
+        validate(jdkFeature(), hasValhallaCompiler);
     }
 
     /**
      * Validates against an explicitly-configured {@code java<N>.home} only;
      * the ambient environment is deliberately not consulted.
      */
-    public static void validate(int feature, String java28Home)
-            throws MojoFailureException {
+    static void validate(int feature, String java28Home) throws MojoFailureException {
         validate(feature, isNotBlank(java28Home));
+    }
+
+    /**
+     * The Java feature version of the current JVM (28 for JDK 28), parsed from
+     * the specification version so it works on every JDK.
+     */
+    private static int jdkFeature() {
+        String spec = System.getProperty("java.specification.version", "1.8");
+        if (spec.startsWith("1.")) {
+            spec = spec.substring(2);
+        }
+        try {
+            return Integer.parseInt(spec);
+        } catch (NumberFormatException e) {
+            return 8;
+        }
     }
 
     private static void validate(int feature, boolean hasValhallaCompiler)

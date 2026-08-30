@@ -62,34 +62,32 @@ public final class Javac {
             return override.trim();
         }
 
-        Home home = resolveScannedHome(preferredVersion, properties, env);
+        String home = resolveScannedHome(preferredVersion, properties, env);
         String javac = "bin/javac";
         if (home == null) {
             return new File(System.getProperty("java.home", "/"), javac).getAbsolutePath();
         }
-        return new File(home.path.trim(), javac).getAbsolutePath();
+        return new File(home.trim(), javac).getAbsolutePath();
     }
 
-    private static Home resolveScannedHome(int preferredVersion, Properties properties, Map<String, String> env) {
-        Map<Integer, List<Home>> homes = new TreeMap<>();
+    private static String resolveScannedHome(int preferredVersion, Properties properties, Map<String, String> env) {
+        Map<Integer, List<String>> homes = new TreeMap<>();
         for (String name : properties.stringPropertyNames()) {
             int version = numberedVersion(name, "java", ".home");
             if (version >= MIN_SCAN_VERSION) {
-                addHome(homes, version, properties.getProperty(name),
-                        "system property " + name);
+                addHome(homes, version, properties.getProperty(name));
             }
         }
         for (Map.Entry<String, String> entry : env.entrySet()) {
             int version = numberedVersion(entry.getKey(), "JAVA", "_HOME");
             if (version >= MIN_SCAN_VERSION) {
-                addHome(homes, version, entry.getValue(),
-                        "environment variable " + entry.getKey());
+                addHome(homes, version, entry.getValue());
             }
         }
 
         for (int version : versionsInPreferenceOrder(homes, preferredVersion)) {
-            for (Home home : homes.get(version)) {
-                File executable = new File(home.path.trim(), "bin/javac");
+            for (String home : homes.get(version)) {
+                File executable = new File(home.trim(), "bin/javac");
                 if (!executable.isFile()) {
                     continue;
                 }
@@ -114,16 +112,14 @@ public final class Javac {
         }
     }
 
-    private static void addHome(Map<Integer, List<Home>> homes, int version,
-                                String path, String source) {
+    private static void addHome(Map<Integer, List<String>> homes, int version, String path) {
         if (path != null && !path.trim().isEmpty()) {
             homes.computeIfAbsent(version, ignored -> new ArrayList<>())
-                    .add(new Home(path, source));
+                    .add(path);
         }
     }
 
-    private static List<Integer> versionsInPreferenceOrder(Map<Integer, List<Home>> homes,
-                                                           int preferredVersion) {
+    private static List<Integer> versionsInPreferenceOrder(Map<Integer, List<String>> homes, int preferredVersion) {
         List<Integer> versions = new ArrayList<>();
         if (homes.containsKey(preferredVersion)) {
             versions.add(preferredVersion);
@@ -134,17 +130,6 @@ public final class Javac {
             }
         }
         return versions;
-    }
-
-    private static final class Home {
-
-        private final String path;
-        private final String source;
-
-        private Home(String path, String source) {
-            this.path = path;
-            this.source = source;
-        }
     }
 
     static final class ProcessResult {

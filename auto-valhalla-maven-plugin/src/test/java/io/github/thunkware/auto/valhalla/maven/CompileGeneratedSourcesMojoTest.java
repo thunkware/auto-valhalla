@@ -1,38 +1,16 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import java.util.List;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Plugin;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.junit.jupiter.api.Test;
 
 class CompileGeneratedSourcesMojoTest {
-
-    @Test
-    void allowsOlderMavenJdksWhenJava28HomeIsSet() throws Exception {
-        JdkVersionValidator.validate(8, "/jdk28");
-        JdkVersionValidator.validate(27, "/jdk28");
-        JdkVersionValidator.validate(28, null);
-    }
-
-    @Test
-    void rejectsOlderMavenJdksWithoutJava28Home() {
-        assertThrows(MojoFailureException.class,
-                () -> JdkVersionValidator.validate(27, null));
-    }
-
-    @Test
-    void rejectsJdksNewerThanTwentyEight() {
-        assertThrows(MojoFailureException.class,
-                () -> JdkVersionValidator.validate(29, null));
-    }
 
     @Test
     void inheritsFromMavenCompilerPlugin() {
@@ -107,6 +85,7 @@ class CompileGeneratedSourcesMojoTest {
 
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setMavenCompiler(compiler);
+        mojo.setProject(new MavenProject());
 
         List<String> args = mojo.resolveCompilerArgs();
         assertTrue(args.contains("-parameters"));

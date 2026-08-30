@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,13 +70,12 @@ public class AutoValhallaProcessor extends AbstractProcessor {
      * to its {@code javac -proc:only} selection pass.
      */
     public static String processorPath() {
-        if (AutoValhallaProcessor.class.getProtectionDomain() == null
-                || AutoValhallaProcessor.class.getProtectionDomain().getCodeSource() == null) {
+        ProtectionDomain protectionDomain = AutoValhallaProcessor.class.getProtectionDomain();
+        if (protectionDomain == null || protectionDomain.getCodeSource() == null) {
             return null;
         }
         try {
-            URI uri = AutoValhallaProcessor.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI();
+            URI uri = protectionDomain.getCodeSource().getLocation().toURI();
             return Paths.get(uri).toFile().getAbsolutePath();
         } catch (Exception e) {
             return null;
@@ -195,7 +195,7 @@ public class AutoValhallaProcessor extends AbstractProcessor {
                 long start = trees.getSourcePositions().getStartPosition(selected.unit, annotation);
                 long end = trees.getSourcePositions().getEndPosition(selected.unit, annotation);
                 if (start >= 0 && end >= 0 && start < end && end <= source.length()) {
-                    ranges.add(new int[] {(int) start, (int) end});
+                    ranges.add(new int[]{Math.toIntExact(start), Math.toIntExact(end)});
                 }
             }
         }

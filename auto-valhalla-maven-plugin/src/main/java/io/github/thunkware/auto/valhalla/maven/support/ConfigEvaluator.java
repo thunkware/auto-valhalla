@@ -7,7 +7,12 @@ import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /** Evaluates nested compiler configuration and project plugin configuration. */
 public final class ConfigEvaluator {
@@ -22,12 +27,42 @@ public final class ConfigEvaluator {
         return value.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
     }
 
-    public static ConfigEvaluator of(
+    public static Supplier<ConfigEvaluator> of(
+            MavenProject project,
+            PlexusConfiguration mavenCompiler,
+            ConfigOrigin configOrigin) {
+        ConfigEvaluator[] ref = new ConfigEvaluator[1];
+        return () -> {
+            // not thread safe but that's ok.
+            if (ref[0] != null) {
+                return ref[0];
+            }
+            PlexusConfiguration compilerConfig = getCompilerPluginConfiguration(project);
+            ref[0] = ConfigEvaluator.of(mavenCompiler, compilerConfig, configOrigin);
+            return ref[0];
+        };
+    }
+
+    private static PlexusConfiguration getCompilerPluginConfiguration(MavenProject project) {
+        if (project == null) {
+            return null;
+        }
+        Plugin plugin = project.getPlugin("org.apache.maven.plugins:maven-compiler-plugin");
+        if (plugin == null) {
+            plugin = project.getPlugin("maven-compiler-plugin");
+        }
+        if (plugin != null && plugin.getConfiguration() instanceof Xpp3Dom) {
+            return new XmlPlexusConfiguration((Xpp3Dom) plugin.getConfiguration());
+        }
+        return null;
+    }
+
+    static ConfigEvaluator of(
             PlexusConfiguration nested, PlexusConfiguration project, ConfigOrigin origin) {
         return new ConfigEvaluator(nested, project, origin);
     }
 
-    public static ConfigEvaluator of(
+    static ConfigEvaluator of(
             PlexusConfiguration nested, PlexusConfiguration project, String origin) {
         return of(nested, project, parseOrigin(origin));
     }
