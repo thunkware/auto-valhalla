@@ -116,7 +116,7 @@ public final class AnnotationProcessorRunner {
         options.add("-processor");
         options.add(AutoValhallaProcessor.class.getName());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
-                .outputDirectory(new File(input.buildDirectory(), "auto-valhalla-selection-classes"))
+                // do not set outputDirectory. otherwise later default-compile shows irrelevant warnings
                 .compilerArgs(options.subList(1, options.size()))
                 .release(input.release())
                 .enablePreview(input.enablePreview())
