@@ -1,5 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import static java.util.Collections.singletonList;
 
@@ -71,22 +72,17 @@ public final class AutoValhallaSourceTransformer {
         return withMavenCompilerPlugin(input, selection, result);
     }
 
-    private static File getVersionsDirectory(MavenCompilerInput input) {
-        return new File(input.outputDirectory(), "META-INF/versions/" + CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK);
-    }
-
-    private Result withMavenCompilerPlugin(
-            MavenCompilerInput input, Selection selection, Result result) throws IOException {
-        File versionsDirectory = getVersionsDirectory(input);
+    private Result withMavenCompilerPlugin(MavenCompilerInput input, Selection selection, Result result) throws IOException {
+        result.versionsDirectory = new File(input.outputDirectory(), "META-INF/versions/" + MIN_VALHALLA_JDK);
         int generatedCount = 0;
         for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles.entrySet()) {
             generatedCount += entry.getValue().size();
         }
-        Files.createDirectories(versionsDirectory.toPath());
+        Files.createDirectories(result.versionsDirectory.toPath());
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 .sourceRoots(singletonList(selection.generatedSources.getAbsolutePath()))
-                .outputDirectory(versionsDirectory)
-                .release(Integer.toString(CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK))
+                .outputDirectory(result.versionsDirectory)
+                .release(Integer.toString(MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("none")
                 .build();

@@ -1,6 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
-import io.github.thunkware.auto.valhalla.maven.support.Utils;
+import io.github.thunkware.auto.valhalla.maven.support.Failable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -49,7 +49,7 @@ final class MavenCompilerLogInterceptor {
                 } catch (Exception e) {
                     interceptorLog.debug(e);
                     if (sharedField != null && sharedMavenPluginManager != null) {
-                        Utils.run(() -> set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager));
+                        Failable.run(() -> set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager));
                     }
                     sharedField = null;
                     sharedMavenPluginManager = null;
@@ -113,7 +113,7 @@ final class MavenCompilerLogInterceptor {
     public void cleanUp() {
         THIS_INTERCEPTOR.remove();
         if (mojo != null && oldMojoLog != null) {
-            Utils.run(() -> mojo.setLog(oldMojoLog),
+            Failable.run(() -> mojo.setLog(oldMojoLog),
                     interceptorLog::debug);
         }
 
@@ -124,7 +124,7 @@ final class MavenCompilerLogInterceptor {
             installed = false;
             --sharedInstallCount;
             if (sharedInstallCount == 0 && sharedField != null && sharedMavenPluginManager != null) {
-                Utils.run(() -> set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager),
+                Failable.run(() -> set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager),
                         interceptorLog::debug);
                 sharedField = null;
                 sharedMavenPluginManager = null;

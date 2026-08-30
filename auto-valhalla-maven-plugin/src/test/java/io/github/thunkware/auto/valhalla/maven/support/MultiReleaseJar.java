@@ -70,7 +70,7 @@ public final class MultiReleaseJar {
         try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(Files.newInputStream(jar.toPath())))) {
             ZipEntry entry;
             while ((entry = zin.getNextEntry()) != null) {
-                byte[] out = Utils.toByteArray(zin);
+                byte[] out = FileTool.toByteArray(zin);
                 entries.put(entry.getName(), new Content(entry.getMethod(), out));
             }
         }

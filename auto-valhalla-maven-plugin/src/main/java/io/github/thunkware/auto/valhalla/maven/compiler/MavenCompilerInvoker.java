@@ -1,7 +1,12 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
+import static io.github.thunkware.auto.valhalla.maven.support.FileTool.walk;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
+
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.support.Failable;
 import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.io.File;
 import java.nio.file.Files;
@@ -133,8 +138,8 @@ public final class MavenCompilerInvoker {
 
         Xpp3Dom args = new Xpp3Dom("compilerArgs");
         for (String value : input.compilerArgs()) {
-            if (Utils.isNotBlank(value)) {
-                child(args, "arg", Utils.trim(value));
+            if (isNotBlank(value)) {
+                child(args, "arg", trim(value));
             }
         }
         root.addChild(args);
@@ -156,8 +161,8 @@ public final class MavenCompilerInvoker {
         }
         Xpp3Dom compilePath = new Xpp3Dom("compilePath");
         for (String element : elements) {
-            if (Utils.isNotBlank(element)) {
-                child(compilePath, "path", Utils.trim(element));
+            if (isNotBlank(element)) {
+                child(compilePath, "path", trim(element));
             }
         }
         root.addChild(compilePath);
@@ -174,13 +179,13 @@ public final class MavenCompilerInvoker {
             return;
         }
         List<Path> files = new ArrayList<>();
-        Utils.run(() -> files.addAll(Utils.walk(dir.toPath())),
+        Failable.run(() -> walk(dir.toPath()).forEach(files::add),
                 e -> log.debug("could not delete " + dir, e));
 
         files.stream()
                 .sorted(Comparator.reverseOrder())
                 .forEach(path ->
-                        Utils.run(() -> Files.deleteIfExists(path),
+                        Failable.run(() -> Files.deleteIfExists(path),
                                 e -> log.debug("could not delete " + path, e)));
     }
 

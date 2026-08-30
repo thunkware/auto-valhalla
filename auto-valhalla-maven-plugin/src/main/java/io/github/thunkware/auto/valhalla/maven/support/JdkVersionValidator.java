@@ -2,7 +2,7 @@ package io.github.thunkware.auto.valhalla.maven.support;
 
 import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_MAVEN_JDK;
 import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 
 import io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo;
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
@@ -20,13 +20,15 @@ public final class JdkVersionValidator {
         // The environment scan (java<N>.home / JAVA<N>_HOME) belongs here, to
         // the entry point the mojos use, so the (int, String) forms below stay
         // deterministic and don't change with the caller's environment.
-        validate(CompileGeneratedSourcesMojo.jdkFeature(),
-                isNotBlank(executableOverride)
-                        || Javac.hasValhallaCompiler(null, MIN_VALHALLA_JDK));
+        boolean hasValhallaCompiler = isNotBlank(executableOverride)
+                || Javac.hasValhallaCompiler(null, MIN_VALHALLA_JDK);
+        validate(CompileGeneratedSourcesMojo.jdkFeature(), hasValhallaCompiler);
     }
 
-    /** Validates against an explicitly-configured {@code java<N>.home} only;
-     *  the ambient environment is deliberately not consulted. */
+    /**
+     * Validates against an explicitly-configured {@code java<N>.home} only;
+     * the ambient environment is deliberately not consulted.
+     */
     public static void validate(int feature, String java28Home)
             throws MojoFailureException {
         validate(feature, isNotBlank(java28Home));

@@ -1,10 +1,10 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.plural;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 import static io.github.thunkware.auto.valhalla.maven.support.Utils.asBoolean;
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.plural;
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.trim;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.PROCESS_CLASSES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
@@ -180,11 +182,23 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
         int count = result.convertedCount();
         if (count > 0) {
+            String simpleVersionsDir = relativeSubDir(buildDirectory, result.versionsDirectory);
             getLog().info("auto-valhalla: compiled " + count
-                    + " class" + plural(count) + " into value classes under META-INF/versions/" + MIN_VALHALLA_JDK);
+                    + " generated source file" + plural(count) + " to " + simpleVersionsDir);
         } else {
-            getLog().info("auto-valhalla: no classes converted into value classes");
+            getLog().info("auto-valhalla: compiled no generated source files");
         }
+    }
+
+    static String relativeSubDir(File buildDirectory, File subDir) {
+        File parentDir = buildDirectory.getParentFile() == null ? buildDirectory : buildDirectory.getParentFile();
+        return removeFirst(subDir.toString(), parentDir + File.separator);
+    }
+
+    private static String removeFirst(String input, String substring) {
+        return Pattern.compile(substring, Pattern.LITERAL)
+                .matcher(input)
+                .replaceFirst("");
     }
 
     List<String> resolveCompilerArgs() {

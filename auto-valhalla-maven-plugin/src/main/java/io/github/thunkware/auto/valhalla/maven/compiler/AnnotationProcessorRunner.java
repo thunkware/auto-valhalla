@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
+import static io.github.thunkware.auto.valhalla.maven.support.FileTool.walkJavaFiles;
 import static java.util.Comparator.comparing;
 
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
@@ -132,8 +133,7 @@ public final class AnnotationProcessorRunner {
 
     private static void collectGeneratedFiles(File generatedDir, Selection selection)
             throws IOException {
-        Utils.walkJavaFiles(generatedDir.toPath())
-                .stream()
+        walkJavaFiles(generatedDir.toPath())
                 .sorted()
                 .forEach(path -> {
                     String rel = generatedDir.toPath().relativize(path).toString();
@@ -149,7 +149,7 @@ public final class AnnotationProcessorRunner {
             return mtimes;
         }
 
-        Utils.walkJavaFiles(dir.toPath())
+        walkJavaFiles(dir.toPath())
                 .forEach(path -> mtimes.put(path.toFile(), path.toFile().lastModified()));
         return mtimes;
     }
@@ -160,8 +160,7 @@ public final class AnnotationProcessorRunner {
             return;
         }
         List<Path> stale = new ArrayList<>();
-        Utils.walkJavaFiles(generatedDir.toPath())
-                .stream()
+        walkJavaFiles(generatedDir.toPath())
                 .filter(path -> before.containsKey(path.toFile()))
                 .filter(path -> path.toFile().lastModified() == before.get(path.toFile()))
                 .forEach(stale::add);
@@ -179,8 +178,7 @@ public final class AnnotationProcessorRunner {
             if (!root.isDirectory()) {
                 continue;
             }
-            Utils.walkJavaFiles(root.toPath())
-                    .stream()
+            walkJavaFiles(root.toPath())
                     .filter(p -> !isMetaFile(p.getFileName().toString()))
                     .forEach(p -> files.add(p.toFile()));
         }

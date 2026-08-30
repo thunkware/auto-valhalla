@@ -1,5 +1,10 @@
 package io.github.thunkware.auto.valhalla.maven;
 
+import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.relativeSubDir;
+import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.plural;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_SOURCES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
@@ -11,7 +16,6 @@ import io.github.thunkware.auto.valhalla.maven.support.ConfigEvaluator;
 import io.github.thunkware.auto.valhalla.maven.support.ConfigOrigin;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
-import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
 import java.io.IOException;
@@ -143,15 +147,14 @@ public class GenerateSourcesMojo extends AbstractMojo {
         if (selection.selectedTypes.isEmpty()) {
             getLog().info("auto-valhalla: no @AutoValhalla-annotated classes found");
         } else {
+            String simpleVersionsDir = relativeSubDir(buildDirectory, selection.generatedSources);
             int count = selection.selectedTypes.size();
-            getLog().info("auto-valhalla: generated sources for " + count
-                    + " @AutoValhalla-annotated class into "
-                    + selection.generatedSources.getAbsolutePath());
+            getLog().info("auto-valhalla: generated " + count + " source file" + plural(count) + " to " + simpleVersionsDir);
         }
     }
 
     private String resolveEncoding() {
-        return Utils.normalizeEncoding(firstCompilerValue("encoding"));
+        return normalizeEncoding(firstCompilerValue("encoding"));
     }
 
     private String resolveRelease() {
@@ -164,11 +167,11 @@ public class GenerateSourcesMojo extends AbstractMojo {
         // through properties); mirror that so the selection pass compiles at the
         // same level as the base classes.
         release = project.getProperties().getProperty("maven.compiler.release");
-        if (Utils.isNotBlank(release)) {
+        if (isNotBlank(release)) {
             return release;
         }
         String target = project.getProperties().getProperty("maven.compiler.target");
-        return Utils.isNotBlank(target) ? Utils.trim(target) : null;
+        return isNotBlank(target) ? trim(target) : null;
     }
 
     private boolean resolveEnablePreview() {
@@ -177,7 +180,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
             return preview;
         }
         String property = project.getProperties().getProperty("maven.compiler.enablePreview");
-        return Utils.isNotBlank(property) && Boolean.parseBoolean(Utils.trim(property));
+        return isNotBlank(property) && Boolean.parseBoolean(trim(property));
     }
 
     private String resolveExecutableOverride() {

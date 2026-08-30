@@ -13,6 +13,7 @@ public final class Result {
 
     public final List<String> selected = new ArrayList<>();
     public File generatedSources;
+    public File versionsDirectory;
     public int converted;
 
     public int convertedCount() {

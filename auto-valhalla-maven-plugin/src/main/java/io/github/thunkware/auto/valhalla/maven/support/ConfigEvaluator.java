@@ -1,7 +1,8 @@
 package io.github.thunkware.auto.valhalla.maven.support;
 
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.isNotBlank;
-import static io.github.thunkware.auto.valhalla.maven.support.Utils.trim;
+
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
+import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 
 import java.util.ArrayList;
 import java.util.Collections;
