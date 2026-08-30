@@ -1,5 +1,8 @@
 package io.github.thunkware.auto.valhalla.maven.support;
 
+import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
+import static io.github.thunkware.auto.valhalla.maven.support.LogTool.warn;
+
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginManagement;
@@ -45,15 +48,15 @@ public final class JarPluginChecker {
             }
         }
         if (jarPlugin == null || jarPlugin.getVersion() == null) {
-            log.info("auto-valhalla: could not determine the maven-jar-plugin "
+            info(log, "could not determine the maven-jar-plugin "
                     + "version; cannot check whether it handles multi-release jars");
             return;
         }
         if (versionTooLow(jarPlugin.getVersion())) {
-            log.warn("auto-valhalla: maven-jar-plugin " + jarPlugin.getVersion()
-                    + " is in use; versions before 3.4.0 do not turn a jar with "
-                    + "META-INF/versions entries into a multi-release jar on their "
-                    + "own. Consider upgrading maven-jar-plugin to 3.4.0 or newer.");
+            warn(log, "maven-jar-plugin {} is in use; versions before 3.4.0 do not "
+                    + "turn a jar with META-INF/versions entries into a multi-release "
+                    + "jar on their own. Consider upgrading maven-jar-plugin to 3.4.0 "
+                    + "or newer.", jarPlugin.getVersion());
         }
     }
 

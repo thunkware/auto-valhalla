@@ -1,13 +1,14 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import static io.github.thunkware.auto.valhalla.maven.support.FileTool.walk;
+import static io.github.thunkware.auto.valhalla.maven.support.LogTool.debug;
+import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.support.Failable;
-import io.github.thunkware.auto.valhalla.maven.support.Utils;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,13 +79,13 @@ public final class MavenCompilerInvoker {
             // sources permanently stale.
             deleteRecursively(input.outputDirectory());
 
-            log.info("auto-valhalla: Running " + ARTIFACT_ID);
+            info(log, "Running {}", ARTIFACT_ID);
             logInterceptor.installLogInterceptor(pluginManager);
             pluginManager.executeMojo(session, execution);
 
             return new ProcessResult(0, "");
         } catch (Exception e) {
-            log.debug(e);
+            debug(log, e);
             return new ProcessResult(1, e.getMessage() == null ? e.toString() : e.getMessage());
 
         } finally {
@@ -143,9 +144,7 @@ public final class MavenCompilerInvoker {
             }
         }
         root.addChild(args);
-        if (log.isDebugEnabled()) {
-            log.debug("maven-compiler configuration: " + root);
-        }
+        debug(log, "maven-compiler configuration: {}", root);
         return root;
     }
 
@@ -180,13 +179,13 @@ public final class MavenCompilerInvoker {
         }
         List<Path> files = new ArrayList<>();
         Failable.run(() -> walk(dir.toPath()).forEach(files::add),
-                e -> log.debug("could not delete " + dir, e));
+                e -> debug(log, "could not delete {}", dir, e));
 
         files.stream()
                 .sorted(Comparator.reverseOrder())
                 .forEach(path ->
                         Failable.run(() -> Files.deleteIfExists(path),
-                                e -> log.debug("could not delete " + path, e)));
+                                e -> debug(log, "could not delete {}", path, e)));
     }
 
     private static void child(Xpp3Dom parent, String name, String value) {

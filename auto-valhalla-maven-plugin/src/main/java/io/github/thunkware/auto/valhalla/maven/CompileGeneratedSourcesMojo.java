@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.plural;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
@@ -133,7 +134,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (isSkipped()) {
-            getLog().info("auto-valhalla: skipping transformation");
+            info(getLog(), "skipping transformation");
             return;
         }
         JarPluginChecker.checkOnce(session, project, getLog());
@@ -183,10 +184,10 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         int count = result.convertedCount();
         if (count > 0) {
             String simpleVersionsDir = relativeSubDir(buildDirectory, result.versionsDirectory);
-            getLog().info("auto-valhalla: compiled " + count
-                    + " generated source file" + plural(count) + " to " + simpleVersionsDir);
+            info(getLog(), "compiled {} generated source file{} to {}",
+                    count, plural(count), simpleVersionsDir);
         } else {
-            getLog().info("auto-valhalla: compiled no generated source files");
+            info(getLog(), "compiled no generated source files");
         }
     }
 

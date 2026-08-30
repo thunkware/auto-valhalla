@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
+import static io.github.thunkware.auto.valhalla.maven.support.LogTool.debug;
+
 import io.github.thunkware.auto.valhalla.maven.support.Failable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -47,7 +49,7 @@ final class MavenCompilerLogInterceptor {
                     MavenPluginManager newMavenPluginManager = (MavenPluginManager) Proxy.newProxyInstance(MavenPluginManager.class.getClassLoader(), ifaces, handler);
                     set(sharedField, buildPluginManager, newMavenPluginManager);
                 } catch (Exception e) {
-                    interceptorLog.debug(e);
+                    debug(interceptorLog, e);
                     if (sharedField != null && sharedMavenPluginManager != null) {
                         Failable.run(() -> set(sharedField, sharedBuildPluginManager, sharedMavenPluginManager));
                     }

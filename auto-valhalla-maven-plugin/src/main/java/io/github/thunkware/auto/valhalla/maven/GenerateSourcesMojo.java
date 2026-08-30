@@ -2,6 +2,7 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.relativeSubDir;
 import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.plural;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
@@ -101,7 +102,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (isSkipped()) {
-            getLog().info("auto-valhalla: skipping source processing");
+            info(getLog(), "skipping source processing");
             return;
         }
         JarPluginChecker.checkOnce(session, project, getLog());
@@ -145,11 +146,12 @@ public class GenerateSourcesMojo extends AbstractMojo {
         }
 
         if (selection.selectedTypes.isEmpty()) {
-            getLog().info("auto-valhalla: no @AutoValhalla-annotated classes found");
+            info(getLog(), "no @AutoValhalla-annotated classes found");
         } else {
             String simpleVersionsDir = relativeSubDir(buildDirectory, selection.generatedSources);
             int count = selection.selectedTypes.size();
-            getLog().info("auto-valhalla: generated " + count + " source file" + plural(count) + " to " + simpleVersionsDir);
+            info(getLog(), "generated {} source file{} to {}",
+                    count, plural(count), simpleVersionsDir);
         }
     }
 
