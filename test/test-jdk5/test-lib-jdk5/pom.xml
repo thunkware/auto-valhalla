@@ -46,6 +46,7 @@
           <skip>true</skip>
         </configuration>
       </plugin>
+      <!-- run `source jdk-setup.sh` before compiling -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
@@ -81,42 +82,4 @@
     </plugins>
   </build>
 
-  <profiles>
-    <!-- When JAVA5_HOME is absent, fall back to the modern compiler. -->
-    <profile>
-      <id>skip-jdk5</id>
-      <activation>
-        <property>
-          <name>!env.JAVA5_HOME</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven-compiler-plugin.version}</version>
-            <configuration combine.self="override" />
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>${exec-maven-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>compile-jdk5</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <skip>true</skip>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>

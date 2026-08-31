@@ -37,6 +37,7 @@
 
   <build>
     <plugins>
+      <!-- run `source jdk-setup.sh` before compiling -->
       <!-- The application source lives under src/main/jdk5 (outside Maven's
            default source root), so the JDK 28 compiler finds nothing to do;
            it is compiled to Java 5 bytecode by the exec step below. -->
@@ -90,48 +91,4 @@
     </plugins>
   </build>
 
-  <profiles>
-    <!-- When JAVA5_HOME is absent, skip the legacy compile and runtime
-         verification steps; the JDK 5-specific source is outside the normal
-         Maven source root. -->
-    <profile>
-      <id>skip-jdk5</id>
-      <activation>
-        <property>
-          <name>!env.JAVA5_HOME</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>${exec-maven-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>compile-jdk5</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <skip>true</skip>
-                </configuration>
-              </execution>
-              <execution>
-                <id>run-on-jdk5</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <skip>true</skip>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
