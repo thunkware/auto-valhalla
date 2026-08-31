@@ -2,8 +2,6 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import java.io.File;
 import java.util.List;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;

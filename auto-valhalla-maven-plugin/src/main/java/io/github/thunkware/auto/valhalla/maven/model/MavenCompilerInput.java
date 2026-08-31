@@ -97,6 +97,11 @@ public final class MavenCompilerInput {
         return builder.isTest;
     }
 
+    @Override
+    public String toString() {
+        return builder.toString();
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -255,6 +260,27 @@ public final class MavenCompilerInput {
 
         private <T> List<T> copyIfNotNull(List<T> list) {
             return list == null ? null : new ArrayList<>(list);
+        }
+
+        @Override
+        public String toString() {
+            return "Input{" +
+                    ", sourceRoots=" + sourceRoots +
+                    ", outputDirectory=" + outputDirectory +
+                    ", buildDirectory=" + buildDirectory +
+                    ", generatedSourcesDirectory=" + generatedSourcesDirectory +
+                    ", executable='" + executable + '\'' +
+                    ", processorPath='" + processorPath + '\'' +
+                    ", compileClasspath=" + compileClasspath +
+                    ", encoding='" + encoding + '\'' +
+                    ", compilerArgs=" + compilerArgs +
+                    ", release='" + release + '\'' +
+                    ", enablePreview=" + enablePreview +
+                    ", proc='" + proc + '\'' +
+                    ", removeAnnotation=" + removeAnnotation +
+                    ", compilerConfigurations=" + compilerConfigurations +
+                    ", isTest=" + isTest +
+                    '}';
         }
     }
 }

@@ -109,7 +109,7 @@ public final class MavenCompilerInvoker {
             return new ProcessResult(0, "");
         } catch (Exception e) {
             debug(log, e);
-            return new ProcessResult(1, e.getMessage() == null ? e.toString() : e.getMessage());
+            return new ProcessResult(1, String.valueOf(e));
 
         } finally {
             if (project.getArtifact() != null && artifactFile != null) {

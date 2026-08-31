@@ -4,7 +4,6 @@ import static io.github.thunkware.auto.valhalla.maven.support.LogTool.debug;
 import static io.github.thunkware.auto.valhalla.maven.support.Undocumented.undocumented;
 
 import io.github.thunkware.auto.valhalla.maven.support.Failable;
-import io.github.thunkware.auto.valhalla.maven.support.Undocumented;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;

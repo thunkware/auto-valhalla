@@ -159,11 +159,10 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                     + "transformation: " + e, e);
         }
 
-        int count = result.convertedCount();
+        int count = result.converted;
         if (count > 0) {
             String simpleVersionsDir = relativeSubDir(buildDirectory, result.versionsDirectory);
-            info(getLog(), "compiled {} generated source file{} to {}",
-                    count, plural(count), simpleVersionsDir);
+            info(getLog(), "compiled {} generated source file{} to {}", count, plural(count), simpleVersionsDir);
         } else {
             info(getLog(), "compiled no generated source files");
         }

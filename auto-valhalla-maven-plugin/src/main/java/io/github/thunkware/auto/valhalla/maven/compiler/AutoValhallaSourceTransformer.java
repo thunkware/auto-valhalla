@@ -54,7 +54,6 @@ public final class AutoValhallaSourceTransformer {
         if (input.outputDirectory() == null) {
             throw new IllegalStateException("outputDirectory is required for transform");
         }
-        Result result = new Result();
 
         // Regenerate the selection instead of re-reading the generated dir:
         // run() prunes stale generated sources (an @AutoValhalla that was
@@ -63,8 +62,8 @@ public final class AutoValhallaSourceTransformer {
         Selection selection = undocumented("always-run-processor")
                 ? runner.run(input)
                 : runner.findGeneratedFiles(input);
-        result.selected.addAll(selection.selectedTypes);
-        result.generatedSources = selection.generatedSources;
+        Result result = new Result();
+        result.selection = selection;
         if (selection.generatedFiles.isEmpty()) {
             return result;
         }
