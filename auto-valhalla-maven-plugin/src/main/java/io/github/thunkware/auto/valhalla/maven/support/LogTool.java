@@ -1,5 +1,8 @@
 package io.github.thunkware.auto.valhalla.maven.support;
 
+import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import org.apache.maven.plugin.logging.Log;
 
 public final class LogTool {
@@ -9,27 +12,11 @@ public final class LogTool {
     }
 
     public static void info(Log log, String format, Object... arguments) {
-        if (log.isInfoEnabled()) {
-            String message = getMessage(format, arguments);
-            Throwable throwable = getThrowable(arguments);
-            if (throwable != null) {
-                log.info(message, throwable);
-            } else {
-                log.info(message);
-            }
-        }
+        log(log::isInfoEnabled, log::info, log::info, format, arguments);
     }
 
     public static void debug(Log log, String format, Object... arguments) {
-        if (log.isDebugEnabled()) {
-            String message = getMessage(format, arguments);
-            Throwable throwable = getThrowable(arguments);
-            if (throwable != null) {
-                log.debug(message, throwable);
-            } else {
-                log.debug(message);
-            }
-        }
+        log(log::isDebugEnabled, log::debug, log::debug, format, arguments);
     }
 
     public static void debug(Log log, Throwable throwable) {
@@ -39,13 +26,20 @@ public final class LogTool {
     }
 
     public static void warn(Log log, String format, Object... arguments) {
-        if (log.isWarnEnabled()) {
+        log(log::isWarnEnabled, log::warn, log::warn, format, arguments);
+    }
+
+    private static void log(BooleanSupplier isEnabled,
+                            Consumer<String> logString,
+                            BiConsumer<String, Throwable> logStringThrowable,
+                            String format, Object... arguments) {
+        if (isEnabled.getAsBoolean()) {
             String message = getMessage(format, arguments);
             Throwable throwable = getThrowable(arguments);
             if (throwable != null) {
-                log.warn(message, throwable);
+                logStringThrowable.accept(message, throwable);
             } else {
-                log.warn(message);
+                logString.accept(message);
             }
         }
     }
@@ -62,4 +56,5 @@ public final class LogTool {
         String newFormat = format.replace("{}", "%s");
         return "auto-valhalla: " + String.format(newFormat, arguments);
     }
+
 }
