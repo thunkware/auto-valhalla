@@ -1,6 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.plural;
@@ -16,7 +17,7 @@ import io.github.thunkware.auto.valhalla.maven.support.ConfigEvaluator;
 import io.github.thunkware.auto.valhalla.maven.support.ConfigOrigin;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import io.github.thunkware.auto.valhalla.maven.support.MojoTool;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,7 +25,6 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -71,13 +71,6 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
         requiresDependencyResolution = COMPILE_PLUS_RUNTIME
 )
 public class CompileGeneratedSourcesMojo extends AbstractMojo {
-
-    /**
-     * Minimum Java feature version that can compile value classes.
-     */
-    public static final int MIN_VALHALLA_JDK = 28;
-
-    public static final int MIN_MAVEN_JDK = 8;
 
     /**
      * Skip the transformation entirely.
@@ -134,25 +127,16 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (isSkipped()) {
-            info(getLog(), "skipping transformation");
+            String test = isTest() ? "test " : "";
+            info(getLog(), "skipping compiling generated {}sources", test);
             return;
         }
 
         JarPluginChecker.checkOnce(session, project, getLog());
         JdkVersionValidator.validate(resolveExecutableOverride());
-        List<String> compileClasspath;
-        try {
-            compileClasspath = compileClasspath();
-        } catch (DependencyResolutionRequiredException e) {
-            throw new MojoExecutionException("auto-valhalla: could not resolve the project's "
-                    + "compile classpath for javac: " + e.getMessage(), e);
-        }
+        List<String> compileClasspath = MojoTool.getCompileClasspath(project, isTest());
 
-        String processorPath = AutoValhallaProcessor.processorPath();
-        if (processorPath == null) {
-            throw new MojoExecutionException("auto-valhalla: could not locate the "
-                    + "auto-valhalla-processor jar for javac's -processorpath");
-        }
+        String processorPath = MojoTool.getProcessorPath();
         String resolvedEncoding = resolveEncoding();
         List<String> extraCompilerArgs = resolveCompilerArgs();
         MavenCompilerInput input = MavenCompilerInput.builder()
@@ -330,15 +314,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
     protected File outputDirectory() {
         return outputDirectory;
-    }
-
-    /**
-     * The classpath the generated sources are selected and compiled against;
-     * overridden by the test goals to supply the test classpath so generated
-     * test value classes can see JUnit and {@code target/test-classes}.
-     */
-    protected List<String> compileClasspath() throws DependencyResolutionRequiredException {
-        return project.getCompileClasspathElements();
     }
 
     protected boolean isSkipped() {

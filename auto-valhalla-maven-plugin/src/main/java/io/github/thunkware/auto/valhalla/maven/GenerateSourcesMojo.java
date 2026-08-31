@@ -1,6 +1,5 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.relativeSubDir;
 import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
 import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
@@ -18,7 +17,7 @@ import io.github.thunkware.auto.valhalla.maven.support.ConfigEvaluator;
 import io.github.thunkware.auto.valhalla.maven.support.ConfigOrigin;
 import io.github.thunkware.auto.valhalla.maven.support.JarPluginChecker;
 import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import io.github.thunkware.auto.valhalla.maven.support.MojoTool;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -103,25 +102,17 @@ public class GenerateSourcesMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (isSkipped()) {
-            info(getLog(), "skipping source processing");
+            String test = isTest() ? "test " : "";
+            info(getLog(), "skipping generating {}sources", test);
             return;
         }
         configEvaluatorSupplier = ConfigEvaluator.of(project, mavenCompiler, configOrigin);
 
         JarPluginChecker.checkOnce(session, project, getLog());
         JdkVersionValidator.validate(resolveExecutableOverride());
-        List<String> compileClasspath;
-        try {
-            compileClasspath = compileClasspath();
-        } catch (DependencyResolutionRequiredException e) {
-            throw new MojoExecutionException("auto-valhalla: could not resolve the project's "
-                    + "compile classpath for javac: " + e.getMessage(), e);
-        }
-        String processorPath = AutoValhallaProcessor.processorPath();
-        if (processorPath == null) {
-            throw new MojoExecutionException("auto-valhalla: could not locate the "
-                    + "auto-valhalla-processor jar for javac's -processorpath");
-        }
+        List<String> compileClasspath = MojoTool.getCompileClasspath(project, isTest());
+
+        String processorPath = MojoTool.getProcessorPath();
         Selection selection;
         try {
             MavenCompilerInput input = MavenCompilerInput.builder()
@@ -198,7 +189,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
     }
 
     private String resolveExecutable() {
-        return Javac.resolveExecutable(resolveExecutableOverride(), MIN_VALHALLA_JDK);
+        return Javac.resolveExecutable(resolveExecutableOverride(), JdkVersionValidator.MIN_VALHALLA_JDK);
     }
 
     private String firstCompilerValue(String name) {
@@ -215,15 +206,6 @@ public class GenerateSourcesMojo extends AbstractMojo {
 
     protected File generatedSourcesDirectory() {
         return new File(buildDirectory, "auto-valhalla-generated-sources");
-    }
-
-    /**
-     * The classpath the test source roots are selected against; overridden by
-     * the test goal to supply the test classpath so the selection pass can
-     * resolve test-only dependencies.
-     */
-    protected List<String> compileClasspath() throws DependencyResolutionRequiredException {
-        return project.getCompileClasspathElements();
     }
 
     protected boolean isSkipped() {

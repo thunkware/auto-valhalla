@@ -2,6 +2,8 @@ package io.github.thunkware.auto.valhalla.maven;
 
 import java.io.File;
 import java.util.List;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -29,11 +31,6 @@ public class CompileGeneratedTestSourcesMojo extends CompileGeneratedSourcesMojo
     @Override
     protected File generatedSourcesDirectory() {
         return new File(buildDirectory, "auto-valhalla-generated-test-sources");
-    }
-
-    @Override
-    protected List<String> compileClasspath() throws org.apache.maven.artifact.DependencyResolutionRequiredException {
-        return project.getTestClasspathElements();
     }
 
     @Override

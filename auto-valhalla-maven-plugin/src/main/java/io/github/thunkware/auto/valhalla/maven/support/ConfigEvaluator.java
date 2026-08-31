@@ -5,6 +5,7 @@ import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBl
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
@@ -116,8 +117,7 @@ public final class ConfigEvaluator {
                 return value;
             }
         }
-        throw new IllegalArgumentException("config-origin must be one of "
-                + "nestedFirst, projectFirst, nestedOnly, projectOnly");
+        throw new IllegalArgumentException("config-origin must be one of " + Arrays.toString(ConfigOrigin.values()));
     }
 
     private static String value(PlexusConfiguration configuration, String name) {

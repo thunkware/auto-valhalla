@@ -1,8 +1,10 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
 import static io.github.thunkware.auto.valhalla.maven.support.LogTool.debug;
+import static io.github.thunkware.auto.valhalla.maven.support.Undocumented.undocumented;
 
 import io.github.thunkware.auto.valhalla.maven.support.Failable;
+import io.github.thunkware.auto.valhalla.maven.support.Undocumented;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -35,6 +37,10 @@ final class MavenCompilerLogInterceptor {
     }
 
     void installLogInterceptor(BuildPluginManager buildPluginManager) {
+        if (undocumented("disableMavenCompilerLogInterceptor")) {
+            return;
+        }
+
         synchronized (SHARED_INSTALL_LOCK) {
             if (installed) {
                 return;

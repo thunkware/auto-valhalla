@@ -1,7 +1,5 @@
 package io.github.thunkware.auto.valhalla.maven.support;
 
-import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_MAVEN_JDK;
-import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 
 import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
@@ -9,12 +7,19 @@ import org.apache.maven.plugin.MojoFailureException;
 
 public final class JdkVersionValidator {
 
+    /**
+     * Minimum Java feature version that can compile value classes.
+     */
+    public static final int MIN_VALHALLA_JDK = 28;
+
+    public static final int MIN_MAVEN_JDK = 8;
+
     private JdkVersionValidator() {
         throw new AssertionError();
     }
 
     /**
-     * Accepts any JDK 28 javac the plugin would compile value classes with:
+     * Accepts any JDK28+ javac the plugin would compile value classes with:
      * the consuming project's {@code <executable>} configuration, a
      * {@code java<N>.home}/{@code JAVA<N>_HOME} (N >= 28), or Maven running on
      * JDK 28 itself.
@@ -25,22 +30,22 @@ public final class JdkVersionValidator {
         // deterministic and don't change with the caller's environment.
         boolean hasValhallaCompiler = isNotBlank(executableOverride)
                 || Javac.hasValhallaCompiler(null, MIN_VALHALLA_JDK);
-        validate(jdkFeature(), hasValhallaCompiler);
+        validate(jdkVersion(), hasValhallaCompiler);
     }
 
     /**
      * Validates against an explicitly-configured {@code java<N>.home} only;
      * the ambient environment is deliberately not consulted.
      */
-    static void validate(int feature, String java28Home) throws MojoFailureException {
-        validate(feature, isNotBlank(java28Home));
+    static void validate(int version, String java28Home) throws MojoFailureException {
+        validate(version, isNotBlank(java28Home));
     }
 
     /**
      * The Java feature version of the current JVM (28 for JDK 28), parsed from
      * the specification version so it works on every JDK.
      */
-    private static int jdkFeature() {
+    private static int jdkVersion() {
         String spec = System.getProperty("java.specification.version", "1.8");
         if (spec.startsWith("1.")) {
             spec = spec.substring(2);
@@ -52,20 +57,13 @@ public final class JdkVersionValidator {
         }
     }
 
-    private static void validate(int feature, boolean hasValhallaCompiler)
+    private static void validate(int version, boolean hasValhallaCompiler)
             throws MojoFailureException {
-        if (feature < MIN_MAVEN_JDK) {
-            throw new MojoFailureException("auto-valhalla: Maven must run on JDK 8 through "
-                    + MIN_VALHALLA_JDK + "; got JDK " + feature);
+        if (version < MIN_MAVEN_JDK) {
+            throw new MojoFailureException("auto-valhalla: Maven must run on JDK 8 or greater. got JDK " + version);
         }
-        if (feature > MIN_VALHALLA_JDK) {
-            throw new MojoFailureException("auto-valhalla: running on JDK " + feature
-                    + " is unsupported; run Maven on JDK " + MIN_VALHALLA_JDK
-                    + " or use JDK 8 through " + (MIN_VALHALLA_JDK - 1)
-                    + " with a JDK 28 javac configured");
-        }
-        if (feature < MIN_VALHALLA_JDK && !hasValhallaCompiler) {
-            throw new MojoFailureException("auto-valhalla: running on JDK " + feature
+        if (version < MIN_VALHALLA_JDK && !hasValhallaCompiler) {
+            throw new MojoFailureException("auto-valhalla: running on JDK " + version
                     + " requires a JDK 28 javac; set java28.home / JAVA28_HOME "
                     + "or configure <executable>");
         }

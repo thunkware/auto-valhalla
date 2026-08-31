@@ -7,8 +7,8 @@ import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBl
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 import static io.github.thunkware.auto.valhalla.maven.support.Undocumented.undocumented;
 
-import io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.model.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.support.Failable;
 import java.io.File;
 import java.nio.file.Files;

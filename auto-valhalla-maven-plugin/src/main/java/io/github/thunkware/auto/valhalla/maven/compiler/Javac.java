@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
+import static io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator.MIN_VALHALLA_JDK;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,12 +23,6 @@ public final class Javac {
     public static String joinClasspath(List<String> paths) {
         return String.join(File.pathSeparator, paths);
     }
-
-    /**
-     * Lowest JDK feature version scanned for {@code java<N>.home} /
-     * {@code JAVA<N>_HOME}.
-     */
-    private static final int MIN_SCAN_VERSION = 28;
 
     /**
      * Resolves the {@code javac} executable: an explicit {@code override}
@@ -74,13 +70,13 @@ public final class Javac {
         Map<Integer, List<String>> homes = new TreeMap<>();
         for (String name : properties.stringPropertyNames()) {
             int version = numberedVersion(name, "java", ".home");
-            if (version >= MIN_SCAN_VERSION) {
+            if (version >= MIN_VALHALLA_JDK) {
                 addHome(homes, version, properties.getProperty(name));
             }
         }
         for (Map.Entry<String, String> entry : env.entrySet()) {
             int version = numberedVersion(entry.getKey(), "JAVA", "_HOME");
-            if (version >= MIN_SCAN_VERSION) {
+            if (version >= MIN_VALHALLA_JDK) {
                 addHome(homes, version, entry.getValue());
             }
         }
@@ -132,14 +128,4 @@ public final class Javac {
         return versions;
     }
 
-    static final class ProcessResult {
-
-        public final int exit;
-        public final String output;
-
-        public ProcessResult(int exit, String output) {
-            this.exit = exit;
-            this.output = output;
-        }
-    }
 }

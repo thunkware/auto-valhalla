@@ -1,14 +1,14 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
-import static io.github.thunkware.auto.valhalla.maven.CompileGeneratedSourcesMojo.MIN_VALHALLA_JDK;
-import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import static io.github.thunkware.auto.valhalla.maven.support.Undocumented.undocumented;
 import static java.util.Collections.singletonList;
 
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.model.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
+import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -73,7 +73,7 @@ public final class AutoValhallaSourceTransformer {
     }
 
     private Result withMavenCompilerPlugin(MavenCompilerInput input, Selection selection, Result result) throws IOException {
-        result.versionsDirectory = new File(input.outputDirectory(), "META-INF/versions/" + MIN_VALHALLA_JDK);
+        result.versionsDirectory = new File(input.outputDirectory(), "META-INF/versions/" + JdkVersionValidator.MIN_VALHALLA_JDK);
         int generatedCount = 0;
         for (Map.Entry<String, List<Generated>> entry : selection.generatedFiles.entrySet()) {
             generatedCount += entry.getValue().size();
@@ -82,7 +82,7 @@ public final class AutoValhallaSourceTransformer {
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 .sourceRoots(singletonList(selection.generatedSources.getAbsolutePath()))
                 .outputDirectory(result.versionsDirectory)
-                .release(Integer.toString(MIN_VALHALLA_JDK))
+                .release(Integer.toString(JdkVersionValidator.MIN_VALHALLA_JDK))
                 .enablePreview(true)
                 .proc("none")
                 .build();

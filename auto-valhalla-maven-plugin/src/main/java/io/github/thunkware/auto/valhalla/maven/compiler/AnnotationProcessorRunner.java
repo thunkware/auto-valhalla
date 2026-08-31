@@ -1,11 +1,11 @@
 package io.github.thunkware.auto.valhalla.maven.compiler;
 
-import static io.github.thunkware.auto.valhalla.maven.compiler.Javac.ProcessResult;
 import static io.github.thunkware.auto.valhalla.maven.support.FileTool.walkJavaFiles;
 import static java.util.Comparator.comparing;
 
 import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
+import io.github.thunkware.auto.valhalla.maven.model.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
 import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
 import java.io.File;
@@ -32,12 +32,6 @@ import org.apache.maven.plugin.logging.Log;
  * error writing the generated sources or the manifest).
  */
 public final class AnnotationProcessorRunner {
-
-    /**
-     * Name of the generated dir under the build directory that receives the
-     * processor's generated sources and selection manifest.
-     */
-    public static final String GENERATED_DIR = "auto-valhalla-generated-sources";
 
     private final MavenCompilerInvoker mavenCompilerInvoker;
 
@@ -123,7 +117,6 @@ public final class AnnotationProcessorRunner {
                 .proc("only")
                 .build();
         ProcessResult process = mavenCompilerInvoker.compile(mavenCompilerInput);
-        System.out.println(process.output);
         if (process.exit != 0) {
             throw new IOException("the auto-valhalla selection pass "
                     + "(maven-compiler-plugin) failed:\n"
@@ -139,7 +132,7 @@ public final class AnnotationProcessorRunner {
                     String rel = generatedDir.toPath().relativize(path).toString();
                     selection.selectedTypes.add(rel);
                     selection.generatedFiles.computeIfAbsent(rel, k -> new ArrayList<>())
-                            .add(new Generated(rel, rel));
+                            .add(new Generated(rel));
                 });
     }
 

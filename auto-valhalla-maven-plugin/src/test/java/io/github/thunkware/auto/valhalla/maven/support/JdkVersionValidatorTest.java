@@ -19,10 +19,4 @@ class JdkVersionValidatorTest {
         assertThrows(MojoFailureException.class,
                 () -> JdkVersionValidator.validate(27, null));
     }
-
-    @Test
-    void rejectsJdksNewerThanTwentyEight() {
-        assertThrows(MojoFailureException.class,
-                () -> JdkVersionValidator.validate(29, null));
-    }
 }
