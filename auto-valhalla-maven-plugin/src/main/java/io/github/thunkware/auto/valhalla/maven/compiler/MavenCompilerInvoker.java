@@ -127,11 +127,7 @@ public final class MavenCompilerInvoker {
         // maps its own options. Keys that this plugin controls are skipped here
         // and pushed below so the forced settings always win over a user
         // mirroring e.g. <release>17</release>.
-        Set<String> seen = new HashSet<>();
-        List<PlexusConfiguration> compilerConfigurations = input.compilerConfigurations();
-        if (compilerConfigurations != null) {
-            mergeCompilerConfigurations(compilerConfigurations, root, seen);
-        }
+        mergeCompilerConfigurations(input, root);
 
         child(root, "basedir", "${project.basedir}");
         child(root, "buildDirectory", "${project.build.directory}");
@@ -141,13 +137,7 @@ public final class MavenCompilerInvoker {
             child(root, "projectArtifact", "${project.artifact}");
         }
 
-        if (undocumented("dynamically-resolve-compile-path")) {
-            configureCompilePath(input, root);
-        } else if (undocumented("simple-compile-path") || !input.isTest()) {
-            child(root, "compilePath", COMPILE_CLASSPATH_ELEMENTS);
-        } else {
-            configureCompilePath(input, root);
-        }
+        configureCompilePath(input, root);
 
         child(root, "mojoExecution", "${mojoExecution}");
         Xpp3Dom sourceRoots = new Xpp3Dom("compileSourceRoots");
@@ -156,15 +146,9 @@ public final class MavenCompilerInvoker {
         }
         root.addChild(sourceRoots);
         child(root, "outputDirectory", input.outputDirectory().getAbsolutePath());
-        if (input.release() != null) {
-            child(root, "release", input.release());
-        }
-        if (input.enablePreview()) {
-            child(root, "enablePreview", "true");
-        }
-        if (input.proc() != null) {
-            child(root, "proc", input.proc());
-        }
+        childIfNotNull(root, "release", input.release());
+        child(root, "enablePreview", Boolean.toString(input.enablePreview()));
+        childIfNotNull(root, "proc", input.proc());
         child(root, "compilerId", "javac");
         child(root, "fork", "true");
         child(root, "executable", input.executable());
@@ -190,8 +174,27 @@ public final class MavenCompilerInvoker {
         return root;
     }
 
-    static void mergeCompilerConfigurations(
-            List<PlexusConfiguration> configurations, Xpp3Dom root, Set<String> seen) {
+    private static void configureCompilePath(MavenCompilerInput input, Xpp3Dom root) {
+        if (undocumented("dynamically-resolve-compile-path")) {
+            dynamicallyConfigureCompilePath(input, root);
+        } else if (undocumented("simple-compile-path") || !input.isTest()) {
+            child(root, compilePathOrTestPath(input), COMPILE_CLASSPATH_ELEMENTS);
+        } else {
+            dynamicallyConfigureCompilePath(input, root);
+        }
+    }
+
+    static void mergeCompilerConfigurations(MavenCompilerInput input, Xpp3Dom root) {
+        List<PlexusConfiguration> configurations = input.compilerConfigurations();
+        mergeCompilerConfigurations(configurations, root);
+    }
+
+    static void mergeCompilerConfigurations(List<PlexusConfiguration> configurations, Xpp3Dom root) {
+        if (configurations == null) {
+            return;
+        }
+
+        Set<String> seen = new HashSet<>();
         for (PlexusConfiguration configuration : configurations) {
             for (PlexusConfiguration child : configuration.getChildren()) {
                 String name = child.getName();
@@ -212,13 +215,17 @@ public final class MavenCompilerInvoker {
         }
     }
 
-    private static void configureCompilePath(MavenCompilerInput input, Xpp3Dom root) {
+    private static String compilePathOrTestPath(MavenCompilerInput input) {
+        return input.isTest() ? "testPath" : "compilePath";
+    }
+
+    private static void dynamicallyConfigureCompilePath(MavenCompilerInput input, Xpp3Dom root) {
         // Use the resolved input classpath (the test mojo supplies test
         // elements, so generated test value classes can see JUnit and
         // target/test-classes) instead of the project.compileClasspathElements
         // expression, which only ever resolves to the main compile classpath.
         List<String> elements = input.compileClasspath();
-        String configName = input.isTest() ? "testPath" : "compilePath";
+        String configName = compilePathOrTestPath(input);
         if (elements == null || elements.isEmpty()) {
             String propertyName = input.isTest() ? TEST_CLASSPATH_ELEMENTS : COMPILE_CLASSPATH_ELEMENTS;
             child(root, configName, propertyName);
@@ -252,6 +259,12 @@ public final class MavenCompilerInvoker {
                 .forEach(path ->
                         Failable.run(() -> Files.deleteIfExists(path),
                                 e -> debug(log, "could not delete {}", path, e)));
+    }
+
+    private static void childIfNotNull(Xpp3Dom parent, String name, String value) {
+        if (value != null) {
+            child(parent, name, value);
+        }
     }
 
     private static void child(Xpp3Dom parent, String name, String value) {

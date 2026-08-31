@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collections;
 import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.junit.jupiter.api.Test;
@@ -26,8 +26,7 @@ class MavenCompilerInvokerTest {
                 "release", "21");
 
         Xpp3Dom root = new Xpp3Dom("configuration");
-        MavenCompilerInvoker.mergeCompilerConfigurations(
-                Arrays.asList(nested, project), root, new HashSet<>());
+        MavenCompilerInvoker.mergeCompilerConfigurations(Arrays.asList(nested, project), root);
 
         // Earlier sources win for duplicate keys (parameters, release is owned).
         assertEquals("true", childValue(root, "parameters"));
@@ -50,8 +49,7 @@ class MavenCompilerInvokerTest {
         project.addChild(compilerArgs);
 
         Xpp3Dom root = new Xpp3Dom("configuration");
-        MavenCompilerInvoker.mergeCompilerConfigurations(
-                Arrays.asList(project), root, new HashSet<>());
+        MavenCompilerInvoker.mergeCompilerConfigurations(Collections.singletonList(project), root);
 
         assertEquals("-Werror", childValue(root, "compilerArgs", "arg"));
     }

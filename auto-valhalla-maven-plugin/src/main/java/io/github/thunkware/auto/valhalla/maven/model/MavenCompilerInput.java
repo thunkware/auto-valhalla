@@ -243,15 +243,18 @@ public final class MavenCompilerInput {
         public Builder clone() {
             try {
                 Builder clone = (Builder) super.clone();
-                clone.sourceRoots = sourceRoots == null ? null : new ArrayList<>(sourceRoots);
-                clone.compileClasspath = compileClasspath == null ? null : new ArrayList<>(compileClasspath);
-                clone.compilerArgs = compilerArgs == null ? null : new ArrayList<>(compilerArgs);
-                clone.compilerConfigurations = compilerConfigurations == null
-                        ? null : new ArrayList<>(compilerConfigurations);
+                clone.sourceRoots = copyIfNotNull(sourceRoots);
+                clone.compileClasspath = copyIfNotNull(compileClasspath);
+                clone.compilerArgs = copyIfNotNull(compilerArgs);
+                clone.compilerConfigurations = copyIfNotNull(compilerConfigurations);
                 return clone;
             } catch (CloneNotSupportedException e) {
                 throw new AssertionError(e);
             }
+        }
+
+        private <T> List<T> copyIfNotNull(List<T> list) {
+            return list == null ? null : new ArrayList<>(list);
         }
     }
 }

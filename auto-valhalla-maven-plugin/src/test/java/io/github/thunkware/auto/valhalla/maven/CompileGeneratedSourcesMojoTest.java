@@ -14,8 +14,6 @@ class CompileGeneratedSourcesMojoTest {
 
     @Test
     void inheritsCompilerConfigOpaquelyFromMavenCompilerPlugin() {
-        MavenProject project = new MavenProject();
-        Build build = new Build();
         Plugin compilerPlugin = new Plugin();
         compilerPlugin.setGroupId("org.apache.maven.plugins");
         compilerPlugin.setArtifactId("maven-compiler-plugin");
@@ -40,7 +38,9 @@ class CompileGeneratedSourcesMojoTest {
         config.addChild(encoding);
 
         compilerPlugin.setConfiguration(config);
+        Build build = new Build();
         build.addPlugin(compilerPlugin);
+        MavenProject project = new MavenProject();
         project.setBuild(build);
 
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();

@@ -4,10 +4,11 @@ package io.github.thunkware.auto.valhalla.maven.support;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -57,13 +58,11 @@ public final class ConfigEvaluator {
         return null;
     }
 
-    static ConfigEvaluator of(
-            PlexusConfiguration nested, PlexusConfiguration project, ConfigOrigin origin) {
+    static ConfigEvaluator of(PlexusConfiguration nested, PlexusConfiguration project, ConfigOrigin origin) {
         return new ConfigEvaluator(nested, project, origin);
     }
 
-    static ConfigEvaluator of(
-            PlexusConfiguration nested, PlexusConfiguration project, String origin) {
+    static ConfigEvaluator of(PlexusConfiguration nested, PlexusConfiguration project, String origin) {
         return of(nested, project, parseOrigin(origin));
     }
 
@@ -88,13 +87,9 @@ public final class ConfigEvaluator {
      * invocation opaquely, so the plugin maps the options itself.
      */
     public List<PlexusConfiguration> configurations() {
-        List<PlexusConfiguration> result = new ArrayList<>();
-        for (PlexusConfiguration configuration : configurations) {
-            if (configuration != null) {
-                result.add(configuration);
-            }
-        }
-        return result;
+        return Arrays.stream(configurations)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     private static PlexusConfiguration[] configurations(
