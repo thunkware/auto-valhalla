@@ -5,7 +5,7 @@
   <parent>
     <groupId>io.github.thunkware</groupId>
     <artifactId>auto-valhalla</artifactId>
-    <version>0.1.1-SNAPSHOT</version>
+    <version>0.2.0</version>
   </parent>
 
   <artifactId>auto-valhalla-agent-attach</artifactId>
@@ -33,7 +33,7 @@
       <connection>scm:git:git://github.com/thunkware/auto-valhalla.git</connection>
       <developerConnection>scm:git:https://github.com/thunkware/auto-valhalla.git</developerConnection>
       <url>https://github.com/thunkware/auto-valhalla</url>
-      <tag>HEAD</tag>
+      <tag>auto-valhalla-0.2.0</tag>
   </scm>
 
   <developers>
