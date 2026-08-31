@@ -26,7 +26,6 @@
          must target a pre-Valhalla release without preview -->
     <maven.compiler.release>8</maven.compiler.release>
     <maven.compiler.enablePreview>false</maven.compiler.enablePreview>
-    <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -38,7 +37,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.10.2</version>
+      <version>${junit-jupiter.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
