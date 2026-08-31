@@ -1,16 +1,11 @@
 package io.github.thunkware.auto.valhalla.maven;
 
-import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
-import static io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.support.LogTool.info;
-import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.plural;
-import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.PROCESS_CLASSES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
 import io.github.thunkware.auto.valhalla.maven.compiler.AutoValhallaSourceTransformer;
-import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.Result;
 import io.github.thunkware.auto.valhalla.maven.support.ConfigEvaluator;
@@ -86,6 +81,15 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
     @Parameter(defaultValue = "false", property = "auto-valhalla.removeAnnotation")
     private boolean removeAnnotation;
 
+    @Parameter(property = "auto-valhalla.config-origin", defaultValue = "NESTED_FIRST")
+    private ConfigOrigin configOrigin = ConfigOrigin.NESTED_FIRST;
+
+    /**
+     * Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}).
+     */
+    @Parameter(alias = "compiler")
+    private PlexusConfiguration mavenCompiler;
+
     /**
      * The compiled classes directory; the versioned value classes are written
      * under {@code META-INF/versions/<versionDirectory>} here.
@@ -98,15 +102,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "${project.build.directory}", readonly = true, required = true)
     protected File buildDirectory;
-
-    /**
-     * Nested compiler configuration block (e.g. {@code <maven-compiler>} or {@code <compiler>}).
-     */
-    @Parameter(alias = "compiler")
-    private PlexusConfiguration mavenCompiler;
-
-    @Parameter(property = "auto-valhalla.config-origin", defaultValue = "NESTED_FIRST")
-    private ConfigOrigin configOrigin = ConfigOrigin.NESTED_FIRST;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     protected MavenProject project;
@@ -131,24 +126,24 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
             return;
         }
 
+        ConfigEvaluator configEvaluator = getConfigEvaluator();
         JarPluginChecker.checkOnce(session, project, getLog());
-        JdkVersionValidator.validate(resolveExecutableOverride());
+        JdkVersionValidator.validate(configEvaluator);
         List<String> compileClasspath = MojoTool.getCompileClasspath(project, isTest());
 
         String processorPath = MojoTool.getProcessorPath();
-        String resolvedEncoding = resolveEncoding();
         MavenCompilerInput input = MavenCompilerInput.builder()
                 .sourceRoots(sourceRoots())
                 .outputDirectory(outputDirectory())
                 .buildDirectory(buildDirectory)
                 .generatedSourcesDirectory(generatedSourcesDirectory())
-                .executable(resolveExecutable())
+                .executable(configEvaluator.resolveExecutable())
                 .processorPath(processorPath)
                 .compileClasspath(compileClasspath)
-                .encoding(resolvedEncoding)
-                .compilerConfigurations(getConfigEvaluator().configurations())
-                .release(resolveRelease())
-                .enablePreview(resolveEnablePreview())
+                .encoding(configEvaluator.resolveEncoding())
+                .compilerConfigurations(configEvaluator.configurations())
+                .release(configEvaluator.resolveRelease(project))
+                .enablePreview(configEvaluator.resolveEnablePreview(project))
                 .removeAnnotation(removeAnnotation)
                 .session(session)
                 .project(project)
@@ -189,7 +184,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .replaceFirst("");
     }
 
-    private ConfigEvaluator getConfigEvaluator() {
+    ConfigEvaluator getConfigEvaluator() {
         if (configEvaluatorSupplier == null) {
             configEvaluatorSupplier = ConfigEvaluator.of(project, mavenCompiler, configOrigin);
         }
@@ -200,55 +195,12 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
         return getConfigEvaluator().configurations();
     }
 
-    String resolveEncoding() {
-        String encoding = getConfigEvaluator().resolveString("encoding");
-        return normalizeEncoding(encoding);
-    }
-
-    String resolveRelease() {
-        String release = getConfigEvaluator().resolveString("release");
-        if (release != null) {
-            return release;
-        }
-        // The plugin also accepts maven.compiler.release / maven.compiler.target
-        // properties (e.g. consumers that steer the default-bound compile purely
-        // through properties); mirror that so the selection pass compiles at the
-        // same level as the base classes.
-        release = project.getProperties().getProperty("maven.compiler.release");
-        if (isNotBlank(release)) {
-            return release;
-        }
-        String target = project.getProperties().getProperty("maven.compiler.target");
-        return isNotBlank(target) ? trim(target) : null;
-    }
-
-    boolean resolveEnablePreview() {
-        Boolean preview = getConfigEvaluator().resolveBoolean("enablePreview");
-        if (preview != null) {
-            return preview;
-        }
-        String property = project.getProperties().getProperty("maven.compiler.enablePreview");
-        return isNotBlank(property) && Boolean.parseBoolean(trim(property));
-    }
-
     void setProject(MavenProject project) {
         this.project = project;
     }
 
-    void setMavenCompiler(PlexusConfiguration mavenCompiler) {
-        this.mavenCompiler = mavenCompiler;
-    }
-
     void setMavenCompiler(Xpp3Dom mavenCompiler) {
         this.mavenCompiler = mavenCompiler == null ? null : new XmlPlexusConfiguration(mavenCompiler);
-    }
-
-    private String resolveExecutableOverride() {
-        return getConfigEvaluator().resolveString("executable");
-    }
-
-    private String resolveExecutable() {
-        return Javac.resolveExecutable(resolveExecutableOverride(), MIN_VALHALLA_JDK);
     }
 
     protected List<String> sourceRoots() {

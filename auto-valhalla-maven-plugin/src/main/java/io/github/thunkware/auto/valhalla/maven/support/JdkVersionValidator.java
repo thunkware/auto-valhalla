@@ -24,7 +24,8 @@ public final class JdkVersionValidator {
      * {@code java<N>.home}/{@code JAVA<N>_HOME} (N >= 28), or Maven running on
      * JDK 28 itself.
      */
-    public static void validate(String executableOverride) throws MojoFailureException {
+    public static void validate(ConfigEvaluator configEvaluator) throws MojoFailureException {
+        String executableOverride = configEvaluator.resolveString("executable");
         // The environment scan (java<N>.home / JAVA<N>_HOME) belongs here, to
         // the entry point the mojos use, so the (int, String) forms below stay
         // deterministic and don't change with the caller's environment.

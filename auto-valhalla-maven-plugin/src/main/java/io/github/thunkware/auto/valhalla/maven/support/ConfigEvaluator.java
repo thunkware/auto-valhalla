@@ -1,9 +1,12 @@
 package io.github.thunkware.auto.valhalla.maven.support;
 
 
+import static io.github.thunkware.auto.valhalla.maven.support.FileTool.normalizeEncoding;
+import static io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator.MIN_VALHALLA_JDK;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.isNotBlank;
 import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 
+import io.github.thunkware.auto.valhalla.maven.compiler.Javac;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -15,7 +18,9 @@ import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
-/** Evaluates nested compiler configuration and project plugin configuration. */
+/**
+ * Evaluates nested compiler configuration and project plugin configuration.
+ */
 public final class ConfigEvaluator {
 
     private final PlexusConfiguration[] configurations;
@@ -81,6 +86,44 @@ public final class ConfigEvaluator {
         return null;
     }
 
+    public String resolveExecutableOverride() {
+        return resolveString("executable");
+    }
+
+    public String resolveExecutable() {
+        return Javac.resolveExecutable(resolveExecutableOverride(), MIN_VALHALLA_JDK);
+    }
+
+    public String resolveEncoding() {
+        return normalizeEncoding(resolveString("encoding"));
+    }
+
+    public boolean resolveEnablePreview(MavenProject mavenProject) {
+        Boolean preview = resolveBoolean("enablePreview");
+        if (preview != null) {
+            return preview;
+        }
+        String property = mavenProject.getProperties().getProperty("maven.compiler.enablePreview");
+        return isNotBlank(property) && Boolean.parseBoolean(trim(property));
+    }
+
+    public String resolveRelease(MavenProject mavenProject) {
+        String release = resolveString("release");
+        if (release != null) {
+            return release;
+        }
+        // The plugin also accepts maven.compiler.release / maven.compiler.target
+        // properties (e.g. consumers that steer the default-bound compile purely
+        // through properties); mirror that so the selection pass compiles at the
+        // same level as the base classes.
+        release = mavenProject.getProperties().getProperty("maven.compiler.release");
+        if (isNotBlank(release)) {
+            return release;
+        }
+        String target = mavenProject.getProperties().getProperty("maven.compiler.target");
+        return isNotBlank(target) ? trim(target) : null;
+    }
+
     /**
      * The configurations to apply, in resolution order (i.e. earlier sources
      * take precedence). Used to feed the {@code maven-compiler-plugin}
@@ -96,14 +139,14 @@ public final class ConfigEvaluator {
             ConfigOrigin origin, PlexusConfiguration nested, PlexusConfiguration project) {
         switch (origin) {
             case PROJECT_FIRST:
-                return new PlexusConfiguration[] {project, nested};
+                return new PlexusConfiguration[]{project, nested};
             case NESTED_ONLY:
-                return new PlexusConfiguration[] {nested};
+                return new PlexusConfiguration[]{nested};
             case PROJECT_ONLY:
-                return new PlexusConfiguration[] {project};
+                return new PlexusConfiguration[]{project};
             case NESTED_FIRST:
             default:
-                return new PlexusConfiguration[] {nested, project};
+                return new PlexusConfiguration[]{nested, project};
         }
     }
 

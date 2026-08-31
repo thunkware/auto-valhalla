@@ -55,7 +55,7 @@ class CompileGeneratedSourcesMojoTest {
         assertEquals("true", inherited.getChild("debug").getValue(null));
         assertEquals("-Xlint:unchecked",
                 inherited.getChild("compilerArgs").getChild("arg").getValue(null));
-        assertEquals("UTF-16", mojo.resolveEncoding());
+        assertEquals("UTF-16", mojo.getConfigEvaluator().resolveEncoding());
     }
 
     @Test
@@ -73,7 +73,7 @@ class CompileGeneratedSourcesMojoTest {
         assertEquals(1, configurations.size());
         PlexusConfiguration nested = configurations.get(0);
         assertEquals("lines,vars", nested.getChild("debuglevel").getValue(null));
-        assertEquals("ISO-8859-1", mojo.resolveEncoding());
+        assertEquals("ISO-8859-1", mojo.getConfigEvaluator().resolveEncoding());
     }
 
     @Test
@@ -105,7 +105,7 @@ class CompileGeneratedSourcesMojoTest {
         assertEquals(2, configurations.size());
         assertEquals("true", configurations.get(0).getChild("parameters").getValue(null));
         assertEquals("false", configurations.get(1).getChild("parameters").getValue(null));
-        assertEquals("ISO-8859-1", mojo.resolveEncoding());
+        assertEquals("ISO-8859-1", mojo.getConfigEvaluator().resolveEncoding());
     }
 
     private static void child(Xpp3Dom parent, String name, String value) {
