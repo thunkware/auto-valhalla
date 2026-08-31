@@ -84,8 +84,13 @@ public final class MavenCompilerInput {
         return builder.removeAnnotation;
     }
 
-    public PlexusConfiguration compilerConfiguration() {
-        return builder.compilerConfiguration;
+    /**
+     * The merged compiler configurations (nested {@code <compiler>} block and
+     * the project's {@code maven-compiler-plugin} configuration, in
+     * {@code configOrigin} order), applied opaquely to the compiler invocation.
+     */
+    public List<PlexusConfiguration> compilerConfigurations() {
+        return builder.compilerConfigurations;
     }
 
     public boolean isTest() {
@@ -121,7 +126,7 @@ public final class MavenCompilerInput {
         private boolean enablePreview;
         private String proc;
         private boolean removeAnnotation;
-        private PlexusConfiguration compilerConfiguration;
+        private List<PlexusConfiguration> compilerConfigurations;
         private boolean isTest;
 
         public Builder session(MavenSession session) {
@@ -204,8 +209,9 @@ public final class MavenCompilerInput {
             return this;
         }
 
-        public Builder compilerConfiguration(PlexusConfiguration compilerConfiguration) {
-            this.compilerConfiguration = compilerConfiguration;
+        public Builder compilerConfigurations(List<PlexusConfiguration> compilerConfigurations) {
+            this.compilerConfigurations = compilerConfigurations == null
+                    ? null : new ArrayList<>(compilerConfigurations);
             return this;
         }
 
@@ -240,6 +246,8 @@ public final class MavenCompilerInput {
                 clone.sourceRoots = sourceRoots == null ? null : new ArrayList<>(sourceRoots);
                 clone.compileClasspath = compileClasspath == null ? null : new ArrayList<>(compileClasspath);
                 clone.compilerArgs = compilerArgs == null ? null : new ArrayList<>(compilerArgs);
+                clone.compilerConfigurations = compilerConfigurations == null
+                        ? null : new ArrayList<>(compilerConfigurations);
                 return clone;
             } catch (CloneNotSupportedException e) {
                 throw new AssertionError(e);

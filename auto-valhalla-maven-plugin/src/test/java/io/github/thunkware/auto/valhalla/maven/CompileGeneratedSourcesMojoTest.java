@@ -1,19 +1,19 @@
 package io.github.thunkware.auto.valhalla.maven;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.junit.jupiter.api.Test;
 
 class CompileGeneratedSourcesMojoTest {
 
     @Test
-    void inheritsFromMavenCompilerPlugin() {
+    void inheritsCompilerConfigOpaquelyFromMavenCompilerPlugin() {
         MavenProject project = new MavenProject();
         Build build = new Build();
         Plugin compilerPlugin = new Plugin();
@@ -29,27 +29,15 @@ class CompileGeneratedSourcesMojoTest {
         debug.setValue("true");
         config.addChild(debug);
 
-        Xpp3Dom debuglevel = new Xpp3Dom("debuglevel");
-        debuglevel.setValue("source,lines");
-        config.addChild(debuglevel);
-
-        Xpp3Dom showWarnings = new Xpp3Dom("showWarnings");
-        showWarnings.setValue("false");
-        config.addChild(showWarnings);
-
-        Xpp3Dom showDeprecation = new Xpp3Dom("showDeprecation");
-        showDeprecation.setValue("true");
-        config.addChild(showDeprecation);
-
-        Xpp3Dom encoding = new Xpp3Dom("encoding");
-        encoding.setValue("UTF-16");
-        config.addChild(encoding);
-
         Xpp3Dom compilerArgs = new Xpp3Dom("compilerArgs");
         Xpp3Dom arg1 = new Xpp3Dom("arg");
         arg1.setValue("-Xlint:unchecked");
         compilerArgs.addChild(arg1);
         config.addChild(compilerArgs);
+
+        Xpp3Dom encoding = new Xpp3Dom("encoding");
+        encoding.setValue("UTF-16");
+        config.addChild(encoding);
 
         compilerPlugin.setConfiguration(config);
         build.addPlugin(compilerPlugin);
@@ -58,42 +46,33 @@ class CompileGeneratedSourcesMojoTest {
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setProject(project);
 
-        List<String> args = mojo.resolveCompilerArgs();
-        assertTrue(args.contains("-parameters"));
-        assertTrue(args.contains("-g:source,lines"));
-        assertTrue(args.contains("-nowarn"));
-        assertTrue(args.contains("-deprecation"));
-        assertTrue(args.contains("-Xlint:unchecked"));
+        // The project's maven-compiler-plugin configuration is applied opaquely,
+        // not translated into javac flags by the plugin.
+        List<PlexusConfiguration> configurations = mojo.compilerConfigurations();
+        assertEquals(1, configurations.size());
+        PlexusConfiguration inherited = configurations.get(0);
+        assertEquals("true", inherited.getChild("parameters").getValue(null));
+        assertEquals("true", inherited.getChild("debug").getValue(null));
+        assertEquals("-Xlint:unchecked",
+                inherited.getChild("compilerArgs").getChild("arg").getValue(null));
         assertEquals("UTF-16", mojo.resolveEncoding());
     }
 
     @Test
     void resolvesNestedMavenCompilerConfiguration() {
-        Xpp3Dom compiler = nestedCompiler(
-                "parameters", "true",
-                "debug", "true",
-                "debuglevel", "lines,vars",
-                "showWarnings", "false",
-                "showDeprecation", "true",
-                "compilerArgument", "-Xlint:all",
-                "encoding", "ISO-8859-1");
-        Xpp3Dom compilerArgs = new Xpp3Dom("compilerArgs");
-        Xpp3Dom arg = new Xpp3Dom("arg");
-        arg.setValue("-Werror");
-        compilerArgs.addChild(arg);
-        compiler.addChild(compilerArgs);
+        Xpp3Dom compiler = new Xpp3Dom("compiler");
+        child(compiler, "debug", "true");
+        child(compiler, "debuglevel", "lines,vars");
+        child(compiler, "encoding", "ISO-8859-1");
 
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setMavenCompiler(compiler);
         mojo.setProject(new MavenProject());
 
-        List<String> args = mojo.resolveCompilerArgs();
-        assertTrue(args.contains("-parameters"));
-        assertTrue(args.contains("-g:lines,vars"));
-        assertTrue(args.contains("-nowarn"));
-        assertTrue(args.contains("-deprecation"));
-        assertTrue(args.contains("-Xlint:all"));
-        assertTrue(args.contains("-Werror"));
+        List<PlexusConfiguration> configurations = mojo.compilerConfigurations();
+        assertEquals(1, configurations.size());
+        PlexusConfiguration nested = configurations.get(0);
+        assertEquals("lines,vars", nested.getChild("debuglevel").getValue(null));
         assertEquals("ISO-8859-1", mojo.resolveEncoding());
     }
 
@@ -106,36 +85,32 @@ class CompileGeneratedSourcesMojoTest {
         compilerPlugin.setArtifactId("maven-compiler-plugin");
 
         Xpp3Dom config = new Xpp3Dom("configuration");
-        Xpp3Dom parameters = new Xpp3Dom("parameters");
-        parameters.setValue("false");
-        config.addChild(parameters);
-
-        Xpp3Dom encoding = new Xpp3Dom("encoding");
-        encoding.setValue("UTF-16");
-        config.addChild(encoding);
-
+        child(config, "parameters", "false");
+        child(config, "encoding", "UTF-16");
         compilerPlugin.setConfiguration(config);
         build.addPlugin(compilerPlugin);
         project.setBuild(build);
 
-        Xpp3Dom compiler = nestedCompiler("parameters", "true", "encoding", "ISO-8859-1");
+        Xpp3Dom compiler = new Xpp3Dom("compiler");
+        child(compiler, "parameters", "true");
+        child(compiler, "encoding", "ISO-8859-1");
 
         CompileGeneratedSourcesMojo mojo = new CompileGeneratedSourcesMojo();
         mojo.setProject(project);
         mojo.setMavenCompiler(compiler);
 
-        List<String> args = mojo.resolveCompilerArgs();
-        assertTrue(args.contains("-parameters"));
+        // NESTED_FIRST: the nested block precedes and wins over the project
+        // configuration, and both pass through opaquely.
+        List<PlexusConfiguration> configurations = mojo.compilerConfigurations();
+        assertEquals(2, configurations.size());
+        assertEquals("true", configurations.get(0).getChild("parameters").getValue(null));
+        assertEquals("false", configurations.get(1).getChild("parameters").getValue(null));
         assertEquals("ISO-8859-1", mojo.resolveEncoding());
     }
 
-    private static Xpp3Dom nestedCompiler(String... entries) {
-        Xpp3Dom compiler = new Xpp3Dom("compiler");
-        for (int i = 0; i < entries.length; i += 2) {
-            Xpp3Dom child = new Xpp3Dom(entries[i]);
-            child.setValue(entries[i + 1]);
-            compiler.addChild(child);
-        }
-        return compiler;
+    private static void child(Xpp3Dom parent, String name, String value) {
+        Xpp3Dom child = new Xpp3Dom(name);
+        child.setValue(value);
+        parent.addChild(child);
     }
 }

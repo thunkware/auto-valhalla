@@ -124,7 +124,7 @@ public class GenerateSourcesMojo extends AbstractMojo {
                     .processorPath(processorPath)
                     .compileClasspath(compileClasspath)
                     .encoding(resolveEncoding())
-                    .compilerConfiguration(mavenCompiler)
+                    .compilerConfigurations(configEvaluatorSupplier.get().configurations())
                     .release(resolveRelease())
                     .enablePreview(resolveEnablePreview())
                     .removeAnnotation(removeAnnotation)

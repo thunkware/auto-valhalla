@@ -14,9 +14,13 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -39,6 +43,16 @@ public final class MavenCompilerInvoker {
     private static final String DEFAULT_VERSION = "3.15.0";
     public static final String COMPILE_CLASSPATH_ELEMENTS = "${project.compileClasspathElements}";
     public static final String TEST_CLASSPATH_ELEMENTS = "${project.testClasspathElements}";
+
+    // Keys the value-class/selection passes control themselves. User-supplied
+    // occurrences are dropped so the forced settings below always apply.
+    private static final Set<String> OWNED_KEYS = Collections.unmodifiableSet(
+            new LinkedHashSet<>(Arrays.asList(
+                    "basedir", "buildDirectory", "project", "session", "projectArtifact",
+                    "compilePath", "testPath", "mojoExecution", "compileSourceRoots",
+                    "outputDirectory", "release", "enablePreview", "proc", "compilerId",
+                    "fork", "executable", "encoding", "useIncrementalCompilation",
+                    "forceLegacyJavacApi")));
 
     private final Log log;
 
@@ -107,15 +121,18 @@ public final class MavenCompilerInvoker {
 
     private Xpp3Dom configuration(MavenCompilerInput input) {
         Xpp3Dom root = new Xpp3Dom("configuration");
-        // The consuming project's nested <compiler> block is merged first and
-        // the mandatory settings below are appended after, so that duplicate
-        // keys (release, proc, outputDirectory, ...) default to the value-class
-        // pass instead of a user mirroring e.g. <release>17</release>.
-        if (input.compilerConfiguration() != null) {
-            for (PlexusConfiguration child : input.compilerConfiguration().getChildren()) {
-                root.addChild(copy(child));
-            }
+        // The consuming project's compiler configurations (the nested
+        // <compiler> block and the maven-compiler-plugin configuration, merged
+        // in configOrigin order) are applied opaquely so maven-compiler-plugin
+        // maps its own options. Keys that this plugin controls are skipped here
+        // and pushed below so the forced settings always win over a user
+        // mirroring e.g. <release>17</release>.
+        Set<String> seen = new HashSet<>();
+        List<PlexusConfiguration> compilerConfigurations = input.compilerConfigurations();
+        if (compilerConfigurations != null) {
+            mergeCompilerConfigurations(compilerConfigurations, root, seen);
         }
+
         child(root, "basedir", "${project.basedir}");
         child(root, "buildDirectory", "${project.build.directory}");
         child(root, "project", "${project}");
@@ -155,15 +172,44 @@ public final class MavenCompilerInvoker {
         child(root, "useIncrementalCompilation", "false");
         child(root, "forceLegacyJavacApi", "true");
 
-        Xpp3Dom args = new Xpp3Dom("compilerArgs");
-        for (String value : input.compilerArgs()) {
-            if (isNotBlank(value)) {
-                child(args, "arg", trim(value));
+        // The selection pass supplies its javac options as compilerArgs, which
+        // must win over any user-provided ones; the value-class compile leaves
+        // them empty so a user's <compilerArgs> passes through untouched.
+        List<String> compilerArgs = input.compilerArgs();
+        if (compilerArgs != null && !compilerArgs.isEmpty()) {
+            removeChild(root, "compilerArgs");
+            Xpp3Dom args = new Xpp3Dom("compilerArgs");
+            for (String value : compilerArgs) {
+                if (isNotBlank(value)) {
+                    child(args, "arg", trim(value));
+                }
             }
+            root.addChild(args);
         }
-        root.addChild(args);
         debug(log, "maven-compiler configuration: {}", root);
         return root;
+    }
+
+    static void mergeCompilerConfigurations(
+            List<PlexusConfiguration> configurations, Xpp3Dom root, Set<String> seen) {
+        for (PlexusConfiguration configuration : configurations) {
+            for (PlexusConfiguration child : configuration.getChildren()) {
+                String name = child.getName();
+                if (name == null || OWNED_KEYS.contains(name) || !seen.add(name)) {
+                    continue;
+                }
+                root.addChild(copy(child));
+            }
+        }
+    }
+
+    private static void removeChild(Xpp3Dom parent, String name) {
+        Xpp3Dom[] children = parent.getChildren();
+        for (int i = children.length - 1; i >= 0; i--) {
+            if (name.equals(children[i].getName())) {
+                parent.removeChild(i);
+            }
+        }
     }
 
     private static void configureCompilePath(MavenCompilerInput input, Xpp3Dom root) {

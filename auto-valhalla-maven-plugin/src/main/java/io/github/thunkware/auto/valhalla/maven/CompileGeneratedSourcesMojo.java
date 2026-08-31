@@ -20,7 +20,6 @@ import io.github.thunkware.auto.valhalla.maven.support.JdkVersionValidator;
 import io.github.thunkware.auto.valhalla.maven.support.MojoTool;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -138,7 +137,6 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
 
         String processorPath = MojoTool.getProcessorPath();
         String resolvedEncoding = resolveEncoding();
-        List<String> extraCompilerArgs = resolveCompilerArgs();
         MavenCompilerInput input = MavenCompilerInput.builder()
                 .sourceRoots(sourceRoots())
                 .outputDirectory(outputDirectory())
@@ -148,8 +146,7 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .processorPath(processorPath)
                 .compileClasspath(compileClasspath)
                 .encoding(resolvedEncoding)
-                .compilerArgs(extraCompilerArgs)
-                .compilerConfiguration(mavenCompiler)
+                .compilerConfigurations(getConfigEvaluator().configurations())
                 .release(resolveRelease())
                 .enablePreview(resolveEnablePreview())
                 .removeAnnotation(removeAnnotation)
@@ -192,65 +189,15 @@ public class CompileGeneratedSourcesMojo extends AbstractMojo {
                 .replaceFirst("");
     }
 
-    List<String> resolveCompilerArgs() {
-        Boolean resolvedParameters = getConfigEvaluator().resolveBoolean("parameters");
-        Boolean resolvedDebug = getConfigEvaluator().resolveBoolean("debug");
-        String resolvedDebuglevel = getConfigEvaluator().resolveString("debuglevel");
-        Boolean resolvedShowWarnings = getConfigEvaluator().resolveBoolean("showWarnings");
-        Boolean resolvedShowDeprecation = getConfigEvaluator().resolveBoolean("showDeprecation");
-        String resolvedCompilerArgument = getConfigEvaluator().resolveString("compilerArgument");
-        List<String> resolvedCompilerArgs = getConfigEvaluator().resolveCompilerArgs();
-
-        List<String> args = new ArrayList<>();
-        if (asBoolean(resolvedParameters)) {
-            args.add("-parameters");
-        }
-        if (resolvedDebug != null) {
-            if (asBoolean(resolvedDebug)) {
-                if (isNotBlank(resolvedDebuglevel)) {
-                    args.add("-g:" + trim(resolvedDebuglevel));
-                } else {
-                    args.add("-g");
-                }
-            } else {
-                args.add("-g:none");
-            }
-        } else if (isNotBlank(resolvedDebuglevel)) {
-            args.add("-g:" + trim(resolvedDebuglevel));
-        }
-        if (resolvedShowWarnings != null && !asBoolean(resolvedShowWarnings)) {
-            args.add("-nowarn");
-        }
-        if (asBoolean(resolvedShowDeprecation)) {
-            args.add("-deprecation");
-        }
-        if (isNotBlank(resolvedCompilerArgument)) {
-            for (String token : trim(resolvedCompilerArgument).split("\\s+")) {
-                if (!token.isEmpty()) {
-                    args.add(token);
-                }
-            }
-        }
-        for (String arg : resolvedCompilerArgs) {
-            if (isNotBlank(arg)) {
-                args.add(trim(arg));
-            }
-        }
-        return args;
-    }
-
-    private static boolean asBoolean(Boolean value) {
-        if (value == null) {
-            return false;
-        }
-        return value;
-    }
-
     private ConfigEvaluator getConfigEvaluator() {
         if (configEvaluatorSupplier == null) {
             configEvaluatorSupplier = ConfigEvaluator.of(project, mavenCompiler, configOrigin);
         }
         return configEvaluatorSupplier.get();
+    }
+
+    List<PlexusConfiguration> compilerConfigurations() {
+        return getConfigEvaluator().configurations();
     }
 
     String resolveEncoding() {

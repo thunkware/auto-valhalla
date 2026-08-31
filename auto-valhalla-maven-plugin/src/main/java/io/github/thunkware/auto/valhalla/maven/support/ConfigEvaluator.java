@@ -6,7 +6,6 @@ import static io.github.thunkware.auto.valhalla.maven.support.StringTool.trim;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 import org.apache.maven.model.Plugin;
@@ -83,14 +82,19 @@ public final class ConfigEvaluator {
         return null;
     }
 
-    public List<String> resolveCompilerArgs() {
+    /**
+     * The configurations to apply, in resolution order (i.e. earlier sources
+     * take precedence). Used to feed the {@code maven-compiler-plugin}
+     * invocation opaquely, so the plugin maps the options itself.
+     */
+    public List<PlexusConfiguration> configurations() {
+        List<PlexusConfiguration> result = new ArrayList<>();
         for (PlexusConfiguration configuration : configurations) {
-            List<String> args = compilerArgs(configuration);
-            if (!args.isEmpty()) {
-                return args;
+            if (configuration != null) {
+                result.add(configuration);
             }
         }
-        return Collections.emptyList();
+        return result;
     }
 
     private static PlexusConfiguration[] configurations(
@@ -127,28 +131,5 @@ public final class ConfigEvaluator {
         PlexusConfiguration child = configuration.getChild(name, false);
         String value = child == null ? null : child.getValue(null);
         return isNotBlank(value) ? trim(value) : null;
-    }
-
-    private static List<String> compilerArgs(PlexusConfiguration configuration) {
-        if (configuration == null) {
-            return Collections.emptyList();
-        }
-        PlexusConfiguration args = configuration.getChild("compilerArgs", false);
-        if (args == null) {
-            args = configuration.getChild("compilerArguments", false);
-        }
-        if (args == null) {
-            return Collections.emptyList();
-        }
-        List<String> result = new ArrayList<>();
-        for (PlexusConfiguration child : args.getChildren()) {
-            String value = child.getValue(null);
-            if (isNotBlank(value)) {
-                result.add(trim(value));
-            } else if (child.getName() != null && child.getName().startsWith("-")) {
-                result.add(child.getName());
-            }
-        }
-        return result;
     }
 }
