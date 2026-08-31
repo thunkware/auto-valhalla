@@ -109,6 +109,30 @@ auto-valhalla can be applied in these ways (choose one):
   * maven plugin if you want to edit and re-compile the source code
   * javaagent if you do not want to edit or re-compile the source code
 
+## Java version compatibility
+
+The following table lists the compatible Java version for various auto-valhalla artifacts. Obviously, to get benefits
+of Valhalla, you must run on a Valhalla-enabled JDK28+ JDK.
+
+| Artifact                   | Compatible Java version |
+|----------------------------|-------------------------|
+| auto-valhalla-api          | 5+                      |
+| auto-valhalla-maven-plugin | 8+                      |
+| auto-valhalla-agent        | 5+                      |
+| auto-valhalla-agent-attach | 5+                      |
+
+## Troubleshooting
+
+Run with these flags to view how JVM lays out memory for identity or value classes:
+```
+java -XX:+UnlockDiagnosticVMOptions \
+  -XX:+UnlockExperimentalVMOptions \
+  -XX:+PrintInlineLayout \
+  -XX:+PrintFlatArrayLayout \
+  -XX:+PrintFieldLayout \
+  --enable-preview
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for building from source and the module
