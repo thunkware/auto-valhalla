@@ -1,6 +1,6 @@
 package io.github.thunkware.auto.valhalla.maven.support;
 
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import io.github.thunkware.auto.valhalla.processor.ProcessorTool;
 import java.util.List;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -23,11 +23,12 @@ public final class MojoTool {
     }
 
     public static String getProcessorPath() throws MojoExecutionException {
-        String processorPath = AutoValhallaProcessor.processorPath();
+        String processorPath = ProcessorTool.processorPath();
         if (processorPath == null) {
             throw new MojoExecutionException("auto-valhalla: could not locate the "
                     + "auto-valhalla-processor jar for javac's -processorpath");
         }
         return processorPath;
     }
+
 }

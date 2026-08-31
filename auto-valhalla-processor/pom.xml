@@ -52,10 +52,6 @@
   </properties>
 
   <dependencies>
-    <!-- tools.jar from JDK8; provided scope keeps it out of the published
-         artifact and the consumers' classpaths. The processor only uses the
-         com.sun.source APIs at compile time and runs inside javac, where the
-         tools are always present. -->
     <dependency>
       <groupId>io.github.thunkware.sun</groupId>
       <artifactId>com.sun.tools.8</artifactId>

@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla.processor;
 
+import static io.github.thunkware.auto.valhalla.processor.ProcessorTool.OPT_OUTDIR;
+import static io.github.thunkware.auto.valhalla.processor.ProcessorTool.OPT_REMOVE_ANNOTATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,7 +49,7 @@ class AutoValhallaProcessorTest {
         }
         javacPath = javac.getAbsoluteFile().getAbsolutePath();
         apiJar = AutoValhalla.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-        processorPath = AutoValhallaProcessor.processorPath();
+        processorPath = ProcessorTool.processorPath();
     }
 
     @Test
@@ -108,7 +110,7 @@ class AutoValhallaProcessorTest {
         Path out = temp.resolve("out");
 
         ProcessResult pass = runPass(src, out,
-                "-A" + AutoValhallaProcessor.OPT_REMOVE_ANNOTATION + "=true");
+                "-A" + OPT_REMOVE_ANNOTATION + "=true");
 
         assertEquals(0, pass.exit, pass.output);
         String generated = new String(
@@ -128,7 +130,7 @@ class AutoValhallaProcessorTest {
         Path out = temp.resolve("out");
 
         ProcessResult pass = runPass(src, out,
-                "-A" + AutoValhallaProcessor.OPT_REMOVE_ANNOTATION + "=true");
+                "-A" + OPT_REMOVE_ANNOTATION + "=true");
 
         assertEquals(0, pass.exit, pass.output);
         String generated = new String(
@@ -269,7 +271,7 @@ class AutoValhallaProcessorTest {
         command.add(apiJar);
         command.add("-encoding");
         command.add("UTF-8");
-        command.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + out.toAbsolutePath());
+        command.add("-A" + OPT_OUTDIR + "=" + out.toAbsolutePath());
         if (option != null) {
             command.add(option);
         }

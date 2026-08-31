@@ -56,6 +56,12 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>io.github.thunkware</groupId>
+      <artifactId>auto-valhalla-processor</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
     <!-- The plugin's own @Mojo code talks only to this (shared, Java-8) API. -->
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -83,32 +89,6 @@
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
-
-    <!-- The processor the plugin drives with javac -proc:only to select and
-         generate the value-class sources. Compile scope so it ends up on the
-         plugin's own classpath at runtime (the plugin locates it there and
-         passes it to javac as -processorpath). -->
-    <dependency>
-      <groupId>io.github.thunkware</groupId>
-      <artifactId>auto-valhalla-processor</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <!-- The plugin loads AutoValhallaProcessor inside its own realm (to compute
-         -processorpath), and on a JDK 8 Maven run that realm must supply the
-         com.sun.source APIs itself: JDK 8 only has them in tools.jar, which is
-         not a module. The processor declares the same shim as provided (so
-         consumers of the processor jar are not forced onto tools.jar), hence
-         the plugin re-declares it here. It is bundled in the plugin's own
-         runtime realm only, never passed to the toolchain and never leaking
-         to consumers. -->
-    <dependency>
-      <groupId>io.github.thunkware.sun</groupId>
-      <artifactId>com.sun.tools.8</artifactId>
-      <version>0.1.0</version>
-      <classifier>linux_x64</classifier>
-    </dependency>
-
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

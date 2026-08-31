@@ -1,5 +1,7 @@
 package io.github.thunkware.auto.valhalla.processor;
 
+import static io.github.thunkware.auto.valhalla.processor.ProcessorTool.OPT_OUTDIR;
+import static io.github.thunkware.auto.valhalla.processor.ProcessorTool.OPT_REMOVE_ANNOTATION;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.sun.source.tree.AnnotationTree;
@@ -10,12 +12,10 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -50,37 +50,8 @@ import javax.tools.Diagnostic.Kind;
  */
 public class AutoValhallaProcessor extends AbstractProcessor {
 
-    /**
-     * The {@code -A} option for output directory
-     */
-    public static final String OPT_OUTDIR = "outdir";
-
-    /**
-     * The {@code -A} option for removing {@code @AutoValhalla} annotation from generated source.
-     */
-    public static final String OPT_REMOVE_ANNOTATION = "removeAnnotation";
-
     private static final String ANNOTATION = "io.github.thunkware.auto.valhalla.api.AutoValhalla";
     private static final String ANNOTATION_SIMPLE = "AutoValhalla";
-
-    /**
-     * The absolute path of the location this class was loaded from (the jar or
-     * class directory to hand to {@code javac -processorpath}), or {@code null}
-     * when it cannot be determined. The maven plugin passes this path through
-     * to its {@code javac -proc:only} selection pass.
-     */
-    public static String processorPath() {
-        ProtectionDomain protectionDomain = AutoValhallaProcessor.class.getProtectionDomain();
-        if (protectionDomain == null || protectionDomain.getCodeSource() == null) {
-            return null;
-        }
-        try {
-            URI uri = protectionDomain.getCodeSource().getLocation().toURI();
-            return Paths.get(uri).toFile().getAbsolutePath();
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {

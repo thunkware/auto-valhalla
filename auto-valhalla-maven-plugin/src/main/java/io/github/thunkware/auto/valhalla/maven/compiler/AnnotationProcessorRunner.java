@@ -7,7 +7,7 @@ import io.github.thunkware.auto.valhalla.maven.model.Generated;
 import io.github.thunkware.auto.valhalla.maven.model.MavenCompilerInput;
 import io.github.thunkware.auto.valhalla.maven.model.ProcessResult;
 import io.github.thunkware.auto.valhalla.maven.model.Selection;
-import io.github.thunkware.auto.valhalla.processor.AutoValhallaProcessor;
+import io.github.thunkware.auto.valhalla.processor.ProcessorTool;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -103,12 +103,12 @@ public final class AnnotationProcessorRunner {
         options.add(Javac.joinClasspath(input.compileClasspath()));
         options.add("-encoding");
         options.add(input.encoding());
-        options.add("-A" + AutoValhallaProcessor.OPT_OUTDIR + "=" + selected.getAbsolutePath());
+        options.add("-A" + ProcessorTool.OPT_OUTDIR + "=" + selected.getAbsolutePath());
         if (input.removeAnnotation()) {
-            options.add("-A" + AutoValhallaProcessor.OPT_REMOVE_ANNOTATION + "=true");
+            options.add("-A" + ProcessorTool.OPT_REMOVE_ANNOTATION + "=true");
         }
         options.add("-processor");
-        options.add(AutoValhallaProcessor.class.getName());
+        options.add(ProcessorTool.PROCESSOR_NAME);
         MavenCompilerInput mavenCompilerInput = MavenCompilerInput.builder(input)
                 // do not set outputDirectory. otherwise later default-compile shows irrelevant warnings
                 .compilerArgs(options.subList(1, options.size()))
